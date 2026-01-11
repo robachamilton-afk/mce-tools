@@ -1,0 +1,115 @@
+/**
+ * Main Character Energy - Brand CSS Variables
+ * 
+ * These variables define the MCE brand colors and design tokens.
+ * Extracted from the official MCE website for consistency across all tools.
+ * 
+ * Usage: Import this file in your main CSS/SCSS file
+ * @import './shared/styles/variables.css';
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+}
+
+:root {
+  /* Primary Brand Colors */
+  --primary: #1d4ed8; /* Blue 700 */
+  --primary-foreground: #eff6ff; /* Blue 50 */
+  
+  /* Border Radius */
+  --radius: 0.65rem; /* 10.4px */
+  
+  /* Light Mode Colors */
+  --background: oklch(1 0 0); /* Pure white */
+  --foreground: oklch(0.235 0.015 65); /* Dark gray */
+  --card: oklch(1 0 0); /* White */
+  --card-foreground: oklch(0.235 0.015 65); /* Dark gray */
+  --popover: oklch(1 0 0); /* White */
+  --popover-foreground: oklch(0.235 0.015 65); /* Dark gray */
+  --secondary: oklch(0.98 0.001 286.375); /* Very light gray */
+  --secondary-foreground: oklch(0.4 0.015 65); /* Medium dark gray */
+  --muted: oklch(0.967 0.001 286.375); /* Light gray */
+  --muted-foreground: oklch(0.552 0.016 285.938); /* Medium gray */
+  --accent: oklch(0.967 0.001 286.375); /* Light gray */
+  --accent-foreground: oklch(0.141 0.005 285.823); /* Very dark gray */
+  --destructive: oklch(0.577 0.245 27.325); /* Red */
+  --destructive-foreground: oklch(0.985 0 0); /* White */
+  --border: oklch(0.92 0.004 286.32); /* Light border gray */
+  --input: oklch(0.92 0.004 286.32); /* Light border gray */
+  --ring: oklch(0.623 0.214 259.815); /* Blue ring */
+  
+  /* Chart Colors */
+  --chart-1: #93c5fd; /* Blue 300 */
+  --chart-2: #3b82f6; /* Blue 500 */
+  --chart-3: #2563eb; /* Blue 600 */
+  --chart-4: #1d4ed8; /* Blue 700 */
+  --chart-5: #1e40af; /* Blue 800 */
+}
+
+.dark {
+  /* Dark Mode Colors */
+  --primary: #1d4ed8; /* Blue 700 */
+  --primary-foreground: #eff6ff; /* Blue 50 */
+  --background: oklch(0.141 0.005 285.823); /* Very dark blue-gray */
+  --foreground: oklch(0.85 0.005 65); /* Light gray */
+  --card: oklch(0.21 0.006 285.885); /* Dark card */
+  --card-foreground: oklch(0.85 0.005 65); /* Light gray */
+  --popover: oklch(0.21 0.006 285.885); /* Dark card */
+  --popover-foreground: oklch(0.85 0.005 65); /* Light gray */
+  --secondary: oklch(0.24 0.006 286.033); /* Dark gray */
+  --secondary-foreground: oklch(0.7 0.005 65); /* Light gray */
+  --muted: oklch(0.274 0.006 286.033); /* Medium dark gray */
+  --muted-foreground: oklch(0.705 0.015 286.067); /* Medium light gray */
+  --accent: oklch(0.274 0.006 286.033); /* Medium dark gray */
+  --accent-foreground: oklch(0.92 0.005 65); /* Very light gray */
+  --destructive: oklch(0.704 0.191 22.216); /* Red (dark mode) */
+  --destructive-foreground: oklch(0.985 0 0); /* White */
+  --border: oklch(1 0 0 / 10%); /* Subtle white overlay */
+  --input: oklch(1 0 0 / 15%); /* Subtle white overlay */
+  --ring: oklch(0.488 0.243 264.376); /* Blue ring (dark) */
+  
+  /* Chart Colors (same in dark mode) */
+  --chart-1: #93c5fd; /* Blue 300 */
+  --chart-2: #3b82f6; /* Blue 500 */
+  --chart-3: #2563eb; /* Blue 600 */
+  --chart-4: #1d4ed8; /* Blue 700 */
+  --chart-5: #1e40af; /* Blue 800 */
+}
+
+/* Base Styles */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

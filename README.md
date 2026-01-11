@@ -171,6 +171,7 @@ See [docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md) for detailed local de
 - **[Development Setup](docs/DEVELOPMENT_SETUP.md)** - Local development environment guide
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment instructions
 - **[Shared Libraries](docs/SHARED_LIBRARIES.md)** - Documentation for shared code
+- **[Brand Style Guide](docs/BRAND_STYLE_GUIDE.md)** - MCE brand colors, typography, and design system
 
 ## Security & Data Privacy
 
