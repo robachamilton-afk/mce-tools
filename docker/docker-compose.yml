@@ -1,0 +1,188 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mce-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mce_tools}
+      POSTGRES_USER: ${POSTGRES_USER:-mce_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mce_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: mce-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    container_name: mce-backend
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-mce_tools}
+      POSTGRES_USER: ${POSTGRES_USER:-mce_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-True}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../shared:/app/shared
+      - ../tools:/app/tools
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn shared.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+
+  # Celery Worker
+  celery-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    container_name: mce-celery-worker
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-mce_tools}
+      POSTGRES_USER: ${POSTGRES_USER:-mce_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD}@redis:6379/0
+    volumes:
+      - ../shared:/app/shared
+      - ../tools:/app/tools
+      - uploads:/app/uploads
+    depends_on:
+      - redis
+      - postgres
+    command: celery -A shared.celery_app worker --loglevel=info
+    restart: unless-stopped
+
+  # Frontend - Spec Generator
+  frontend-spec:
+    build:
+      context: ../tools/spec-generator/frontend
+      dockerfile: Dockerfile
+    container_name: mce-frontend-spec
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3001:3000"
+    volumes:
+      - ../tools/spec-generator/frontend:/app
+      - /app/node_modules
+    command: pnpm dev --host 0.0.0.0
+    restart: unless-stopped
+
+  # Frontend - Performance Model
+  frontend-perf:
+    build:
+      context: ../tools/performance-model/frontend
+      dockerfile: Dockerfile
+    container_name: mce-frontend-perf
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3002:3000"
+    volumes:
+      - ../tools/performance-model/frontend:/app
+      - /app/node_modules
+    command: pnpm dev --host 0.0.0.0
+    restart: unless-stopped
+
+  # Frontend - Risk Assessment
+  frontend-risk:
+    build:
+      context: ../tools/risk-assessment/frontend
+      dockerfile: Dockerfile
+    container_name: mce-frontend-risk
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3003:3000"
+    volumes:
+      - ../tools/risk-assessment/frontend:/app
+      - /app/node_modules
+    command: pnpm dev --host 0.0.0.0
+    restart: unless-stopped
+
+  # Frontend - Benchmarking DB
+  frontend-bench:
+    build:
+      context: ../tools/benchmarking-db/frontend
+      dockerfile: Dockerfile
+    container_name: mce-frontend-bench
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3004:3000"
+    volumes:
+      - ../tools/benchmarking-db/frontend:/app
+      - /app/node_modules
+    command: pnpm dev --host 0.0.0.0
+    restart: unless-stopped
+
+  # Frontend - Data Scraper
+  frontend-scraper:
+    build:
+      context: ../tools/data-scraper/frontend
+      dockerfile: Dockerfile
+    container_name: mce-frontend-scraper
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3005:3000"
+    volumes:
+      - ../tools/data-scraper/frontend:/app
+      - /app/node_modules
+    command: pnpm dev --host 0.0.0.0
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads:
+    driver: local
+
+networks:
+  default:
+    name: mce-network
