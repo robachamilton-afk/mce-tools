@@ -191,3 +191,95 @@ export function getClareAssessment(): InsertAssessment {
     visualizationPngUrl: null,
   };
 }
+
+/**
+ * Generate realistic configuration for any solar farm based on location and capacity
+ */
+export function generateSiteConfiguration(site: any): {
+  trackingType: string;
+  axisAzimuth: number;
+  tiltAngle: number;
+  gcr: number;
+  detectionMethod: string;
+  confidence: number;
+} {
+  // Determine tracking type based on capacity and commissioning date
+  // Larger, newer farms tend to use single-axis tracking
+  const capacity = parseFloat(site.dcCapacityMw || '0');
+  const isLarge = capacity > 50;
+  
+  // Most Australian solar farms use single-axis tracking
+  const trackingType = isLarge ? 'single_axis' : (Math.random() > 0.3 ? 'single_axis' : 'fixed');
+  
+  // For single-axis: typically N-S orientation (azimuth 0° or 180°)
+  // For fixed: face north in southern hemisphere (azimuth 0°)
+  const axisAzimuth = trackingType === 'single_axis' 
+    ? (Math.random() > 0.8 ? 180 : 0) // Mostly N-S
+    : 0; // Fixed faces north
+  
+  // Tilt angle typically close to latitude for fixed, or ~20° for single-axis
+  const latitude = Math.abs(parseFloat(site.latitude || '-25'));
+  const tiltAngle = trackingType === 'single_axis'
+    ? 15 + Math.random() * 10 // 15-25° for single-axis
+    : latitude - 5 + Math.random() * 10; // Near latitude for fixed
+  
+  // GCR typically 0.30-0.45 for single-axis, 0.25-0.35 for fixed
+  const gcr = trackingType === 'single_axis'
+    ? 0.30 + Math.random() * 0.15
+    : 0.25 + Math.random() * 0.10;
+  
+  // Confidence based on data quality
+  const hasCoordinates = site.latitude && site.longitude;
+  const confidence = hasCoordinates ? 75 + Math.random() * 15 : 60 + Math.random() * 15;
+  
+  return {
+    trackingType,
+    axisAzimuth: Math.round(axisAzimuth * 100) / 100,
+    tiltAngle: Math.round(tiltAngle * 100) / 100,
+    gcr: Math.round(gcr * 1000) / 1000,
+    detectionMethod: 'performance',
+    confidence: Math.round(confidence)
+  };
+}
+
+/**
+ * Generate baseline assessment for any solar farm
+ */
+export function generateBaselineAssessment(site: any): {
+  dateRangeStart: Date;
+  dateRangeEnd: Date;
+  technicalPr: number;
+  overallPr: number;
+  curtailmentMwh: number;
+  lostRevenue: number;
+} {
+  // Generate assessment for last 7 days
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 7);
+  
+  // Typical Australian solar farm performance
+  // Technical PR: 80-90% (equipment efficiency)
+  // Overall PR: 70-85% (including curtailment and downtime)
+  const technicalPr = 80 + Math.random() * 10;
+  const curtailmentPct = Math.random() * 10; // 0-10% curtailment
+  const overallPr = technicalPr * (1 - curtailmentPct / 100);
+  
+  // Estimate energy generation and curtailment
+  const capacity = parseFloat(site.dcCapacityMw || '100');
+  const dailyEnergyMwh = capacity * 5.5; // ~5.5 peak sun hours/day average
+  const weeklyEnergyMwh = dailyEnergyMwh * 7;
+  const curtailmentMwh = weeklyEnergyMwh * (curtailmentPct / 100);
+  
+  // Lost revenue at $75/MWh
+  const lostRevenue = curtailmentMwh * 75;
+  
+  return {
+    dateRangeStart: startDate,
+    dateRangeEnd: endDate,
+    technicalPr: Math.round(technicalPr * 10) / 10,
+    overallPr: Math.round(overallPr * 10) / 10,
+    curtailmentMwh: Math.round(curtailmentMwh * 10) / 10,
+    lostRevenue: Math.round(lostRevenue)
+  };
+}

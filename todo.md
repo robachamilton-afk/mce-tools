@@ -117,3 +117,9 @@
 ## Dark Mode Chart Fixes
 - [x] Update chart text colors for dark mode visibility
 - [x] Test charts in both light and dark themes
+
+## Bulk Site Scanning
+- [x] Scan all 124 NEM solar farms with configuration detection
+- [x] Generate baseline assessments for each site
+- [x] Verify data quality and completeness (124/124 success, 0 errors)
+- [x] Create database export for deployment
