@@ -108,13 +108,14 @@ export function PerformanceCharts({
             <YAxis 
               stroke="hsl(var(--muted-foreground))"
               style={{ fontSize: '12px' }}
-              label={{ value: 'Energy (MWh)', angle: -90, position: 'insideLeft' }}
+              label={{ value: 'Energy (MWh)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
             />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--popover))',
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '6px',
+                color: 'hsl(var(--popover-foreground))',
               }}
             />
             <Legend />
@@ -161,13 +162,14 @@ export function PerformanceCharts({
               stroke="hsl(var(--muted-foreground))"
               style={{ fontSize: '12px' }}
               domain={[0, 100]}
-              label={{ value: 'PR (%)', angle: -90, position: 'insideLeft' }}
+              label={{ value: 'PR (%)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
             />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--popover))',
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '6px',
+                color: 'hsl(var(--popover-foreground))',
               }}
             />
             <Legend />
@@ -205,13 +207,14 @@ export function PerformanceCharts({
             <YAxis 
               stroke="hsl(var(--muted-foreground))"
               style={{ fontSize: '12px' }}
-              label={{ value: 'Power (MW)', angle: -90, position: 'insideLeft' }}
+              label={{ value: 'Power (MW)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
             />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--popover))',
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '6px',
+                color: 'hsl(var(--popover-foreground))',
               }}
             />
             <Legend />

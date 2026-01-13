@@ -113,3 +113,7 @@
 - [x] Create curtailment analysis chart (hourly pattern)
 - [x] Add performance graphs to assessment page
 - [x] Write tests for equipment data and visualizations (7/7 passing)
+
+## Dark Mode Chart Fixes
+- [x] Update chart text colors for dark mode visibility
+- [x] Test charts in both light and dark themes
