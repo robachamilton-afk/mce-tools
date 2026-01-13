@@ -18,6 +18,7 @@ import {
   AreaChart,
 } from 'recharts';
 import { Card } from '@/components/ui/card';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface PerformanceChartsProps {
   dateRangeStart: Date;
@@ -36,6 +37,11 @@ export function PerformanceCharts({
   curtailmentMwh,
   totalEnergyMwh = '2999',
 }: PerformanceChartsProps) {
+  const { theme } = useTheme();
+  
+  // Get computed colors for dark/light mode
+  const textColor = theme === 'dark' ? '#e2e8f0' : '#1e293b'; // slate-200 / slate-800
+  const gridColor = theme === 'dark' ? '#334155' : '#cbd5e1'; // slate-700 / slate-300
   // Generate sample daily data for the date range
   const dailyData = useMemo(() => {
     const days: any[] = [];
@@ -102,15 +108,15 @@ export function PerformanceCharts({
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
               dataKey="date" 
-              stroke="hsl(var(--foreground))"
-              tick={{ fill: 'hsl(var(--foreground))' }}
+              stroke={textColor}
+              tick={{ fill: textColor }}
               style={{ fontSize: '12px' }}
             />
             <YAxis 
-              stroke="hsl(var(--foreground))"
-              tick={{ fill: 'hsl(var(--foreground))' }}
+              stroke={textColor}
+              tick={{ fill: textColor }}
               style={{ fontSize: '12px' }}
-              label={{ value: 'Energy (MWh)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
+              label={{ value: 'Energy (MWh)', angle: -90, position: 'insideLeft', fill: textColor }}
             />
             <Tooltip
               contentStyle={{
@@ -157,16 +163,16 @@ export function PerformanceCharts({
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
               dataKey="date" 
-              stroke="hsl(var(--foreground))"
-              tick={{ fill: 'hsl(var(--foreground))' }}
+              stroke={textColor}
+              tick={{ fill: textColor }}
               style={{ fontSize: '12px' }}
             />
             <YAxis 
-              stroke="hsl(var(--foreground))"
-              tick={{ fill: 'hsl(var(--foreground))' }}
+              stroke={textColor}
+              tick={{ fill: textColor }}
               style={{ fontSize: '12px' }}
               domain={[0, 100]}
-              label={{ value: 'PR (%)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
+              label={{ value: 'PR (%)', angle: -90, position: 'insideLeft', fill: textColor }}
             />
             <Tooltip
               contentStyle={{
@@ -205,15 +211,15 @@ export function PerformanceCharts({
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
               dataKey="hour" 
-              stroke="hsl(var(--foreground))"
-              tick={{ fill: 'hsl(var(--foreground))' }}
+              stroke={textColor}
+              tick={{ fill: textColor }}
               style={{ fontSize: '12px' }}
             />
             <YAxis 
-              stroke="hsl(var(--foreground))"
-              tick={{ fill: 'hsl(var(--foreground))' }}
+              stroke={textColor}
+              tick={{ fill: textColor }}
               style={{ fontSize: '12px' }}
-              label={{ value: 'Power (MW)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
+              label={{ value: 'Power (MW)', angle: -90, position: 'insideLeft', fill: textColor }}
             />
             <Tooltip
               contentStyle={{
