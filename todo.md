@@ -60,3 +60,10 @@
 - [ ] Create checkpoint
 - [ ] Push to GitHub (MCE-tools repo)
 - [ ] Documentation
+
+## Styling Updates
+- [x] Replicate MCE website layout and navigation structure
+- [x] Add MCE logo and header menu
+- [x] Switch to dark theme as default with toggle
+- [x] Match MCE website color scheme, typography, and spacing
+- [x] Implement MCE-style footer
