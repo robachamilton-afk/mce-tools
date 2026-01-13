@@ -15,6 +15,13 @@
       "when": 1768272794402,
       "tag": "0001_wonderful_kree",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1768287127451,
+      "tag": "0002_volatile_multiple_man",
+      "breakpoints": true
     }
   ]
 }

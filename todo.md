@@ -101,3 +101,15 @@
 - [x] Show detected configuration (tracking type, azimuth, tilt, GCR)
 - [x] Add performance metrics and analysis (PR, curtailment, lost revenue)
 - [x] Write tests for scanning engine (10/10 passing)
+
+## Equipment Details & Visualizations
+- [x] Extend database schema for inverter details (make, model, count)
+- [x] Extend database schema for module details (make, model)
+- [ ] Search AEMO/APVI data sources for equipment information (deferred - no data source found)
+- [x] Add conditional rendering for equipment fields (only show if data available)
+- [x] Implement PCU count field in schema (ready for satellite AI detection)
+- [x] Create generation profile chart (time-series with curtailment)
+- [x] Create PR trend visualization (technical vs overall)
+- [x] Create curtailment analysis chart (hourly pattern)
+- [x] Add performance graphs to assessment page
+- [x] Write tests for equipment data and visualizations (7/7 passing)

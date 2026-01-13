@@ -67,6 +67,13 @@ export const siteConfigurations = mysqlTable("site_configurations", {
   lastValidated: timestamp("last_validated"),
   satelliteImageUrl: text("satellite_image_url"),
   satelliteImageDate: timestamp("satellite_image_date"),
+  // Equipment details
+  inverterMake: varchar("inverter_make", { length: 128 }),
+  inverterModel: varchar("inverter_model", { length: 128 }),
+  inverterCount: int("inverter_count"),
+  pcuCount: int("pcu_count"), // Power Conversion Units detected from satellite
+  moduleMake: varchar("module_make", { length: 128 }),
+  moduleModel: varchar("module_model", { length: 128 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
