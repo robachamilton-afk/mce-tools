@@ -73,3 +73,18 @@
 - [x] Show matching sites as user types
 - [x] Display site name, DUID, and capacity in dropdown
 - [ ] Navigate to site detail page on selection (need to create site detail page)
+## Site Detail Page
+- [x] Create site detail page route (/site/:id)
+- [x] Display full site information (name, DUID, capacity, coordinates, status)
+- [x] Add location map with site marker (placeholder)
+- [x] Show assessment history table
+- [x] Add "New Assessment" button
+- [x] Write tests for site detail functionality
+
+## Assessment Dashboard
+- [x] Create dashboard page route (/dashboard)
+- [x] Display key metrics (total sites, assessments, recent activity)
+- [x] Show recent assessments list with filtering
+- [x] Add performance charts/visualizations (empty state)
+- [x] Show top 10 sites by capacity with click-through
+- [x] Write tests for dashboard functionality

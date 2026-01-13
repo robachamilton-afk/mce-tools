@@ -23,11 +23,13 @@ export const appRouter = router({
     list: publicProcedure.query(async () => {
       return await db.getAllSites();
     }),
+
     search: publicProcedure
       .input(z.object({ query: z.string() }))
       .query(async ({ input }) => {
         return await db.searchSites(input.query);
       }),
+
     getById: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
