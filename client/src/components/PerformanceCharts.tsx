@@ -102,12 +102,12 @@ export function PerformanceCharts({
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
               dataKey="date" 
-              stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: '12px' }}
+              stroke="hsl(var(--foreground))"
+              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
             />
             <YAxis 
-              stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: '12px' }}
+              stroke="hsl(var(--foreground))"
+              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
               label={{ value: 'Energy (MWh)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
             />
             <Tooltip
@@ -118,7 +118,7 @@ export function PerformanceCharts({
                 color: 'hsl(var(--popover-foreground))',
               }}
             />
-            <Legend />
+            <Legend wrapperStyle={{ color: 'hsl(var(--foreground))' }} />
             <Area
               type="monotone"
               dataKey="potential"
@@ -155,12 +155,12 @@ export function PerformanceCharts({
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
               dataKey="date" 
-              stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: '12px' }}
+              stroke="hsl(var(--foreground))"
+              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
             />
             <YAxis 
-              stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: '12px' }}
+              stroke="hsl(var(--foreground))"
+              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
               domain={[0, 100]}
               label={{ value: 'PR (%)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
             />
@@ -172,7 +172,7 @@ export function PerformanceCharts({
                 color: 'hsl(var(--popover-foreground))',
               }}
             />
-            <Legend />
+            <Legend wrapperStyle={{ color: 'hsl(var(--foreground))' }} />
             <Line
               type="monotone"
               dataKey="technicalPR"
@@ -201,12 +201,12 @@ export function PerformanceCharts({
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
               dataKey="hour" 
-              stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: '12px' }}
+              stroke="hsl(var(--foreground))"
+              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
             />
             <YAxis 
-              stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: '12px' }}
+              stroke="hsl(var(--foreground))"
+              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
               label={{ value: 'Power (MW)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
             />
             <Tooltip
@@ -217,7 +217,7 @@ export function PerformanceCharts({
                 color: 'hsl(var(--popover-foreground))',
               }}
             />
-            <Legend />
+            <Legend wrapperStyle={{ color: 'hsl(var(--foreground))' }} />
             <Bar 
               dataKey="generation" 
               stackId="a" 

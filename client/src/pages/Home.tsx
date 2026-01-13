@@ -4,8 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Zap, TrendingUp, MapPin, BarChart3, Satellite } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import SearchBar from "@/components/SearchBar";
+import { useLocation } from "wouter";
 
 export default function Home() {
+  const [, setLocation] = useLocation();
+  
   // Get all sites for the list view
   const { data: allSites, isLoading: isLoadingAll } = trpc.sites.list.useQuery();
 
@@ -148,6 +151,7 @@ export default function Home() {
                         <Button 
                           variant="outline" 
                           size="sm"
+                          onClick={() => setLocation(`/site/${site.id}`)}
                           className="border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white dark:border-orange-500 dark:text-orange-400 dark:hover:bg-orange-500 dark:hover:text-white"
                         >
                           <TrendingUp className="h-4 w-4 mr-2" />

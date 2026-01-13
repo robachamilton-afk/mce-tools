@@ -123,3 +123,11 @@
 - [x] Generate baseline assessments for each site
 - [x] Verify data quality and completeness (124/124 success, 0 errors)
 - [x] Create database export for deployment
+
+## UI Fixes
+- [x] Fix dark mode graph colors (ensure all text/labels are visible)
+- [x] Fix "Analyze Performance" button on home page to navigate to site detail page
+
+## Coordinate Refinement
+- [ ] Enhance satellite scanning to refine coordinates using GPT-4 Vision
+- [ ] Update coordinates to point to actual solar array center (not nearby addresses)
