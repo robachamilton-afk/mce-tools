@@ -125,7 +125,7 @@
 - [x] Create database export for deployment
 
 ## UI Fixes
-- [x] Fix dark mode graph colors (ensure all text/labels are visible)
+- [x] Fix dark mode graph colors - X-axis and Y-axis tick labels now visible
 - [x] Fix "Analyze Performance" button on home page to navigate to site detail page
 
 ## Coordinate Refinement

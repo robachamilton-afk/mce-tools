@@ -103,11 +103,13 @@ export function PerformanceCharts({
             <XAxis 
               dataKey="date" 
               stroke="hsl(var(--foreground))"
-              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
+              tick={{ fill: 'hsl(var(--foreground))' }}
+              style={{ fontSize: '12px' }}
             />
             <YAxis 
               stroke="hsl(var(--foreground))"
-              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
+              tick={{ fill: 'hsl(var(--foreground))' }}
+              style={{ fontSize: '12px' }}
               label={{ value: 'Energy (MWh)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
             />
             <Tooltip
@@ -156,11 +158,13 @@ export function PerformanceCharts({
             <XAxis 
               dataKey="date" 
               stroke="hsl(var(--foreground))"
-              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
+              tick={{ fill: 'hsl(var(--foreground))' }}
+              style={{ fontSize: '12px' }}
             />
             <YAxis 
               stroke="hsl(var(--foreground))"
-              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
+              tick={{ fill: 'hsl(var(--foreground))' }}
+              style={{ fontSize: '12px' }}
               domain={[0, 100]}
               label={{ value: 'PR (%)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
             />
@@ -202,11 +206,13 @@ export function PerformanceCharts({
             <XAxis 
               dataKey="hour" 
               stroke="hsl(var(--foreground))"
-              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
+              tick={{ fill: 'hsl(var(--foreground))' }}
+              style={{ fontSize: '12px' }}
             />
             <YAxis 
               stroke="hsl(var(--foreground))"
-              style={{ fontSize: '12px', fill: 'hsl(var(--foreground))' }}
+              tick={{ fill: 'hsl(var(--foreground))' }}
+              style={{ fontSize: '12px' }}
               label={{ value: 'Power (MW)', angle: -90, position: 'insideLeft', fill: 'hsl(var(--foreground))' }}
             />
             <Tooltip
