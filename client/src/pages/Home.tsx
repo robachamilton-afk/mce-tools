@@ -1,24 +1,15 @@
-import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Zap, TrendingUp, MapPin, BarChart3, Satellite } from "lucide-react";
+import { Zap, TrendingUp, MapPin, BarChart3, Satellite } from "lucide-react";
 import Navigation from "@/components/Navigation";
+import SearchBar from "@/components/SearchBar";
 
 export default function Home() {
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Search sites as user types
-  const { data: searchResults, isLoading: isSearching } = trpc.sites.search.useQuery(
-    { query: searchQuery },
-    { enabled: searchQuery.length >= 2 }
-  );
-
   // Get all sites for the list view
   const { data: allSites, isLoading: isLoadingAll } = trpc.sites.list.useQuery();
 
-  const displaySites = searchQuery.length >= 2 ? searchResults : allSites?.slice(0, 10);
+  const displaySites = allSites?.slice(0, 10);
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-900">
@@ -43,16 +34,7 @@ export default function Home() {
             </p>
 
             {/* Search Bar */}
-            <div className="relative max-w-2xl mx-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Search by site name or DUID (e.g., 'Clare Solar Farm' or 'CLARESF1')"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-14 text-lg bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700"
-              />
-            </div>
+            <SearchBar />
 
             {/* Feature Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8">
@@ -103,17 +85,15 @@ export default function Home() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                  {searchQuery.length >= 2 ? "Search Results" : "Solar Farms"}
+                  Solar Farms
                 </h2>
                 <p className="text-slate-600 dark:text-slate-400">
-                  {searchQuery.length >= 2 && searchResults 
-                    ? `${searchResults.length} results found`
-                    : "Select a site to begin performance analysis"}
+                  Select a site to begin performance analysis
                 </p>
               </div>
             </div>
 
-            {isSearching || isLoadingAll ? (
+            {isLoadingAll ? (
               <div className="text-center py-16">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
                 <p className="mt-4 text-slate-600 dark:text-slate-400">Loading sites...</p>
@@ -178,15 +158,6 @@ export default function Home() {
                   </Card>
                 ))}
               </div>
-            ) : searchQuery.length >= 2 ? (
-              <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                <CardContent className="py-16 text-center">
-                  <Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <p className="text-slate-600 dark:text-slate-400">
-                    No sites found matching "<span className="font-semibold">{searchQuery}</span>"
-                  </p>
-                </CardContent>
-              </Card>
             ) : (
               <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                 <CardContent className="py-16 text-center">

@@ -67,3 +67,9 @@
 - [x] Switch to dark theme as default with toggle
 - [x] Match MCE website color scheme, typography, and spacing
 - [x] Implement MCE-style footer
+
+## Search UX Improvements
+- [x] Add autocomplete dropdown to search bar (MCE-style)
+- [x] Show matching sites as user types
+- [x] Display site name, DUID, and capacity in dropdown
+- [ ] Navigate to site detail page on selection (need to create site detail page)
