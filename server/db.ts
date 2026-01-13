@@ -1,6 +1,6 @@
-import { eq, like, or } from "drizzle-orm";
+import { eq, like, or, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, sites } from "../drizzle/schema";
+import { InsertUser, users, sites, siteConfigurations, assessments, InsertSiteConfiguration, InsertAssessment } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -119,4 +119,76 @@ export async function getSiteById(id: number) {
   
   const result = await db.select().from(sites).where(eq(sites.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+// Site Configuration helpers
+export async function getSiteConfiguration(siteId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db
+    .select()
+    .from(siteConfigurations)
+    .where(eq(siteConfigurations.siteId, siteId))
+    .orderBy(desc(siteConfigurations.createdAt))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createSiteConfiguration(config: InsertSiteConfiguration) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(siteConfigurations).values(config);
+  return result;
+}
+
+// Assessment helpers
+export async function getSiteAssessments(siteId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db
+    .select()
+    .from(assessments)
+    .where(eq(assessments.siteId, siteId))
+    .orderBy(desc(assessments.assessmentDate));
+}
+
+export async function getAssessmentById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(assessments).where(eq(assessments.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createAssessment(assessment: InsertAssessment) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(assessments).values(assessment);
+  return result;
+}
+
+export async function getAllAssessments() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db
+    .select({
+      id: assessments.id,
+      siteId: assessments.siteId,
+      siteName: sites.name,
+      siteDuid: sites.duid,
+      assessmentDate: assessments.assessmentDate,
+      dateRangeStart: assessments.dateRangeStart,
+      dateRangeEnd: assessments.dateRangeEnd,
+      technicalPr: assessments.technicalPr,
+      overallPr: assessments.overallPr,
+      curtailmentPct: assessments.curtailmentPct,
+    })
+    .from(assessments)
+    .leftJoin(sites, eq(assessments.siteId, sites.id))
+    .orderBy(desc(assessments.assessmentDate));
 }

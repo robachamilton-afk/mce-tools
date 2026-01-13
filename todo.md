@@ -88,3 +88,16 @@
 - [x] Add performance charts/visualizations (empty state)
 - [x] Show top 10 sites by capacity with click-through
 - [x] Write tests for dashboard functionality
+
+## Clare Solar Farm Scanning & Assessment
+- [x] Review Clare Solar Farm scraped data
+- [x] Integrate Google Maps API with satellite imagery
+- [x] Add interactive map to Clare's site detail page
+- [x] Build scanning engine for tracking type detection
+- [x] Implement azimuth and tilt angle detection
+- [x] Create configuration analysis system
+- [x] Build comprehensive Clare assessment dashboard
+- [x] Display satellite imagery with annotations
+- [x] Show detected configuration (tracking type, azimuth, tilt, GCR)
+- [x] Add performance metrics and analysis (PR, curtailment, lost revenue)
+- [x] Write tests for scanning engine (10/10 passing)

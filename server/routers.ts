@@ -35,6 +35,30 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return await db.getSiteById(input.id);
       }),
+
+    getConfiguration: publicProcedure
+      .input(z.object({ siteId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getSiteConfiguration(input.siteId);
+      }),
+
+    getAssessments: publicProcedure
+      .input(z.object({ siteId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getSiteAssessments(input.siteId);
+      }),
+  }),
+
+  assessments: router({
+    list: publicProcedure.query(async () => {
+      return await db.getAllAssessments();
+    }),
+
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getAssessmentById(input.id);
+      }),
   }),
 });
 
