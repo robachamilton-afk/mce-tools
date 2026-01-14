@@ -107,13 +107,23 @@ export default function SiteDetail() {
               </div>
             </div>
             
-            <Button
-              onClick={() => setLocation("/assessment/new")}
-              className="bg-orange-600 hover:bg-orange-700 text-white"
-            >
-              <TrendingUp className="mr-2 h-4 w-4" />
-              New Assessment
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setLocation("/assessment/new")}
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                <TrendingUp className="mr-2 h-4 w-4" />
+                New Assessment
+              </Button>
+              <Button
+                onClick={() => setLocation(`/site/${siteId}/equipment`)}
+                variant="outline"
+                className="border-orange-600 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+              >
+                <MapPin className="mr-2 h-4 w-4" />
+                Tag Equipment
+              </Button>
+            </div>
           </div>
         </div>
       </div>

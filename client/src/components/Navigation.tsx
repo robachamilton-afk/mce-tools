@@ -43,26 +43,20 @@ export default function Navigation() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-6">
-              <Link href="/">
-                <a className="text-slate-600 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 font-semibold transition-colors">
-                  Sites
-                </a>
+              <Link href="/" className="text-slate-600 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 font-semibold transition-colors">
+                Sites
               </Link>
-              <Link href="/dashboard">
-                <a className="text-slate-600 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 font-semibold transition-colors">
-                  Dashboard
-                </a>
+              <Link href="/dashboard" className="text-slate-600 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 font-semibold transition-colors">
+                Dashboard
               </Link>
-              <Link href="/assessments">
-                <a className="text-slate-600 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 font-semibold transition-colors">
-                  Assessments
-                </a>
+              <Link href="/assessments" className="text-slate-600 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 font-semibold transition-colors">
+                Assessments
               </Link>
             </nav>
 
             <Link href="/new-assessment" className="hidden md:block">
-              <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8">
-                New Assessment
+              <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8" asChild>
+                <span>New Assessment</span>
               </Button>
             </Link>
 
@@ -78,34 +72,30 @@ export default function Navigation() {
                   <Link 
                     href="/"
                     onClick={() => setIsMenuOpen(false)}
+                    className="text-lg font-semibold text-slate-300 hover:text-white transition-colors"
                   >
-                    <a className="text-lg font-semibold text-slate-300 hover:text-white transition-colors">
-                      Sites
-                    </a>
+                    Sites
                   </Link>
                   <Link 
                     href="/dashboard"
                     onClick={() => setIsMenuOpen(false)}
+                    className="text-lg font-semibold text-slate-300 hover:text-white transition-colors"
                   >
-                    <a className="text-lg font-semibold text-slate-300 hover:text-white transition-colors">
-                      Dashboard
-                    </a>
+                    Dashboard
                   </Link>
                   <Link 
                     href="/assessments"
                     onClick={() => setIsMenuOpen(false)}
+                    className="text-lg font-semibold text-slate-300 hover:text-white transition-colors"
                   >
-                    <a className="text-lg font-semibold text-slate-300 hover:text-white transition-colors">
-                      Assessments
-                    </a>
+                    Assessments
                   </Link>
                   <Link 
                     href="/new-assessment"
                     onClick={() => setIsMenuOpen(false)}
+                    className="text-lg font-semibold text-orange-500 hover:text-orange-400 transition-colors"
                   >
-                    <a className="text-lg font-semibold text-orange-500 hover:text-orange-400 transition-colors">
-                      New Assessment
-                    </a>
+                    New Assessment
                   </Link>
                 </div>
               </SheetContent>

@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT \n  s.name,\n  s.duid,\n  s.latitude,\n  s.longitude,\n  sc.tracking_type,\n  sc.axis_azimuth,\n  sc.tilt_angle,\n  sc.gcr,\n  sc.pitch,\n  sc.inverter_count,\n  sc.pcu_count,\n  sc.coordinate_confidence,\n  sc.tracking_confidence,\n  sc.gcr_confidence,\n  sc.pitch_confidence,\n  sc.equipment_confidence,\n  sc.detection_notes,\n  sc.images_analyzed,\n  sc.updated_at\nFROM sites s\nLEFT JOIN site_configurations sc ON s.id = sc.site_id\nWHERE s.duid = 'CLARESF1'\nORDER BY sc.updated_at DESC\nLIMIT 1;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2R5G6YVYACRzXTL.b7be434eb6e1 --database V5ZBFm3AoRBaVCbSk5TE94 --execute \nSELECT \n  s.name,\n  s.duid,\n  s.latitude,\n  s.longitude,\n  sc.tracking_type,\n  sc.axis_azimuth,\n  sc.tilt_angle,\n  sc.gcr,\n  sc.pitch,\n  sc.inverter_count,\n  sc.pcu_count,\n  sc.coordinate_confidence,\n  sc.tracking_confidence,\n  sc.gcr_confidence,\n  sc.pitch_confidence,\n  sc.equipment_confidence,\n  sc.detection_notes,\n  sc.images_analyzed,\n  sc.updated_at\nFROM sites s\nLEFT JOIN site_configurations sc ON s.id = sc.site_id\nWHERE s.duid = 'CLARESF1'\nORDER BY sc.updated_at DESC\nLIMIT 1;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'sc.pitch' in 'field list'"
+  ]
+}

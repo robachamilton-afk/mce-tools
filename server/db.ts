@@ -192,3 +192,82 @@ export async function getAllAssessments() {
     .leftJoin(sites, eq(assessments.siteId, sites.id))
     .orderBy(desc(assessments.assessmentDate));
 }
+
+// Equipment detection helpers
+export async function getEquipmentDetections(siteId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { equipmentDetections } = await import("../drizzle/schema");
+  return await db
+    .select()
+    .from(equipmentDetections)
+    .where(eq(equipmentDetections.siteId, siteId))
+    .orderBy(desc(equipmentDetections.detectedAt));
+}
+
+export async function addEquipmentDetection(data: {
+  siteId: number;
+  type: "pcu" | "substation" | "combiner_box" | "transformer" | "other";
+  latitude: number;
+  longitude: number;
+  status: "auto_detected" | "user_added";
+  confidence?: number;
+  notes?: string;
+  verifiedBy?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { equipmentDetections } = await import("../drizzle/schema");
+  const values: any = {
+    ...data,
+    latitude: data.latitude.toString(),
+    longitude: data.longitude.toString(),
+  };
+  if (data.status === "user_added") {
+    values.verifiedAt = new Date();
+  }
+  const result = await db.insert(equipmentDetections).values(values);
+  return result;
+}
+
+export async function updateEquipmentLocation(id: number, latitude: number, longitude: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { equipmentDetections } = await import("../drizzle/schema");
+  const result = await db
+    .update(equipmentDetections)
+    .set({ latitude: latitude.toString(), longitude: longitude.toString(), updatedAt: new Date() })
+    .where(eq(equipmentDetections.id, id));
+  return result;
+}
+
+export async function verifyEquipmentDetection(id: number, userId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { equipmentDetections } = await import("../drizzle/schema");
+  const result = await db
+    .update(equipmentDetections)
+    .set({
+      status: "user_verified",
+      verifiedAt: new Date(),
+      verifiedBy: userId,
+      updatedAt: new Date(),
+    })
+    .where(eq(equipmentDetections.id, id));
+  return result;
+}
+
+export async function deleteEquipmentDetection(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { equipmentDetections } = await import("../drizzle/schema");
+  const result = await db
+    .delete(equipmentDetections)
+    .where(eq(equipmentDetections.id, id));
+  return result;
+}

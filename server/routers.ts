@@ -60,6 +60,57 @@ export const appRouter = router({
         return await db.getAssessmentById(input.id);
       }),
   }),
+
+  equipment: router({
+    // Get all equipment detections for a site
+    getBySiteId: publicProcedure
+      .input(z.object({ siteId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getEquipmentDetections(input.siteId);
+      }),
+
+    // Add new equipment detection (user-added)
+    add: publicProcedure
+      .input(z.object({
+        siteId: z.number(),
+        type: z.enum(["pcu", "substation", "combiner_box", "transformer", "other"]),
+        latitude: z.number(),
+        longitude: z.number(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.addEquipmentDetection({
+          ...input,
+          status: "user_added",
+          verifiedBy: ctx.user?.id,
+        });
+      }),
+
+    // Update equipment location
+    updateLocation: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        latitude: z.number(),
+        longitude: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.updateEquipmentLocation(input.id, input.latitude, input.longitude);
+      }),
+
+    // Verify equipment detection (change status to user_verified)
+    verify: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.verifyEquipmentDetection(input.id, ctx.user?.id);
+      }),
+
+    // Delete equipment detection
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.deleteEquipmentDetection(input.id);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

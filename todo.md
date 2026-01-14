@@ -128,6 +128,41 @@
 - [x] Fix dark mode graph colors - X-axis and Y-axis tick labels now visible
 - [x] Fix "Analyze Performance" button on home page to navigate to site detail page
 
-## Coordinate Refinement
-- [ ] Enhance satellite scanning to refine coordinates using GPT-4 Vision
-- [ ] Update coordinates to point to actual solar array center (not nearby addresses)
+## Satellite Vision Analysis (Iterative LLM Exploration)
+- [x] Implement LLM function-calling for satellite image fetching
+- [x] Give LLM ability to request images at any coordinates/zoom level
+- [x] Build iterative exploration workflow (wide view → locate farm → zoom in → analyze details)
+- [x] Handle coordinate offset correction automatically
+- [x] Restructure into focused phases: location (2 iter) → measurement (1 iter) → equipment (separate)
+- [x] Implement zoom 20 pixel-based measurement for accurate pitch/GCR
+- [x] Test zoom 17, 18, 19 for PCU detection accuracy
+- [x] Implement grid-based PCU detection with overlap and spatial context
+- [x] Add cut-out pattern guidance for PCU detection
+- [x] Finalize zoom 17 with overlap as production PCU detection
+- [x] Create equipment_detections table schema (type, lat/lon, status, confidence)
+- [x] Build interactive map tagging UI with Google Maps
+- [x] Implement equipment marker add/remove/move functionality
+- [x] Add equipment type selector (PCU, substation, combiner box, transformer)
+- [x] Create tRPC procedures for equipment CRUD operations
+- [x] Add user verification workflow (auto-detect → user validates → save)
+- [x] Add extraction metadata tracking (source, confidence, method, timestamp)
+- [ ] Test full workflow on Clare Solar Farm
+- [ ] Run bulk satellite analysis on all 124 sites
+- [ ] Generate site schematics (boundary, roads, equipment locations)
+- [ ] Align data export format with acc-tools datamodel structure
+
+## Equipment Data Population
+- [ ] Research AEMO NEM Registration database for equipment data
+- [ ] Build scraper for inverter specifications (make, model, count)
+- [ ] Build scraper for module specifications (make, model)
+- [ ] Test equipment scraping on Clare Solar Farm
+- [ ] Run bulk equipment population on all 124 sites
+
+## Bug Fixes
+- [x] Fix infinite loop error in EquipmentTagging component (Maximum update depth exceeded)
+- [x] Fix Google Maps duplicate loading error on equipment tagging page
+- [x] Investigate why auto-detected equipment not showing (resolved: site 1 has no equipment, site 114 Clare works correctly)
+
+## Equipment Tagging UX Improvements
+- [x] Set default map type to satellite view (currently defaults to map view)
+- [x] Auto-zoom map to fit all equipment markers with bounds

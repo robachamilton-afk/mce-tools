@@ -22,6 +22,20 @@
       "when": 1768287127451,
       "tag": "0002_volatile_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1768296735336,
+      "tag": "0003_slow_doctor_octopus",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1768309711322,
+      "tag": "0004_friendly_adam_warlock",
+      "breakpoints": true
     }
   ]
 }

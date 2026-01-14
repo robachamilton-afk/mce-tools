@@ -1,4 +1,4 @@
-import { decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { decimal, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -62,8 +62,17 @@ export const siteConfigurations = mysqlTable("site_configurations", {
   tiltAngle: decimal("tilt_angle", { precision: 5, scale: 2 }), // degrees
   maxRotationAngle: decimal("max_rotation_angle", { precision: 5, scale: 2 }), // degrees
   gcr: decimal("gcr", { precision: 4, scale: 3 }), // ground coverage ratio
+  pitch: decimal("pitch", { precision: 6, scale: 2 }), // row spacing in meters
   detectionMethod: mysqlEnum("detection_method", ["satellite", "performance", "manual", "hybrid"]),
-  confidenceScore: int("confidence_score"), // 0-100
+  confidenceScore: int("confidence_score"), // 0-100 (overall)
+  // Individual confidence scores from satellite analysis
+  coordinateConfidence: int("coordinate_confidence"), // 0-100
+  trackingConfidence: int("tracking_confidence"), // 0-100
+  gcrConfidence: int("gcr_confidence"), // 0-100
+  pitchConfidence: int("pitch_confidence"), // 0-100
+  equipmentConfidence: int("equipment_confidence"), // 0-100
+  imagesAnalyzed: int("images_analyzed"), // number of satellite images used
+  detectionNotes: text("detection_notes"), // notes from satellite analysis
   lastValidated: timestamp("last_validated"),
   satelliteImageUrl: text("satellite_image_url"),
   satelliteImageDate: timestamp("satellite_image_date"),
@@ -105,3 +114,27 @@ export const assessments = mysqlTable("assessments", {
 
 export type Assessment = typeof assessments.$inferSelect;
 export type InsertAssessment = typeof assessments.$inferInsert;
+/**
+ * Equipment detections from satellite analysis
+ * Stores automated detections and user-verified equipment locations
+ */
+export const equipmentDetections = mysqlTable("equipment_detections", {
+  id: int("id").autoincrement().primaryKey(),
+  siteId: int("site_id").notNull().references(() => sites.id, { onDelete: "cascade" }),
+  type: mysqlEnum("type", ["pcu", "substation", "combiner_box", "transformer", "other"]).notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }).notNull(),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }).notNull(),
+  status: mysqlEnum("status", ["auto_detected", "user_verified", "user_added", "user_deleted"]).default("auto_detected").notNull(),
+  confidence: int("confidence"), // 0-100, null for user-added
+  detectionMethod: varchar("detection_method", { length: 64 }).default("satellite_llm"), // satellite_llm, manual, etc.
+  detectedAt: timestamp("detected_at").defaultNow().notNull(),
+  verifiedAt: timestamp("verified_at"),
+  verifiedBy: int("verified_by").references(() => users.id),
+  notes: text("notes"), // user notes or detection details
+  metadata: json("metadata"), // additional data (grid cell, zoom level, etc.)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type EquipmentDetection = typeof equipmentDetections.$inferSelect;
+export type InsertEquipmentDetection = typeof equipmentDetections.$inferInsert;

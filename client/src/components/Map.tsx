@@ -92,27 +92,61 @@ const FORGE_BASE_URL =
   "https://forge.butterfly-effect.dev";
 const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
 
-function loadMapScript() {
-  return new Promise(resolve => {
+// Track if script is loading or loaded
+let scriptLoadingPromise: Promise<void> | null = null;
+
+function loadMapScript(): Promise<void> {
+  // If already loaded, resolve immediately
+  if (window.google?.maps) {
+    return Promise.resolve();
+  }
+
+  // If currently loading, return the existing promise
+  if (scriptLoadingPromise) {
+    return scriptLoadingPromise;
+  }
+
+  // Check if script tag already exists
+  const existingScript = document.querySelector(
+    `script[src*="${MAPS_PROXY_URL}/maps/api/js"]`
+  );
+  if (existingScript) {
+    // Wait for it to load
+    scriptLoadingPromise = new Promise((resolve) => {
+      const checkLoaded = setInterval(() => {
+        if (window.google?.maps) {
+          clearInterval(checkLoaded);
+          resolve();
+        }
+      }, 100);
+    });
+    return scriptLoadingPromise;
+  }
+
+  // Create new script
+  scriptLoadingPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
     script.async = true;
     script.crossOrigin = "anonymous";
     script.onload = () => {
-      resolve(null);
-      script.remove(); // Clean up immediately
+      resolve();
     };
     script.onerror = () => {
-      console.error("Failed to load Google Maps script");
+      scriptLoadingPromise = null; // Reset on error so it can retry
+      reject(new Error("Failed to load Google Maps script"));
     };
     document.head.appendChild(script);
   });
+
+  return scriptLoadingPromise;
 }
 
 interface MapViewProps {
   className?: string;
   initialCenter?: google.maps.LatLngLiteral;
   initialZoom?: number;
+  mapTypeId?: google.maps.MapTypeId;
   onMapReady?: (map: google.maps.Map) => void;
 }
 
@@ -120,6 +154,7 @@ export function MapView({
   className,
   initialCenter = { lat: 37.7749, lng: -122.4194 },
   initialZoom = 12,
+  mapTypeId = google.maps.MapTypeId.ROADMAP,
   onMapReady,
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -134,6 +169,7 @@ export function MapView({
     map.current = new window.google.maps.Map(mapContainer.current, {
       zoom: initialZoom,
       center: initialCenter,
+      mapTypeId: mapTypeId,
       mapTypeControl: true,
       fullscreenControl: true,
       zoomControl: true,
