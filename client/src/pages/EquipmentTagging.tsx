@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { MapView } from "@/components/Map";
 import { trpc } from "@/lib/trpc";
@@ -36,6 +36,7 @@ export default function EquipmentTagging() {
   const [markers, setMarkers] = useState<google.maps.marker.AdvancedMarkerElement[]>([]);
   const [selectedType, setSelectedType] = useState<EquipmentType>("pcu");
   const [isAddingMode, setIsAddingMode] = useState(false);
+  const hasAutoZoomedRef = useRef(false); // Track if we've done initial auto-zoom
 
   const { data: site, isLoading: siteLoading } = trpc.sites.getById.useQuery({ id: siteId });
   const { data: equipment, isLoading: equipmentLoading, refetch } = trpc.equipment.getBySiteId.useQuery({ siteId });
@@ -173,8 +174,8 @@ export default function EquipmentTagging() {
 
     setMarkers(newMarkers);
     
-    // Auto-zoom to fit all equipment markers
-    if (equipment.length > 0) {
+    // Auto-zoom to fit all equipment markers (only on initial load)
+    if (equipment.length > 0 && !hasAutoZoomedRef.current) {
       map.fitBounds(bounds);
       // Add some padding
       const listener = google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
@@ -183,6 +184,7 @@ export default function EquipmentTagging() {
           map.setZoom(18); // Don't zoom in too much
         }
       });
+      hasAutoZoomedRef.current = true; // Mark that we've done initial zoom
     }
   }, [map, equipment]); // Don't include mutation objects in dependencies
 
