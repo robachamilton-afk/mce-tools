@@ -168,3 +168,15 @@
 - [x] Auto-zoom map to fit all equipment markers with bounds
 - [x] Fix 'google is not defined' error in MapView default parameter
 - [x] Fix map zoom resetting to extents when new equipment is added (should only auto-zoom on initial load)
+- [x] Add "Fit to Bounds" button to manually reset zoom to see all equipment
+- [x] Add bulk verification action to mark all auto-detected equipment as verified at once
+
+## Custom Performance Analysis Engine
+- [ ] Design database schema for custom analyses (uploaded data, contract details, results)
+- [ ] Build file upload interface for SCADA data (generation, availability)
+- [ ] Build file upload interface for meteorological data (irradiance, temperature)
+- [ ] Create contract input form (capacity, tariffs, dates)
+- [ ] Implement LLM-powered column mapping for uploaded CSV files
+- [ ] Build performance model execution engine
+- [ ] Generate assessment results and visualizations
+- [ ] Create results page with metrics and charts

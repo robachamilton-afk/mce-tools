@@ -272,6 +272,55 @@ export default function EquipmentTagging() {
 
         {/* Controls & Summary */}
         <div className="space-y-6">
+          {/* Map Controls */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Map Controls</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => {
+                  if (!map || !equipment || equipment.length === 0) return;
+                  const bounds = new google.maps.LatLngBounds();
+                  equipment.forEach((item: any) => {
+                    bounds.extend({ lat: parseFloat(item.latitude), lng: parseFloat(item.longitude) });
+                  });
+                  map.fitBounds(bounds);
+                  setTimeout(() => {
+                    const currentZoom = map.getZoom();
+                    if (currentZoom && currentZoom > 18) {
+                      map.setZoom(18);
+                    }
+                  }, 100);
+                }}
+                disabled={!equipment || equipment.length === 0}
+              >
+                <MapPin className="mr-2 h-4 w-4" />
+                Fit to Bounds
+              </Button>
+              
+              {autoDetectedCount > 0 && (
+                <Button
+                  className="w-full"
+                  variant="default"
+                  onClick={async () => {
+                    if (!equipment) return;
+                    const autoDetected = equipment.filter((e: any) => e.status === "auto_detected");
+                    for (const item of autoDetected) {
+                      await verifyMutation.mutateAsync({ id: item.id });
+                    }
+                    refetch();
+                  }}
+                >
+                  <Check className="mr-2 h-4 w-4" />
+                  Verify All ({autoDetectedCount})
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Add Equipment */}
           <Card>
             <CardHeader>
