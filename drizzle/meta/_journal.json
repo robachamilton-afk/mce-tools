@@ -36,6 +36,20 @@
       "when": 1768309711322,
       "tag": "0004_friendly_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1768361957215,
+      "tag": "0005_flowery_magdalene",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1768362794558,
+      "tag": "0006_cold_tigra",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { decimal, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, decimal, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -138,3 +138,54 @@ export const equipmentDetections = mysqlTable("equipment_detections", {
 
 export type EquipmentDetection = typeof equipmentDetections.$inferSelect;
 export type InsertEquipmentDetection = typeof equipmentDetections.$inferInsert;
+
+/**
+ * Custom performance analyses with uploaded data
+ * Stores user-uploaded SCADA and meteo data for custom model runs
+ */
+export const customAnalyses = mysqlTable("custom_analyses", {
+  id: int("id").autoincrement().primaryKey(),
+  siteId: int("site_id").notNull().references(() => sites.id, { onDelete: "cascade" }),
+  userId: int("user_id").notNull().references(() => users.id),
+  name: varchar("name", { length: 255 }).notNull(), // user-provided name for this analysis
+  description: text("description"),
+  status: mysqlEnum("status", ["uploading", "extracting_model", "confirming_model", "mapping", "processing", "completed", "failed"]).default("uploading").notNull(),
+  
+  // Contract details
+  contractCapacityMw: decimal("contract_capacity_mw", { precision: 10, scale: 3 }),
+  tariffPerMwh: decimal("tariff_per_mwh", { precision: 10, scale: 2 }), // dollars per MWh
+  contractStartDate: timestamp("contract_start_date"),
+  contractEndDate: timestamp("contract_end_date"),
+  
+  // Data file URLs (stored in S3)
+  contractFileUrl: text("contract_file_url"),
+  contractFileName: varchar("contract_file_name", { length: 255 }),
+  scadaFileUrl: text("scada_file_url"),
+  scadaFileName: varchar("scada_file_name", { length: 255 }),
+  meteoFileUrl: text("meteo_file_url"),
+  meteoFileName: varchar("meteo_file_name", { length: 255 }),
+  
+  // Extracted model from contract (JSON)
+  extractedModel: json("extracted_model"), // { equations: [], parameters: {}, tariffs: {}, guarantees: {} }
+  modelConfirmed: boolean("model_confirmed").default(false),
+  modelConfirmedAt: timestamp("model_confirmed_at"),
+  
+  // Column mappings (JSON)
+  scadaColumnMapping: json("scada_column_mapping"), // { timestamp: "col1", generation: "col2", ... }
+  meteoColumnMapping: json("meteo_column_mapping"), // { timestamp: "col1", irradiance: "col2", ... }
+  
+  // Processing metadata
+  rowsProcessed: int("rows_processed"),
+  processingStartedAt: timestamp("processing_started_at"),
+  processingCompletedAt: timestamp("processing_completed_at"),
+  errorMessage: text("error_message"),
+  
+  // Results (link to assessment)
+  assessmentId: int("assessment_id").references(() => assessments.id),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CustomAnalysis = typeof customAnalyses.$inferSelect;
+export type InsertCustomAnalysis = typeof customAnalyses.$inferInsert;

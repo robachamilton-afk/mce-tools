@@ -111,6 +111,140 @@ export const appRouter = router({
         return await db.deleteEquipmentDetection(input.id);
       }),
   }),
+
+  customAnalysis: router({
+    // Create new custom analysis
+    create: publicProcedure
+      .input(z.object({
+        siteId: z.number(),
+        name: z.string(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!ctx.user) {
+          throw new Error("Authentication required");
+        }
+        return await db.createCustomAnalysis({
+          siteId: input.siteId,
+          userId: ctx.user.id,
+          name: input.name,
+          description: input.description,
+        });
+      }),
+
+    // Get custom analysis by ID
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getCustomAnalysisById(input.id);
+      }),
+
+    // List custom analyses for a site
+    listBySite: publicProcedure
+      .input(z.object({ siteId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getCustomAnalysesBySite(input.siteId);
+      }),
+
+    // Upload contract file
+    uploadContract: publicProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        fileName: z.string(),
+        fileContent: z.string(), // base64 encoded
+      }))
+      .mutation(async ({ input }) => {
+        return await db.uploadContractFile(input.analysisId, input.fileName, input.fileContent);
+      }),
+
+    // Extract model from contract
+    extractModel: publicProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.extractAndSaveContractModel(input.analysisId);
+      }),
+
+    // Confirm extracted model
+    confirmModel: publicProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        model: z.any(), // Complex nested structure
+      }))
+      .mutation(async ({ input }) => {
+        return await db.confirmContractModel(input.analysisId, input.model);
+      }),
+
+    // Upload SCADA file
+    uploadScada: publicProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        fileName: z.string(),
+        fileContent: z.string(), // base64 encoded
+      }))
+      .mutation(async ({ input }) => {
+        return await db.uploadScadaFile(input.analysisId, input.fileName, input.fileContent);
+      }),
+
+    // Upload meteo file
+    uploadMeteo: publicProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        fileName: z.string(),
+        fileContent: z.string(), // base64 encoded
+      }))
+      .mutation(async ({ input }) => {
+        return await db.uploadMeteoFile(input.analysisId, input.fileName, input.fileContent);
+      }),
+
+    // Analyze CSV/PDF headers with LLM
+    analyzeHeaders: publicProcedure
+      .input(z.object({
+        analysisId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        return await db.analyzeCSVHeaders(input.analysisId);
+      }),
+
+    // Save column mappings
+    saveColumnMappings: publicProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        scadaMapping: z.record(z.string(), z.string()),
+        meteoMapping: z.record(z.string(), z.string()),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.saveColumnMappings(
+          input.analysisId,
+          input.scadaMapping as Record<string, string>,
+          input.meteoMapping as Record<string, string>
+        );
+      }),
+
+    // Save contract details
+    saveContract: publicProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        capacityMw: z.number(),
+        tariffPerMwh: z.number(),
+        startDate: z.string(),
+        endDate: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.saveContractDetails(input.analysisId, {
+          capacityMw: input.capacityMw,
+          tariffPerMwh: input.tariffPerMwh,
+          startDate: input.startDate,
+          endDate: input.endDate,
+        });
+      }),
+
+    // Run performance analysis
+    runAnalysis: publicProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.runPerformanceAnalysis(input.analysisId);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

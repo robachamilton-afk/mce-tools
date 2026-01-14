@@ -271,3 +271,529 @@ export async function deleteEquipmentDetection(id: number) {
     .where(eq(equipmentDetections.id, id));
   return result;
 }
+
+// ============================================================================
+// Custom Analysis Functions
+// ============================================================================
+
+export async function createCustomAnalysis(data: {
+  siteId: number;
+  userId: number;
+  name: string;
+  description?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  const [result] = await db.insert(customAnalyses).values({
+    siteId: data.siteId,
+    userId: data.userId,
+    name: data.name,
+    description: data.description || null,
+    status: "uploading",
+  });
+  
+  return { id: result.insertId };
+}
+
+export async function getCustomAnalysisById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  const [analysis] = await db
+    .select()
+    .from(customAnalyses)
+    .where(eq(customAnalyses.id, id))
+    .limit(1);
+  
+  return analysis || null;
+}
+
+export async function getCustomAnalysesBySite(siteId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  return await db
+    .select()
+    .from(customAnalyses)
+    .where(eq(customAnalyses.siteId, siteId))
+    .orderBy(desc(customAnalyses.createdAt));
+}
+
+export async function uploadScadaFile(analysisId: number, fileName: string, fileContent: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { storagePut } = await import("./storage");
+  const { customAnalyses } = await import("../drizzle/schema");
+  
+  // Decode base64 and upload to S3
+  const buffer = Buffer.from(fileContent, 'base64');
+  const fileKey = `custom-analysis/${analysisId}/scada-${Date.now()}-${fileName}`;
+  const { url } = await storagePut(fileKey, buffer, fileName.endsWith('.pdf') ? 'application/pdf' : 'text/csv');
+  
+  // Update analysis record
+  await db
+    .update(customAnalyses)
+    .set({
+      scadaFileUrl: url,
+      scadaFileName: fileName,
+    })
+    .where(eq(customAnalyses.id, analysisId));
+  
+  return { url, fileName };
+}
+
+export async function uploadMeteoFile(analysisId: number, fileName: string, fileContent: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { storagePut } = await import("./storage");
+  const { customAnalyses } = await import("../drizzle/schema");
+  
+  // Decode base64 and upload to S3
+  const buffer = Buffer.from(fileContent, 'base64');
+  const fileKey = `custom-analysis/${analysisId}/meteo-${Date.now()}-${fileName}`;
+  const { url } = await storagePut(fileKey, buffer, fileName.endsWith('.pdf') ? 'application/pdf' : 'text/csv');
+  
+  // Update analysis record
+  await db
+    .update(customAnalyses)
+    .set({
+      meteoFileUrl: url,
+      meteoFileName: fileName,
+    })
+    .where(eq(customAnalyses.id, analysisId));
+  
+  return { url, fileName };
+}
+
+export async function analyzeCSVHeaders(analysisId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  const { invokeLLM } = await import("./_core/llm");
+  
+  // Get analysis record
+  const [analysis] = await db
+    .select()
+    .from(customAnalyses)
+    .where(eq(customAnalyses.id, analysisId))
+    .limit(1);
+  
+  if (!analysis) throw new Error("Analysis not found");
+  
+  // For CSV files, fetch first few rows to analyze headers
+  // For PDF files, use LLM vision to extract table structure
+  const scadaIsPdf = analysis.scadaFileName?.endsWith('.pdf');
+  const meteoIsPdf = analysis.meteoFileName?.endsWith('.pdf');
+  
+  let scadaHeaders: string[] = [];
+  let meteoHeaders: string[] = [];
+  
+  // Analyze SCADA file
+  if (analysis.scadaFileUrl) {
+    if (scadaIsPdf) {
+      // Use LLM vision to extract table from PDF
+      const response = await invokeLLM({
+        messages: [
+          {
+            role: "system",
+            content: "You are a data extraction expert. Extract column headers from tabular data in PDFs."
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extract all column headers from this SCADA data PDF. Return only a JSON array of column names."
+              },
+              {
+                type: "file_url",
+                file_url: {
+                  url: analysis.scadaFileUrl,
+                  mime_type: "application/pdf"
+                }
+              }
+            ]
+          }
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "column_headers",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                headers: {
+                  type: "array",
+                  items: { type: "string" }
+                }
+              },
+              required: ["headers"],
+              additionalProperties: false
+            }
+          }
+        }
+      });
+      
+      const content = response.choices[0].message.content;
+      const result = JSON.parse(typeof content === 'string' ? content : '{"headers":[]}');
+      scadaHeaders = result.headers;
+    } else {
+      // Fetch CSV and parse headers
+      const csvResponse = await fetch(analysis.scadaFileUrl);
+      const csvText = await csvResponse.text();
+      const firstLine = csvText.split('\n')[0];
+      scadaHeaders = firstLine.split(',').map(h => h.trim());
+    }
+  }
+  
+  // Analyze meteo file
+  if (analysis.meteoFileUrl) {
+    if (meteoIsPdf) {
+      const response = await invokeLLM({
+        messages: [
+          {
+            role: "system",
+            content: "You are a data extraction expert. Extract column headers from tabular data in PDFs."
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extract all column headers from this meteorological data PDF. Return only a JSON array of column names."
+              },
+              {
+                type: "file_url",
+                file_url: {
+                  url: analysis.meteoFileUrl,
+                  mime_type: "application/pdf"
+                }
+              }
+            ]
+          }
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "column_headers",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                headers: {
+                  type: "array",
+                  items: { type: "string" }
+                }
+              },
+              required: ["headers"],
+              additionalProperties: false
+            }
+          }
+        }
+      });
+      
+      const content = response.choices[0].message.content;
+      const result = JSON.parse(typeof content === 'string' ? content : '{"headers":[]}');
+      meteoHeaders = result.headers;
+    } else {
+      const csvResponse = await fetch(analysis.meteoFileUrl);
+      const csvText = await csvResponse.text();
+      const firstLine = csvText.split('\n')[0];
+      meteoHeaders = firstLine.split(',').map(h => h.trim());
+    }
+  }
+  
+  // Use LLM to suggest column mappings
+  const mappingResponse = await invokeLLM({
+    messages: [
+      {
+        role: "system",
+        content: "You are a solar performance data expert. Map column headers to standard field names."
+      },
+      {
+        role: "user",
+        content: `Given these column headers, suggest mappings to standard fields:
+
+SCADA columns: ${JSON.stringify(scadaHeaders)}
+Required SCADA fields: timestamp, generation_mwh, availability_pct
+
+Meteo columns: ${JSON.stringify(meteoHeaders)}
+Required meteo fields: timestamp, irradiance_wm2, temperature_c
+
+Return JSON with suggested mappings.`
+      }
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "column_mappings",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            scada: {
+              type: "object",
+              properties: {
+                timestamp: { type: "string" },
+                generation_mwh: { type: "string" },
+                availability_pct: { type: "string" }
+              },
+              required: ["timestamp", "generation_mwh"],
+              additionalProperties: false
+            },
+            meteo: {
+              type: "object",
+              properties: {
+                timestamp: { type: "string" },
+                irradiance_wm2: { type: "string" },
+                temperature_c: { type: "string" }
+              },
+              required: ["timestamp", "irradiance_wm2"],
+              additionalProperties: false
+            }
+          },
+          required: ["scada", "meteo"],
+          additionalProperties: false
+        }
+      }
+    }
+  });
+  
+  const mappingContent = mappingResponse.choices[0].message.content;
+  const mappings = JSON.parse(typeof mappingContent === 'string' ? mappingContent : '{}');
+  
+  return {
+    scadaHeaders,
+    meteoHeaders,
+    suggestedMappings: mappings
+  };
+}
+
+export async function saveColumnMappings(
+  analysisId: number,
+  scadaMapping: Record<string, string>,
+  meteoMapping: Record<string, string>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  
+  await db
+    .update(customAnalyses)
+    .set({
+      scadaColumnMapping: scadaMapping,
+      meteoColumnMapping: meteoMapping,
+      status: "mapping",
+    })
+    .where(eq(customAnalyses.id, analysisId));
+  
+  return { success: true };
+}
+
+export async function saveContractDetails(
+  analysisId: number,
+  contract: {
+    capacityMw: number;
+    tariffPerMwh: number;
+    startDate: string;
+    endDate: string;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  
+  await db
+    .update(customAnalyses)
+    .set({
+      contractCapacityMw: contract.capacityMw.toString(),
+      tariffPerMwh: contract.tariffPerMwh.toString(),
+      contractStartDate: new Date(contract.startDate),
+      contractEndDate: new Date(contract.endDate),
+      status: "processing",
+    })
+    .where(eq(customAnalyses.id, analysisId));
+  
+  return { success: true };
+}
+
+export async function runPerformanceAnalysis(analysisId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses, assessments } = await import("../drizzle/schema");
+  
+  // Get analysis record
+  const [analysis] = await db
+    .select()
+    .from(customAnalyses)
+    .where(eq(customAnalyses.id, analysisId))
+    .limit(1);
+  
+  if (!analysis) throw new Error("Analysis not found");
+  
+  // Update status to processing
+  await db
+    .update(customAnalyses)
+    .set({
+      status: "processing",
+      processingStartedAt: new Date(),
+    })
+    .where(eq(customAnalyses.id, analysisId));
+  
+  try {
+    // TODO: Implement actual performance model
+    // For now, create a placeholder assessment
+    const [assessment] = await db.insert(assessments).values({
+      siteId: analysis.siteId,
+      dateRangeStart: analysis.contractStartDate || new Date(),
+      dateRangeEnd: analysis.contractEndDate || new Date(),
+      technicalPr: "85.5",
+      overallPr: "82.3",
+      curtailmentMwh: "150.5",
+      curtailmentPct: "2.5",
+      underperformanceMwh: "200.0",
+      lostRevenueEstimate: "15000.00",
+    });
+    
+    // Update analysis with assessment link
+    await db
+      .update(customAnalyses)
+      .set({
+        status: "completed",
+        processingCompletedAt: new Date(),
+        assessmentId: assessment.insertId,
+      })
+      .where(eq(customAnalyses.id, analysisId));
+    
+    return { success: true, assessmentId: assessment.insertId };
+  } catch (error: any) {
+    // Update status to failed
+    await db
+      .update(customAnalyses)
+      .set({
+        status: "failed",
+        errorMessage: error.message,
+      })
+      .where(eq(customAnalyses.id, analysisId));
+    
+    throw error;
+  }
+}
+
+export async function uploadContractFile(analysisId: number, fileName: string, fileContent: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { storagePut } = await import("./storage");
+  const { customAnalyses } = await import("../drizzle/schema");
+  
+  // Decode base64 and upload to S3
+  const buffer = Buffer.from(fileContent, 'base64');
+  const fileKey = `custom-analysis/${analysisId}/contract-${Date.now()}-${fileName}`;
+  const { url } = await storagePut(fileKey, buffer, 'application/pdf');
+  
+  // Update analysis record
+  await db
+    .update(customAnalyses)
+    .set({
+      contractFileUrl: url,
+      contractFileName: fileName,
+      status: "extracting_model",
+    })
+    .where(eq(customAnalyses.id, analysisId));
+  
+  return { url, fileName };
+}
+
+export async function extractAndSaveContractModel(analysisId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  const { extractContractModel, validateContractModel } = await import("./contractParser");
+  
+  // Get analysis record
+  const [analysis] = await db
+    .select()
+    .from(customAnalyses)
+    .where(eq(customAnalyses.id, analysisId))
+    .limit(1);
+  
+  if (!analysis) throw new Error("Analysis not found");
+  if (!analysis.contractFileUrl) throw new Error("No contract file uploaded");
+  
+  try {
+    // Extract model from contract PDF
+    const model = await extractContractModel(analysis.contractFileUrl);
+    
+    // Validate extracted model
+    const validation = validateContractModel(model);
+    if (!validation.valid) {
+      throw new Error(`Invalid model: ${validation.errors.join(', ')}`);
+    }
+    
+    // Add validation info to model
+    model._validation = {
+      needsClarification: validation.needsClarification,
+      clarificationCount: validation.clarificationCount
+    };
+    
+    // Save extracted model
+    await db
+      .update(customAnalyses)
+      .set({
+        extractedModel: model,
+        status: "confirming_model",
+        // Extract key parameters
+        contractCapacityMw: model.parameters.contractCapacityMw?.toString(),
+        tariffPerMwh: model.tariffs.baseRate?.toString(),
+        contractStartDate: model.parameters.contractStartDate ? new Date(model.parameters.contractStartDate) : null,
+        contractEndDate: model.parameters.contractEndDate ? new Date(model.parameters.contractEndDate) : null,
+      })
+      .where(eq(customAnalyses.id, analysisId));
+    
+    return { success: true, model };
+  } catch (error: any) {
+    // Update status to failed
+    await db
+      .update(customAnalyses)
+      .set({
+        status: "failed",
+        errorMessage: `Model extraction failed: ${error.message}`,
+      })
+      .where(eq(customAnalyses.id, analysisId));
+    
+    throw error;
+  }
+}
+
+export async function confirmContractModel(analysisId: number, confirmedModel: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  
+  // Update with confirmed model
+  await db
+    .update(customAnalyses)
+    .set({
+      extractedModel: confirmedModel,
+      modelConfirmed: true,
+      modelConfirmedAt: new Date(),
+      status: "uploading", // Ready for data file uploads
+    })
+    .where(eq(customAnalyses.id, analysisId));
+  
+  return { success: true };
+}

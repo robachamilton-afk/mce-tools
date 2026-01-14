@@ -172,11 +172,13 @@
 - [x] Add bulk verification action to mark all auto-detected equipment as verified at once
 
 ## Custom Performance Analysis Engine
-- [ ] Design database schema for custom analyses (uploaded data, contract details, results)
-- [ ] Build file upload interface for SCADA data (generation, availability)
-- [ ] Build file upload interface for meteorological data (irradiance, temperature)
-- [ ] Create contract input form (capacity, tariffs, dates)
-- [ ] Implement LLM-powered column mapping for uploaded CSV files
-- [ ] Build performance model execution engine
-- [ ] Generate assessment results and visualizations
-- [ ] Create results page with metrics and charts
+- [x] Design database schema for custom analyses (uploaded data, contract details, results)
+- [x] Update schema to store extracted equations and model parameters from contracts
+- [x] Build file upload interface supporting Contract PDF, SCADA CSV/Excel/PDF, Meteo CSV/Excel/PDF
+- [x] Implement LLM contract parser to extract equations, tariffs, capacity guarantees, performance requirements
+- [x] Add undefined terms detection and clarification system
+- [x] Create model confirmation UI for reviewing and adjusting extracted equations and parameters
+- [ ] Build column mapping interface with LLM-suggested mappings for data files
+- [ ] Implement model execution engine with equation evaluation and variable substitution
+- [ ] Generate assessment results with performance metrics, revenue calculations, compliance checks
+- [ ] Create results page with charts, tables, and downloadable reports
