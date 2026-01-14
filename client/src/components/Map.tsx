@@ -146,7 +146,7 @@ interface MapViewProps {
   className?: string;
   initialCenter?: google.maps.LatLngLiteral;
   initialZoom?: number;
-  mapTypeId?: google.maps.MapTypeId;
+  mapTypeId?: "roadmap" | "satellite" | "hybrid" | "terrain";
   onMapReady?: (map: google.maps.Map) => void;
 }
 
@@ -154,7 +154,7 @@ export function MapView({
   className,
   initialCenter = { lat: 37.7749, lng: -122.4194 },
   initialZoom = 12,
-  mapTypeId = google.maps.MapTypeId.ROADMAP,
+  mapTypeId = "roadmap",
   onMapReady,
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);

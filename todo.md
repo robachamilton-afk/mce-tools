@@ -166,3 +166,4 @@
 ## Equipment Tagging UX Improvements
 - [x] Set default map type to satellite view (currently defaults to map view)
 - [x] Auto-zoom map to fit all equipment markers with bounds
+- [x] Fix 'google is not defined' error in MapView default parameter

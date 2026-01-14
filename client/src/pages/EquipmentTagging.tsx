@@ -260,7 +260,7 @@ export default function EquipmentTagging() {
                 <MapView
                   initialCenter={{ lat, lng }}
                   initialZoom={17}
-                  mapTypeId={google.maps.MapTypeId.SATELLITE}
+                  mapTypeId="satellite"
                   onMapReady={handleMapReady}
                 />
               </div>
