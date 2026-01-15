@@ -182,3 +182,6 @@
 - [ ] Implement model execution engine with equation evaluation and variable substitution
 - [ ] Generate assessment results with performance metrics, revenue calculations, compliance checks
 - [ ] Create results page with charts, tables, and downloadable reports
+
+## Bug Fixes (Jan 15, 2026)
+- [x] Fix 404 error for New Assessment button - route not configured

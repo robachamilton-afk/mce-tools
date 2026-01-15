@@ -9,6 +9,7 @@ import SiteDetail from "./pages/SiteDetail";
 import Dashboard from "./pages/Dashboard";
 import EquipmentTagging from "./pages/EquipmentTagging";
 import CustomAnalysis from "./pages/CustomAnalysis";
+import NewAssessment from "./pages/NewAssessment";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -19,6 +20,7 @@ function Router() {
       <Route path={"/site/:id/equipment"} component={EquipmentTagging} />
       <Route path={"/site/:id/custom-analysis"} component={CustomAnalysis} />
       <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/new-assessment"} component={NewAssessment} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
