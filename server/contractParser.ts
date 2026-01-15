@@ -21,7 +21,17 @@ Focus on:
 - Revenue and penalty formulas
 - Any mathematical equations or thresholds
 
-Return structured JSON with all extracted information.`
+For undefined terms:
+- ONLY flag a term as undefined if it is explicitly referenced in the contract but its definition is NOT provided anywhere in the document
+- Do NOT flag terms that are standard industry terminology (e.g., "Performance Ratio", "Availability", "Force Majeure")
+- Do NOT flag terms that can be reasonably inferred from context
+- Be consistent: the same contract should always produce the same list of undefined terms
+
+For missing parameters:
+- ONLY flag parameters that are required for calculations but not specified
+- Do NOT flag optional or industry-standard default values
+
+Return structured JSON with all extracted information. Be deterministic and consistent.`
       },
       {
         role: "user",

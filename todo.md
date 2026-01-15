@@ -193,3 +193,4 @@
 - [x] Add Excel parsing capability to backend for data processing
 - [x] Fix backend validation error "Invalid data type - upload PDF or csv" to accept Excel MIME types
 - [x] Add drag-and-drop functionality to file upload areas
+- [x] Fix non-deterministic contract extraction (same contract produces different clarifications each time)
