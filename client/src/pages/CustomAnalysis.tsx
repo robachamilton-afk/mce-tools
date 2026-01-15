@@ -347,7 +347,7 @@ export default function CustomAnalysis() {
           <CardHeader>
             <CardTitle>Upload SCADA Data</CardTitle>
             <CardDescription>
-              Upload CSV file with generation data (timestamp, power output, availability)
+              Upload file with generation data (CSV, Excel, or PDF with timestamp, power output, availability)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -358,7 +358,7 @@ export default function CustomAnalysis() {
               <input
                 ref={scadaInputRef}
                 type="file"
-                accept=".csv,.pdf"
+                accept=".csv,.xlsx,.xls,.pdf"
                 className="hidden"
                 onChange={handleScadaUpload}
               />
@@ -376,7 +376,7 @@ export default function CustomAnalysis() {
                   <p className="text-sm text-muted-foreground">
                     Click to upload or drag and drop
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">CSV or PDF files</p>
+                  <p className="text-xs text-muted-foreground mt-1">CSV, Excel (.xlsx, .xls), or PDF files</p>
                 </>
               )}
             </div>
@@ -402,7 +402,7 @@ export default function CustomAnalysis() {
           <CardHeader>
             <CardTitle>Upload Meteorological Data</CardTitle>
             <CardDescription>
-              Upload CSV file with weather data (timestamp, irradiance, temperature)
+              Upload file with weather data (CSV, Excel, or PDF with timestamp, irradiance, temperature)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -413,7 +413,7 @@ export default function CustomAnalysis() {
               <input
                 ref={meteoInputRef}
                 type="file"
-                accept=".csv,.pdf"
+                accept=".csv,.xlsx,.xls,.pdf"
                 className="hidden"
                 onChange={handleMeteoUpload}
               />
@@ -431,7 +431,7 @@ export default function CustomAnalysis() {
                   <p className="text-sm text-muted-foreground">
                     Click to upload or drag and drop
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">CSV or PDF files</p>
+                  <p className="text-xs text-muted-foreground mt-1">CSV, Excel (.xlsx, .xls), or PDF files</p>
                 </>
               )}
             </div>

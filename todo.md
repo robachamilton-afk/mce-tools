@@ -189,3 +189,5 @@
 - [x] Verify all "New Assessment" buttons route to /new-assessment
 - [x] Create Assessments list page (currently 404)
 - [x] Fix "Invalid Time value" error in contract extraction date parsing
+- [x] Update file upload to accept Excel files (.xlsx, .xls) for SCADA and meteo data
+- [x] Add Excel parsing capability to backend for data processing
