@@ -126,10 +126,30 @@ export default function CustomAnalysis() {
   const handleScadaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.name.endsWith('.csv') && !file.name.endsWith('.pdf')) {
+      const validExtensions = ['.csv', '.xlsx', '.xls', '.pdf'];
+      const isValid = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      if (!isValid) {
         toast({
           title: "Invalid file type",
-          description: "Please upload a CSV or PDF file",
+          description: "Please upload a CSV, Excel, or PDF file",
+          variant: "destructive",
+        });
+        return;
+      }
+      setScadaFile(file);
+    }
+  };
+
+  const handleScadaDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      const validExtensions = ['.csv', '.xlsx', '.xls', '.pdf'];
+      const isValid = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      if (!isValid) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a CSV, Excel, or PDF file",
           variant: "destructive",
         });
         return;
@@ -141,16 +161,40 @@ export default function CustomAnalysis() {
   const handleMeteoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.name.endsWith('.csv') && !file.name.endsWith('.pdf')) {
+      const validExtensions = ['.csv', '.xlsx', '.xls', '.pdf'];
+      const isValid = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      if (!isValid) {
         toast({
           title: "Invalid file type",
-          description: "Please upload a CSV or PDF file",
+          description: "Please upload a CSV, Excel, or PDF file",
           variant: "destructive",
         });
         return;
       }
       setMeteoFile(file);
     }
+  };
+
+  const handleMeteoDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      const validExtensions = ['.csv', '.xlsx', '.xls', '.pdf'];
+      const isValid = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      if (!isValid) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a CSV, Excel, or PDF file",
+          variant: "destructive",
+        });
+        return;
+      }
+      setMeteoFile(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
   };
 
   if (siteLoading) {
@@ -354,6 +398,8 @@ export default function CustomAnalysis() {
             <div
               className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary"
               onClick={() => scadaInputRef.current?.click()}
+              onDrop={handleScadaDrop}
+              onDragOver={handleDragOver}
             >
               <input
                 ref={scadaInputRef}
@@ -409,6 +455,8 @@ export default function CustomAnalysis() {
             <div
               className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary"
               onClick={() => meteoInputRef.current?.click()}
+              onDrop={handleMeteoDrop}
+              onDragOver={handleDragOver}
             >
               <input
                 ref={meteoInputRef}

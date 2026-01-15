@@ -2,6 +2,7 @@ import { eq, like, or, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, sites, siteConfigurations, assessments, InsertSiteConfiguration, InsertAssessment } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { getMimeType } from './mimeTypes';
 
 /**
  * Safely parse date string to Date object
@@ -349,7 +350,7 @@ export async function uploadScadaFile(analysisId: number, fileName: string, file
   // Decode base64 and upload to S3
   const buffer = Buffer.from(fileContent, 'base64');
   const fileKey = `custom-analysis/${analysisId}/scada-${Date.now()}-${fileName}`;
-  const { url } = await storagePut(fileKey, buffer, fileName.endsWith('.pdf') ? 'application/pdf' : 'text/csv');
+  const { url } = await storagePut(fileKey, buffer, getMimeType(fileName));
   
   // Update analysis record
   await db
@@ -373,7 +374,7 @@ export async function uploadMeteoFile(analysisId: number, fileName: string, file
   // Decode base64 and upload to S3
   const buffer = Buffer.from(fileContent, 'base64');
   const fileKey = `custom-analysis/${analysisId}/meteo-${Date.now()}-${fileName}`;
-  const { url } = await storagePut(fileKey, buffer, fileName.endsWith('.pdf') ? 'application/pdf' : 'text/csv');
+  const { url } = await storagePut(fileKey, buffer, getMimeType(fileName));
   
   // Update analysis record
   await db

@@ -191,3 +191,5 @@
 - [x] Fix "Invalid Time value" error in contract extraction date parsing
 - [x] Update file upload to accept Excel files (.xlsx, .xls) for SCADA and meteo data
 - [x] Add Excel parsing capability to backend for data processing
+- [x] Fix backend validation error "Invalid data type - upload PDF or csv" to accept Excel MIME types
+- [x] Add drag-and-drop functionality to file upload areas
