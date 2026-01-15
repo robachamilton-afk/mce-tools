@@ -185,3 +185,6 @@
 
 ## Bug Fixes (Jan 15, 2026)
 - [x] Fix 404 error for New Assessment button - route not configured
+- [x] Fix authentication error when creating new custom analysis
+- [x] Verify all "New Assessment" buttons route to /new-assessment
+- [x] Create Assessments list page (currently 404)

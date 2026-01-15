@@ -109,7 +109,7 @@ export default function SiteDetail() {
             
             <div className="flex gap-2">
               <Button
-                onClick={() => setLocation("/assessment/new")}
+                onClick={() => setLocation("/new-assessment")}
                 className="bg-orange-600 hover:bg-orange-700 text-white"
               >
                 <TrendingUp className="mr-2 h-4 w-4" />
@@ -326,7 +326,7 @@ export default function SiteDetail() {
                       No assessments yet for this site
                     </p>
                     <Button
-                      onClick={() => setLocation("/assessment/new")}
+                      onClick={() => setLocation("/new-assessment")}
                       className="bg-orange-600 hover:bg-orange-700 text-white"
                     >
                       Create First Assessment
@@ -389,7 +389,7 @@ export default function SiteDetail() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <Button
-                  onClick={() => setLocation("/assessment/new")}
+                  onClick={() => setLocation("/new-assessment")}
                   className="w-full bg-orange-600 hover:bg-orange-700 text-white justify-start"
                 >
                   <TrendingUp className="mr-2 h-4 w-4" />

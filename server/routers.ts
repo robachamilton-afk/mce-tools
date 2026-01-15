@@ -1,7 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { z } from "zod";
 
@@ -114,16 +114,13 @@ export const appRouter = router({
 
   customAnalysis: router({
     // Create new custom analysis
-    create: publicProcedure
+    create: protectedProcedure
       .input(z.object({
         siteId: z.number(),
         name: z.string(),
         description: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        if (!ctx.user) {
-          throw new Error("Authentication required");
-        }
         return await db.createCustomAnalysis({
           siteId: input.siteId,
           userId: ctx.user.id,
@@ -147,7 +144,7 @@ export const appRouter = router({
       }),
 
     // Upload contract file
-    uploadContract: publicProcedure
+    uploadContract: protectedProcedure
       .input(z.object({
         analysisId: z.number(),
         fileName: z.string(),
@@ -158,14 +155,14 @@ export const appRouter = router({
       }),
 
     // Extract model from contract
-    extractModel: publicProcedure
+    extractModel: protectedProcedure
       .input(z.object({ analysisId: z.number() }))
       .mutation(async ({ input }) => {
         return await db.extractAndSaveContractModel(input.analysisId);
       }),
 
     // Confirm extracted model
-    confirmModel: publicProcedure
+    confirmModel: protectedProcedure
       .input(z.object({
         analysisId: z.number(),
         model: z.any(), // Complex nested structure
@@ -175,7 +172,7 @@ export const appRouter = router({
       }),
 
     // Upload SCADA file
-    uploadScada: publicProcedure
+    uploadScada: protectedProcedure
       .input(z.object({
         analysisId: z.number(),
         fileName: z.string(),
@@ -186,7 +183,7 @@ export const appRouter = router({
       }),
 
     // Upload meteo file
-    uploadMeteo: publicProcedure
+    uploadMeteo: protectedProcedure
       .input(z.object({
         analysisId: z.number(),
         fileName: z.string(),

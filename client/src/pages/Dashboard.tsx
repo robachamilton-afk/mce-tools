@@ -36,7 +36,7 @@ export default function Dashboard() {
               </p>
             </div>
             <Button
-              onClick={() => setLocation("/assessment/new")}
+              onClick={() => setLocation("/new-assessment")}
               className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-6 text-lg"
             >
               <TrendingUp className="h-5 w-5 mr-2" />
@@ -145,7 +145,7 @@ export default function Dashboard() {
                       </CardDescription>
                     </div>
                     <Button
-                      onClick={() => setLocation("/assessment/new")}
+                      onClick={() => setLocation("/new-assessment")}
                       className="bg-orange-600 hover:bg-orange-700 text-white"
                     >
                       <TrendingUp className="h-4 w-4 mr-2" />
@@ -163,7 +163,7 @@ export default function Dashboard() {
                       Create your first performance assessment to get started
                     </p>
                     <Button
-                      onClick={() => setLocation("/assessment/new")}
+                      onClick={() => setLocation("/new-assessment")}
                       className="bg-orange-600 hover:bg-orange-700 text-white"
                     >
                       <TrendingUp className="h-4 w-4 mr-2" />
