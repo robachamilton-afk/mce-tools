@@ -1,6 +1,6 @@
 import { eq, like, or, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, sites, siteConfigurations, assessments, InsertSiteConfiguration, InsertAssessment } from "../drizzle/schema";
+import { InsertUser, users, sites, siteConfigurations, assessments, customAnalyses, InsertSiteConfiguration, InsertAssessment } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { getMimeType } from './mimeTypes';
 
@@ -812,5 +812,97 @@ export async function confirmContractModel(analysisId: number, confirmedModel: a
     })
     .where(eq(customAnalyses.id, analysisId));
   
+  return { success: true };
+}
+
+// Column mapping functions
+export async function analyzeAndStoreColumnMappings(analysisId: number, scadaFileUrl: string, meteoFileUrl: string) {
+  const { analyzeColumnMappings } = await import("./columnMapper");
+  const { parseExcelFile } = await import("./excelParser");
+  
+  // Fetch and parse headers from uploaded files
+  const scadaResponse = await fetch(scadaFileUrl);
+  const scadaBuffer = Buffer.from(await scadaResponse.arrayBuffer());
+  
+  const meteoResponse = await fetch(meteoFileUrl);
+  const meteoBuffer = Buffer.from(await meteoResponse.arrayBuffer());
+  
+  // Determine file type and extract headers
+  const scadaHeaders = scadaFileUrl.endsWith('.csv') 
+    ? scadaBuffer.toString().split('\n')[0].split(',').map(h => h.trim())
+    : (await parseExcelFile(scadaBuffer))[0];
+    
+  const meteoHeaders = meteoFileUrl.endsWith('.csv')
+    ? meteoBuffer.toString().split('\n')[0].split(',').map(h => h.trim())
+    : (await parseExcelFile(meteoBuffer))[0];
+
+  // Get model variables from analysis
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  const [analysis] = await db
+    .select()
+    .from(customAnalyses)
+    .where(eq(customAnalyses.id, analysisId))
+    .limit(1);
+
+  if (!analysis) {
+    throw new Error("Analysis not found");
+  }
+
+  // Extract variables from equations
+  const modelVariables: Array<{ name: string; description: string; unit: string }> = [];
+  
+  if (analysis.extractedModel) {
+    const model = JSON.parse(typeof analysis.extractedModel === 'string' ? analysis.extractedModel : JSON.stringify(analysis.extractedModel));
+    
+    // Collect variables from equations
+    if (model.equations) {
+      for (const eq of model.equations) {
+        if (eq.variables) {
+          for (const v of eq.variables) {
+            if (!modelVariables.find(mv => mv.name === v.name)) {
+              modelVariables.push({
+                name: v.name,
+                description: v.description,
+                unit: v.unit
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Analyze and suggest mappings
+  const mappings = await analyzeColumnMappings(scadaHeaders, meteoHeaders, modelVariables);
+
+  // Store mappings
+  await db.update(customAnalyses)
+    .set({
+      scadaColumnMapping: mappings.scada_mappings,
+      meteoColumnMapping: mappings.meteo_mappings,
+      status: 'mapping',
+      updatedAt: new Date()
+    })
+    .where(eq(customAnalyses.id, analysisId));
+
+  return mappings;
+}
+
+export async function updateColumnMappings(analysisId: number, scadaMappings: any, meteoMappings: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  await db.update(customAnalyses)
+    .set({
+      scadaColumnMapping: scadaMappings,
+      meteoColumnMapping: meteoMappings,
+      updatedAt: new Date()
+    })
+    .where(eq(customAnalyses.id, analysisId));
+
   return { success: true };
 }

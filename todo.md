@@ -178,10 +178,17 @@
 - [x] Implement LLM contract parser to extract equations, tariffs, capacity guarantees, performance requirements
 - [x] Add undefined terms detection and clarification system
 - [x] Create model confirmation UI for reviewing and adjusting extracted equations and parameters
-- [ ] Build column mapping interface with LLM-suggested mappings for data files
-- [ ] Implement model execution engine with equation evaluation and variable substitution
-- [ ] Generate assessment results with performance metrics, revenue calculations, compliance checks
-- [ ] Create results page with charts, tables, and downloadable reports
+- [x] Build column mapping interface with LLM-suggested mappings for SCADA and meteo files
+- [x] Implement LLM CSV/Excel header analysis to suggest column mappings
+- [ ] Create column mapping confirmation UI with dropdown selectors
+- [ ] Add tRPC procedures for column mapping analysis and updates
+- [ ] Implement model execution engine with equation parsing and evaluation
+- [ ] Build variable substitution system to map data columns to equation variables
+- [ ] Generate performance results (PR, availability, energy generation)
+- [ ] Calculate revenue and penalty assessments based on contract terms
+- [ ] Create results page with performance metrics and compliance status
+- [ ] Add charts and visualizations (time series, comparisons, distributions)
+- [ ] Implement downloadable report generation (PDF/Excel)
 
 ## Bug Fixes (Jan 15, 2026)
 - [x] Fix 404 error for New Assessment button - route not configured
