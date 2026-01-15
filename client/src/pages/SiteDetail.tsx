@@ -5,9 +5,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, MapPin, Zap, Calendar, TrendingUp, FileText, Satellite } from "lucide-react";
 import { MapView } from "@/components/Map";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Navigation from "@/components/Navigation";
 import { PerformanceCharts } from "@/components/PerformanceCharts";
+import { Loader2, Sparkles } from "lucide-react";
+
+function RunDemoButton({ siteId }: { siteId: number }) {
+  const [, setLocation] = useLocation();
+  const createDemo = trpc.customAnalysis.createDemo.useMutation({
+    onSuccess: (data) => {
+      setLocation(`/custom-analysis/${data.id}/results`);
+    },
+    onError: (error) => {
+      alert(`Failed to create demo: ${error.message}`);
+    },
+  });
+
+  return (
+    <Button
+      onClick={() => createDemo.mutate({ siteId })}
+      disabled={createDemo.isPending}
+      variant="outline"
+      className="border-purple-600 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950"
+    >
+      {createDemo.isPending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Creating Demo...
+        </>
+      ) : (
+        <>
+          <Sparkles className="mr-2 h-4 w-4" />
+          Run Demo Analysis
+        </>
+      )}
+    </Button>
+  );
+}
 
 export default function SiteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -115,6 +149,7 @@ export default function SiteDetail() {
                 <TrendingUp className="mr-2 h-4 w-4" />
                 New Assessment
               </Button>
+              <RunDemoButton siteId={siteId} />
               <Button
                 onClick={() => setLocation(`/site/${siteId}/equipment`)}
                 variant="outline"

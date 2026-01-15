@@ -149,6 +149,8 @@ export const customAnalyses = mysqlTable("custom_analyses", {
   userId: int("user_id").notNull().references(() => users.id),
   name: varchar("name", { length: 255 }).notNull(), // user-provided name for this analysis
   description: text("description"),
+  analysisMode: mysqlEnum("analysis_mode", ["contract", "mce_tool"]).default("contract").notNull(), // contract-based or MCE performance tool
+  isDemo: boolean("is_demo").default(false).notNull(), // flag for demo analyses
   status: mysqlEnum("status", ["uploading", "extracting_model", "confirming_model", "mapping", "processing", "completed", "failed"]).default("uploading").notNull(),
   
   // Contract details

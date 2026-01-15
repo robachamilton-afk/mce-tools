@@ -1,0 +1,2 @@
+ALTER TABLE `custom_analyses` ADD `analysis_mode` enum('contract','mce_tool') DEFAULT 'contract' NOT NULL;--> statement-breakpoint
+ALTER TABLE `custom_analyses` ADD `is_demo` boolean DEFAULT false NOT NULL;

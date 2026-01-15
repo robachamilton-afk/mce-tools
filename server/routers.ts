@@ -2,6 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { z } from "zod";
 
@@ -113,6 +114,51 @@ export const appRouter = router({
   }),
 
   customAnalysis: router({
+    createDemo: protectedProcedure
+      .input(z.object({ siteId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const { generateMockContract, generateMockSCADAData, generateMockMeteoData, generateMockExtractedModel } = await import('./demoDataGenerator');
+        const db = await import('./db');
+        
+        // Get site info
+        const { sites, customAnalyses } = await import('../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+        const site = await dbInstance.select().from(sites).where(eq(sites.id, input.siteId)).limit(1).then(r => r[0]);
+        if (!site) throw new TRPCError({ code: 'NOT_FOUND', message: 'Site not found' });
+        
+        // Create analysis
+        const analysis = await db.createCustomAnalysis({
+          siteId: input.siteId,
+          userId: ctx.user.id,
+          name: `Demo Analysis - ${site.name}`,
+          description: 'Demonstration analysis with mock data',
+        });
+        
+        // Generate and upload mock files
+        const contract = await generateMockContract(site.name || 'Solar Farm');
+        await db.uploadContractFile(analysis.id, contract.fileName, contract.url);
+        
+        const scada = await generateMockSCADAData(30);
+        await db.uploadScadaFile(analysis.id, scada.fileName, scada.url);
+        
+        const meteo = await generateMockMeteoData(30);
+        await db.uploadMeteoFile(analysis.id, meteo.fileName, meteo.url);
+        
+        // Store mock extracted model directly in database
+        const mockModel = generateMockExtractedModel();
+        await dbInstance.update(customAnalyses)
+          .set({
+            extractedModel: mockModel,
+            modelConfirmed: true,
+            modelConfirmedAt: new Date(),
+            status: 'mapping',
+          })
+          .where(eq(customAnalyses.id, analysis.id));
+        
+        return { id: analysis.id, message: 'Demo analysis created with mock data' };
+      }),
     // Create new custom analysis
     create: protectedProcedure
       .input(z.object({

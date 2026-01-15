@@ -203,3 +203,10 @@
 - [x] Fix backend validation error "Invalid data type - upload PDF or csv" to accept Excel MIME types
 - [x] Add drag-and-drop functionality to file upload areas
 - [x] Fix non-deterministic contract extraction (same contract produces different clarifications each time)
+
+## Analysis Workflow Enhancements
+- [ ] Add analysis mode selector (Contract-Based vs MCE Performance Tool)
+- [ ] Implement MCE Performance Tool workflow without contract requirement
+- [x] Create demo workflow button with auto-generated mock data
+- [x] Add demo data generation for contract, SCADA, and meteo files
+- [x] Add "Run Demo Analysis" button to site detail page
