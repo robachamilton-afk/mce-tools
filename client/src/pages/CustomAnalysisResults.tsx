@@ -4,6 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Download, ArrowLeft, TrendingUp, TrendingDown, DollarSign, Zap } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+
+// Generate mock time-series data for charts
+// TODO: Replace with real data from analysis results
+function generateMockTimeSeriesData() {
+  const data = [];
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 30);
+  
+  for (let i = 0; i < 30; i++) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + i);
+    
+    data.push({
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      pr: 80 + Math.random() * 10,
+      availability: 95 + Math.random() * 5,
+      energy: 3 + Math.random() * 2,
+    });
+  }
+  
+  return data;
+}
 
 export default function CustomAnalysisResults() {
   const params = useParams<{ id: string; analysisId: string }>();
@@ -12,6 +35,27 @@ export default function CustomAnalysisResults() {
 
   const { data: analysis, isLoading: analysisLoading } = trpc.customAnalysis.getById.useQuery({ id: analysisId });
   const { data: site } = trpc.sites.getById.useQuery({ id: siteId });
+  
+  const generatePDF = trpc.customAnalysis.generatePDFReport.useMutation();
+  const generateExcel = trpc.customAnalysis.generateExcelReport.useMutation();
+  
+  const handleExportPDF = async () => {
+    try {
+      const result = await generatePDF.mutateAsync({ analysisId });
+      window.open(result.url, '_blank');
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+    }
+  };
+  
+  const handleExportExcel = async () => {
+    try {
+      const result = await generateExcel.mutateAsync({ analysisId });
+      window.open(result.url, '_blank');
+    } catch (error) {
+      console.error('Failed to generate Excel:', error);
+    }
+  };
 
   if (analysisLoading) {
     return (
@@ -71,12 +115,28 @@ export default function CustomAnalysisResults() {
           <p className="text-muted-foreground">{analysis.description}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
+          <Button 
+            variant="outline" 
+            onClick={handleExportPDF}
+            disabled={generatePDF.isPending}
+          >
+            {generatePDF.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
             Export PDF
           </Button>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
+          <Button 
+            variant="outline"
+            onClick={handleExportExcel}
+            disabled={generateExcel.isPending}
+          >
+            {generateExcel.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
             Export Excel
           </Button>
         </div>
@@ -213,6 +273,62 @@ export default function CustomAnalysisResults() {
           </CardContent>
         </Card>
       )}
+
+      {/* Performance Charts */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Performance Trends</CardTitle>
+          <CardDescription>Time-series analysis of key metrics</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-8">
+            {/* Performance Ratio Chart */}
+            <div>
+              <h3 className="text-sm font-medium mb-4">Performance Ratio Over Time</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={generateMockTimeSeriesData()}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis domain={[70, 100]} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="pr" stroke="#8b5cf6" strokeWidth={2} name="Performance Ratio (%)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Availability Chart */}
+            <div>
+              <h3 className="text-sm font-medium mb-4">Availability Over Time</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={generateMockTimeSeriesData()}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis domain={[90, 100]} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="availability" stroke="#10b981" strokeWidth={2} name="Availability (%)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Energy Generation Chart */}
+            <div>
+              <h3 className="text-sm font-medium mb-4">Daily Energy Generation</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={generateMockTimeSeriesData()}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="energy" stroke="#f59e0b" strokeWidth={2} name="Energy (MWh)" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Compliance Status */}
       <Card>

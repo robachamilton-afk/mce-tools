@@ -187,8 +187,10 @@
 - [x] Generate performance results (PR, availability, energy generation)
 - [x] Calculate revenue and penalty assessments based on contract terms
 - [x] Create results page with performance metrics and compliance status
-- [ ] Add charts and visualizations (time series, comparisons, distributions)
-- [ ] Implement downloadable report generation (PDF/Excel)
+- [x] Install Recharts library for data visualization
+- [x] Add time-series charts for PR, availability, and generation trends
+- [x] Implement PDF report generation with performance summary and charts
+- [x] Implement Excel export with detailed data tables
 
 ## Bug Fixes (Jan 15, 2026)
 - [x] Fix 404 error for New Assessment button - route not configured

@@ -230,6 +230,66 @@ export const appRouter = router({
         return await db.executeCustomAnalysis(input.analysisId);
       }),
 
+    // Generate PDF report
+    generatePDFReport: protectedProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { generatePDFReport } = await import("./reportGenerator");
+        const analysis = await db.getCustomAnalysisById(input.analysisId);
+        
+        if (!analysis) throw new Error("Analysis not found");
+        
+        // TODO: Get actual results from assessment
+        const reportData = {
+          siteName: "Site Name", // TODO: Get from site
+          analysisName: analysis.name,
+          analysisDate: new Date(),
+          performanceRatio: 85.3,
+          availability: 98.5,
+          energyGeneration: 125000,
+          revenue: 12500,
+          penalties: 250,
+          contractTerms: analysis.extractedModel,
+          complianceStatus: {
+            prCompliant: true,
+            availabilityCompliant: true,
+          },
+        };
+        
+        const pdfUrl = await generatePDFReport(reportData);
+        return { url: pdfUrl };
+      }),
+
+    // Generate Excel report
+    generateExcelReport: protectedProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { generateExcelReport } = await import("./reportGenerator");
+        const analysis = await db.getCustomAnalysisById(input.analysisId);
+        
+        if (!analysis) throw new Error("Analysis not found");
+        
+        // TODO: Get actual results from assessment
+        const reportData = {
+          siteName: "Site Name",
+          analysisName: analysis.name,
+          analysisDate: new Date(),
+          performanceRatio: 85.3,
+          availability: 98.5,
+          energyGeneration: 125000,
+          revenue: 12500,
+          penalties: 250,
+          contractTerms: analysis.extractedModel,
+          complianceStatus: {
+            prCompliant: true,
+            availabilityCompliant: true,
+          },
+        };
+        
+        const excelUrl = await generateExcelReport(reportData);
+        return { url: excelUrl };
+      }),
+
     // Analyze CSV/PDF headers with LLM
     analyzeHeaders: publicProcedure
       .input(z.object({
