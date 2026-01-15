@@ -210,3 +210,4 @@
 - [x] Create demo workflow button with auto-generated mock data
 - [x] Add demo data generation for contract, SCADA, and meteo files
 - [x] Add "Run Demo Analysis" button to site detail page
+- [x] Fix 404 error when clicking Run Demo Analysis button

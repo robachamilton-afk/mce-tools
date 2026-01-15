@@ -20,7 +20,9 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/site/:id"} component={SiteDetail} />
       <Route path={"/site/:id/equipment"} component={EquipmentTagging} />          <Route path="/site/:id/custom-analysis" component={CustomAnalysis} />
-          <Route path="/site/:id/custom-analysis/:analysisId/results" component={CustomAnalysisResults} />      <Route path={"/dashboard"} component={Dashboard} />
+          <Route path="/site/:id/custom-analysis/:analysisId/results" component={CustomAnalysisResults} />
+          <Route path="/custom-analysis/:id/results" component={CustomAnalysisResults} />
+      <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/new-assessment"} component={NewAssessment} />
       <Route path={"/assessments"} component={Assessments} />
       <Route path={"/404"} component={NotFound} />

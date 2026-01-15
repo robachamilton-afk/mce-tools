@@ -30,11 +30,14 @@ function generateMockTimeSeriesData() {
 
 export default function CustomAnalysisResults() {
   const params = useParams<{ id: string; analysisId: string }>();
+  // Handle both /custom-analysis/:id/results and /site/:siteId/custom-analysis/:analysisId/results
+  const analysisId = parseInt(params.analysisId || params.id || "0");
   const siteId = parseInt(params.id || "0");
-  const analysisId = parseInt(params.analysisId || "0");
 
   const { data: analysis, isLoading: analysisLoading } = trpc.customAnalysis.getById.useQuery({ id: analysisId });
-  const { data: site } = trpc.sites.getById.useQuery({ id: siteId });
+  // Get site ID from analysis if not in route params
+  const actualSiteId = siteId || analysis?.siteId || 0;
+  const { data: site } = trpc.sites.getById.useQuery({ id: actualSiteId }, { enabled: actualSiteId > 0 });
   
   const generatePDF = trpc.customAnalysis.generatePDFReport.useMutation();
   const generateExcel = trpc.customAnalysis.generateExcelReport.useMutation();
@@ -74,7 +77,7 @@ export default function CustomAnalysisResults() {
             <CardDescription>The requested analysis could not be found.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href={`/site/${siteId}`}>
+            <Link href={actualSiteId ? `/site/${actualSiteId}` : '/'}>
               <Button>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Site
@@ -105,7 +108,7 @@ export default function CustomAnalysisResults() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <Link href={`/site/${siteId}`}>
+          <Link href={actualSiteId ? `/site/${actualSiteId}` : '/'}>
             <Button variant="ghost" size="sm">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to {site?.name || "Site"}
@@ -220,12 +223,12 @@ export default function CustomAnalysisResults() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Base Tariff:</span>
-                    <span className="ml-2 font-medium">${model.tariff_structure.base_tariff || 0}/MWh</span>
+                    <span className="ml-2 font-medium">${model.tariff_structure.base_tariff?.value || model.tariff_structure.base_tariff || 0}/MWh</span>
                   </div>
                   {model.tariff_structure.time_of_use_rates && (
                     <div>
                       <span className="text-muted-foreground">Time-of-Use:</span>
-                      <span className="ml-2 font-medium">Yes</span>
+                      <span className="ml-2 font-medium">Configured</span>
                     </div>
                   )}
                 </div>
@@ -239,32 +242,32 @@ export default function CustomAnalysisResults() {
                   {model.capacity_guarantees.min_performance_ratio && (
                     <div>
                       <span className="text-muted-foreground">Minimum PR:</span>
-                      <span className="ml-2 font-medium">{model.capacity_guarantees.min_performance_ratio}%</span>
+                      <span className="ml-2 font-medium">{model.capacity_guarantees.min_performance_ratio?.value || model.capacity_guarantees.min_performance_ratio}%</span>
                     </div>
                   )}
                   {model.capacity_guarantees.min_availability && (
                     <div>
                       <span className="text-muted-foreground">Minimum Availability:</span>
-                      <span className="ml-2 font-medium">{model.capacity_guarantees.min_availability}%</span>
+                      <span className="ml-2 font-medium">{model.capacity_guarantees.min_availability?.value || model.capacity_guarantees.min_availability}%</span>
                     </div>
                   )}
                 </div>
               </div>
             )}
 
-            {model.equations && model.equations.length > 0 && (
+            {model.equations && Object.keys(model.equations).length > 0 && (
               <div>
                 <h3 className="font-semibold mb-2">Performance Equations</h3>
                 <div className="space-y-2">
-                  {model.equations.slice(0, 3).map((eq: any, idx: number) => (
+                  {Object.entries(model.equations).slice(0, 3).map(([key, eq]: [string, any], idx: number) => (
                     <div key={idx} className="text-sm">
-                      <span className="font-medium">{eq.name}:</span>
+                      <span className="font-medium">{key}:</span>
                       <code className="ml-2 text-xs bg-muted px-2 py-1 rounded">{eq.formula}</code>
                     </div>
                   ))}
-                  {model.equations.length > 3 && (
+                  {Object.keys(model.equations).length > 3 && (
                     <p className="text-xs text-muted-foreground">
-                      +{model.equations.length - 3} more equations
+                      +{Object.keys(model.equations).length - 3} more equations
                     </p>
                   )}
                 </div>
