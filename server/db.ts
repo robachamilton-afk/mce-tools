@@ -3,6 +3,22 @@ import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, sites, siteConfigurations, assessments, InsertSiteConfiguration, InsertAssessment } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
+/**
+ * Safely parse date string to Date object
+ * Returns null if date is invalid
+ */
+function parseDate(dateString: string | null | undefined): Date | null {
+  if (!dateString) return null;
+  try {
+    const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return null;
+    return date;
+  } catch {
+    return null;
+  }
+}
+
 let _db: ReturnType<typeof drizzle> | null = null;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
@@ -618,8 +634,8 @@ export async function saveContractDetails(
     .set({
       contractCapacityMw: contract.capacityMw.toString(),
       tariffPerMwh: contract.tariffPerMwh.toString(),
-      contractStartDate: new Date(contract.startDate),
-      contractEndDate: new Date(contract.endDate),
+      contractStartDate: parseDate(contract.startDate),
+      contractEndDate: parseDate(contract.endDate),
       status: "processing",
     })
     .where(eq(customAnalyses.id, analysisId));
@@ -758,8 +774,8 @@ export async function extractAndSaveContractModel(analysisId: number) {
         // Extract key parameters
         contractCapacityMw: model.parameters.contractCapacityMw?.toString(),
         tariffPerMwh: model.tariffs.baseRate?.toString(),
-        contractStartDate: model.parameters.contractStartDate ? new Date(model.parameters.contractStartDate) : null,
-        contractEndDate: model.parameters.contractEndDate ? new Date(model.parameters.contractEndDate) : null,
+        contractStartDate: parseDate(model.parameters.contractStartDate),
+        contractEndDate: parseDate(model.parameters.contractEndDate),
       })
       .where(eq(customAnalyses.id, analysisId));
     

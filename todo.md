@@ -188,3 +188,4 @@
 - [x] Fix authentication error when creating new custom analysis
 - [x] Verify all "New Assessment" buttons route to /new-assessment
 - [x] Create Assessments list page (currently 404)
+- [x] Fix "Invalid Time value" error in contract extraction date parsing
