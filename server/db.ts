@@ -906,3 +906,102 @@ export async function updateColumnMappings(analysisId: number, scadaMappings: an
 
   return { success: true };
 }
+
+
+// Model execution functions
+export async function executeCustomAnalysis(analysisId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses, assessments } = await import("../drizzle/schema");
+  const { executeAnalysis } = await import("./modelExecutor");
+  
+  // Get analysis record
+  const [analysis] = await db
+    .select()
+    .from(customAnalyses)
+    .where(eq(customAnalyses.id, analysisId))
+    .limit(1);
+  
+  if (!analysis) {
+    throw new Error("Analysis not found");
+  }
+  
+  if (!analysis.scadaFileUrl || !analysis.meteoFileUrl) {
+    throw new Error("Data files not uploaded");
+  }
+  
+  if (!analysis.extractedModel) {
+    throw new Error("Contract model not extracted");
+  }
+  
+  if (!analysis.scadaColumnMapping || !analysis.meteoColumnMapping) {
+    throw new Error("Column mappings not configured");
+  }
+  
+  // Update status to processing
+  await db.update(customAnalyses)
+    .set({ status: 'processing', updatedAt: new Date() })
+    .where(eq(customAnalyses.id, analysisId));
+  
+  try {
+    // Parse model and mappings
+    const extractedModel = typeof analysis.extractedModel === 'string' 
+      ? JSON.parse(analysis.extractedModel) 
+      : analysis.extractedModel;
+      
+    const scadaMappings = typeof analysis.scadaColumnMapping === 'string'
+      ? JSON.parse(analysis.scadaColumnMapping)
+      : analysis.scadaColumnMapping;
+      
+    const meteoMappings = typeof analysis.meteoColumnMapping === 'string'
+      ? JSON.parse(analysis.meteoColumnMapping)
+      : analysis.meteoColumnMapping;
+    
+    // Execute model
+    const results = await executeAnalysis(
+      analysisId,
+      analysis.scadaFileUrl,
+      analysis.meteoFileUrl,
+      extractedModel,
+      scadaMappings,
+      meteoMappings
+    );
+    
+    // Create assessment record
+    const [assessmentResult] = await db.insert(assessments).values({
+      siteId: analysis.siteId,
+      assessmentDate: new Date(),
+      dateRangeStart: new Date(), // TODO: Extract from data
+      dateRangeEnd: new Date(), // TODO: Extract from data
+      technicalPr: results.performance_ratio.toString(),
+      overallPr: results.performance_ratio.toString(),
+      curtailmentMwh: "0", // TODO: Extract from data
+      curtailmentPct: "0",
+      underperformanceMwh: "0",
+      lostRevenueEstimate: results.penalties.toString(),
+    });
+    
+    // Update analysis status
+    await db.update(customAnalyses)
+      .set({
+        status: 'completed',
+        assessmentId: Number(assessmentResult.insertId),
+        updatedAt: new Date()
+      })
+      .where(eq(customAnalyses.id, analysisId));
+    
+    return {
+      success: true,
+      assessmentId: assessmentResult.insertId,
+      results,
+    };
+  } catch (error) {
+    // Update status to failed
+    await db.update(customAnalyses)
+      .set({ status: 'failed', updatedAt: new Date() })
+      .where(eq(customAnalyses.id, analysisId));
+    
+    throw error;
+  }
+}

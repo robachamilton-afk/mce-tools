@@ -193,6 +193,43 @@ export const appRouter = router({
         return await db.uploadMeteoFile(input.analysisId, input.fileName, input.fileContent);
       }),
 
+    // Analyze column mappings with LLM
+    analyzeColumnMappings: protectedProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        const analysis = await db.getCustomAnalysisById(input.analysisId);
+        if (!analysis || !analysis.scadaFileUrl || !analysis.meteoFileUrl) {
+          throw new Error("SCADA and meteo files must be uploaded first");
+        }
+        return await db.analyzeAndStoreColumnMappings(
+          input.analysisId,
+          analysis.scadaFileUrl,
+          analysis.meteoFileUrl
+        );
+      }),
+
+    // Update column mappings
+    updateColumnMappings: protectedProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        scadaMappings: z.any(),
+        meteoMappings: z.any(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.updateColumnMappings(
+          input.analysisId,
+          input.scadaMappings,
+          input.meteoMappings
+        );
+      }),
+
+    // Execute analysis and generate results
+    execute: protectedProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.executeCustomAnalysis(input.analysisId);
+      }),
+
     // Analyze CSV/PDF headers with LLM
     analyzeHeaders: publicProcedure
       .input(z.object({

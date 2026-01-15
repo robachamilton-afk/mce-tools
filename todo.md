@@ -180,13 +180,13 @@
 - [x] Create model confirmation UI for reviewing and adjusting extracted equations and parameters
 - [x] Build column mapping interface with LLM-suggested mappings for SCADA and meteo files
 - [x] Implement LLM CSV/Excel header analysis to suggest column mappings
-- [ ] Create column mapping confirmation UI with dropdown selectors
-- [ ] Add tRPC procedures for column mapping analysis and updates
-- [ ] Implement model execution engine with equation parsing and evaluation
-- [ ] Build variable substitution system to map data columns to equation variables
-- [ ] Generate performance results (PR, availability, energy generation)
-- [ ] Calculate revenue and penalty assessments based on contract terms
-- [ ] Create results page with performance metrics and compliance status
+- [x] Create column mapping confirmation UI with dropdown selectors
+- [x] Add tRPC procedures for column mapping analysis and updates
+- [x] Implement model execution engine with equation parsing and evaluation
+- [x] Build variable substitution system to map data columns to equation variables
+- [x] Generate performance results (PR, availability, energy generation)
+- [x] Calculate revenue and penalty assessments based on contract terms
+- [x] Create results page with performance metrics and compliance status
 - [ ] Add charts and visualizations (time series, comparisons, distributions)
 - [ ] Implement downloadable report generation (PDF/Excel)
 
