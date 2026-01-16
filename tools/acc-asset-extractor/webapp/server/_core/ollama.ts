@@ -1,16 +1,19 @@
 /**
- * Ollama LLM Integration
+ * Ollama Integration Module
  * 
- * Provides local LLM inference using Ollama with configurable models.
- * Supports both extraction (structured data) and chat (conversational) tasks.
+ * Provides a unified interface for interacting with local Ollama models
+ * for both text generation and vision tasks.
  */
 
-interface OllamaMessage {
-  role: "system" | "user" | "assistant";
+import { ENV } from './env';
+
+export interface OllamaMessage {
+  role: 'system' | 'user' | 'assistant';
   content: string;
+  images?: string[]; // Base64 encoded images for vision models
 }
 
-interface OllamaResponse {
+export interface OllamaResponse {
   model: string;
   created_at: string;
   message: {
@@ -18,156 +21,281 @@ interface OllamaResponse {
     content: string;
   };
   done: boolean;
+  total_duration?: number;
+  load_duration?: number;
+  prompt_eval_count?: number;
+  eval_count?: number;
 }
 
-interface OllamaConfig {
-  baseURL: string;
-  extractionModel: string;
-  chatModel: string;
-}
-
-// Load configuration from environment
-const config: OllamaConfig = {
-  baseURL: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
-  extractionModel: process.env.OLLAMA_EXTRACTION_MODEL || "qwen2.5:14b",
-  chatModel: process.env.OLLAMA_CHAT_MODEL || "mistral:7b",
-};
-
-/**
- * Call Ollama API for chat completion
- */
-async function callOllama(
-  messages: OllamaMessage[],
-  model: string,
+export interface OllamaGenerateOptions {
+  model: string;
+  messages: OllamaMessage[];
+  stream?: boolean;
+  format?: 'json'; // Request JSON output
   options?: {
     temperature?: number;
     top_p?: number;
-    max_tokens?: number;
-  }
-): Promise<string> {
-  const response = await fetch(`${config.baseURL}/api/chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: false,
-      options: {
-        temperature: options?.temperature ?? 0.7,
-        top_p: options?.top_p ?? 0.9,
-        num_predict: options?.max_tokens ?? 2048,
+    top_k?: number;
+    num_predict?: number;
+    num_ctx?: number;
+  };
+}
+
+/**
+ * Call Ollama chat completion API
+ */
+export async function ollamaChat(options: OllamaGenerateOptions): Promise<OllamaResponse> {
+  const ollamaUrl = ENV.OLLAMA_BASE_URL || 'http://localhost:11434';
+  const endpoint = `${ollamaUrl}/api/chat`;
+
+  console.log(`[Ollama] Calling ${endpoint} with model ${options.model}`);
+  console.log(`[Ollama] Message count: ${options.messages.length}`);
+  console.log(`[Ollama] Has images: ${options.messages.some(m => m.images?.length)}`);
+
+  try {
+    // Vision models can take 60+ seconds, especially with high-res images
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    }),
-  });
+      body: JSON.stringify({
+        ...options,
+        stream: false, // Always disable streaming for now
+      }),
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Ollama API error: ${response.status} - ${error}`);
-  }
+    clearTimeout(timeout);
 
-  const data: OllamaResponse = await response.json();
-  return data.message.content;
-}
-
-/**
- * Extract structured asset data from document text
- * Uses the larger, more accurate model (Qwen2.5:14b)
- */
-export async function extractAssets(
-  documentText: string,
-  projectName: string
-): Promise<any[]> {
-  const messages: OllamaMessage[] = [
-    {
-      role: "system",
-      content: `You are an expert at extracting asset information from engineering documentation.
-Extract all assets mentioned in the document and return them as a JSON array.
-
-Each asset should have:
-- name: Asset name/identifier
-- category: Type of asset (Inverter, Transformer, Switchboard, Cable, etc.)
-- location: Physical location or zone
-- specifications: Technical specifications as a string
-- confidence: Your confidence in the extraction (0-100)
-
-Return ONLY valid JSON, no markdown formatting or explanation.`,
-    },
-    {
-      role: "user",
-      content: `Project: ${projectName}\n\nDocument content:\n${documentText}`,
-    },
-  ];
-
-  const response = await callOllama(messages, config.extractionModel, {
-    temperature: 0.3, // Lower temperature for more consistent structured output
-    max_tokens: 4096,
-  });
-
-  // Parse JSON response
-  try {
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    return JSON.parse(response);
-  } catch (error) {
-    console.error("Failed to parse Ollama response:", response);
-    throw new Error("Invalid JSON response from Ollama");
-  }
-}
-
-/**
- * Chat completion for conversational tasks
- * Uses the faster, more efficient model (Mistral:7b)
- */
-export async function chatCompletion(
-  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>
-): Promise<string> {
-  return callOllama(messages, config.chatModel, {
-    temperature: 0.7,
-    max_tokens: 2048,
-  });
-}
-
-/**
- * Check if Ollama is available and models are loaded
- */
-export async function checkOllamaHealth(): Promise<{
-  available: boolean;
-  models: string[];
-  error?: string;
-}> {
-  try {
-    const response = await fetch(`${config.baseURL}/api/tags`);
     if (!response.ok) {
-      return {
-        available: false,
-        models: [],
-        error: `Ollama API returned ${response.status}`,
-      };
+      const errorText = await response.text();
+      throw new Error(`Ollama API error: ${response.status} ${errorText}`);
     }
 
     const data = await response.json();
-    const models = data.models?.map((m: any) => m.name) || [];
-
-    return {
-      available: true,
-      models,
-    };
+    return data;
   } catch (error) {
-    return {
-      available: false,
-      models: [],
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    console.error('[Ollama] Chat API error:', error);
+    console.error('[Ollama] Endpoint:', endpoint);
+    console.error('[Ollama] Model:', options.model);
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Ollama request timed out after 2 minutes. The model may be overloaded or the image is too large.');
+      }
+      if (error.message.includes('ECONNREFUSED')) {
+        throw new Error(`Cannot connect to Ollama at ${ollamaUrl}. Make sure Ollama is running (try: ollama serve)`);
+      }
+    }
+    
+    throw error;
   }
 }
 
 /**
- * Get current Ollama configuration
+ * Generate text using Ollama with a simple prompt
  */
-export function getOllamaConfig(): OllamaConfig {
-  return { ...config };
+export async function ollamaGenerate(
+  model: string,
+  prompt: string,
+  systemPrompt?: string,
+  options?: OllamaGenerateOptions['options']
+): Promise<string> {
+  const messages: OllamaMessage[] = [];
+  
+  if (systemPrompt) {
+    messages.push({ role: 'system', content: systemPrompt });
+  }
+  
+  messages.push({ role: 'user', content: prompt });
+
+  const response = await ollamaChat({
+    model,
+    messages,
+    options,
+  });
+
+  return response.message.content;
+}
+
+/**
+ * Generate structured JSON output using Ollama
+ */
+export async function ollamaGenerateJSON<T = any>(
+  model: string,
+  prompt: string,
+  systemPrompt?: string,
+  options?: OllamaGenerateOptions['options']
+): Promise<T> {
+  const messages: OllamaMessage[] = [];
+  
+  if (systemPrompt) {
+    messages.push({ role: 'system', content: systemPrompt });
+  }
+  
+  messages.push({ role: 'user', content: prompt });
+
+  const response = await ollamaChat({
+    model,
+    messages,
+    format: 'json',
+    options,
+  });
+
+  console.log(`[Ollama] Response received from ${model}`);
+  console.log(`[Ollama] Response length: ${response.message.content.length} characters`);
+  console.log(`[Ollama] Generation time: ${response.total_duration ? (response.total_duration / 1e9).toFixed(2) + 's' : 'unknown'}`);
+
+  try {
+    const parsed = JSON.parse(response.message.content);
+    console.log(`[Ollama] Successfully parsed JSON with keys:`, Object.keys(parsed));
+    return parsed;
+  } catch (error) {
+    console.error('[Ollama] Failed to parse JSON response');
+    console.error('[Ollama] Raw response (first 500 chars):', response.message.content.substring(0, 500));
+    console.error('[Ollama] Parse error:', error);
+    throw new Error(`Ollama returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Analyze an image using Ollama vision model (LLaVA)
+ * 
+ * @param imageUrl - URL or base64 encoded image
+ * @param prompt - Question or instruction about the image
+ * @param model - Vision model to use (default: llava:13b)
+ */
+export async function ollamaVision(
+  imageUrl: string,
+  prompt: string,
+  model: string = 'llava:13b',
+  systemPrompt?: string
+): Promise<string> {
+  // If imageUrl is a URL, fetch and convert to base64
+  let imageBase64: string;
+  
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    const response = await fetch(imageUrl);
+    const buffer = await response.arrayBuffer();
+    imageBase64 = Buffer.from(buffer).toString('base64');
+  } else if (imageUrl.startsWith('data:image')) {
+    // Extract base64 from data URL
+    imageBase64 = imageUrl.split(',')[1];
+  } else {
+    // Assume it's already base64
+    imageBase64 = imageUrl;
+  }
+
+  const messages: OllamaMessage[] = [];
+  
+  if (systemPrompt) {
+    messages.push({ role: 'system', content: systemPrompt });
+  }
+  
+  messages.push({
+    role: 'user',
+    content: prompt,
+    images: [imageBase64],
+  });
+
+  const response = await ollamaChat({
+    model,
+    messages,
+  });
+
+  return response.message.content;
+}
+
+/**
+ * Analyze an image and return structured JSON using Ollama vision model
+ */
+export async function ollamaVisionJSON<T = any>(
+  imageUrl: string,
+  prompt: string,
+  model: string = 'llava:13b',
+  systemPrompt?: string
+): Promise<T> {
+  // If imageUrl is a URL, fetch and convert to base64
+  let imageBase64: string;
+  
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    const response = await fetch(imageUrl);
+    const buffer = await response.arrayBuffer();
+    imageBase64 = Buffer.from(buffer).toString('base64');
+  } else if (imageUrl.startsWith('data:image')) {
+    // Extract base64 from data URL
+    imageBase64 = imageUrl.split(',')[1];
+  } else {
+    // Assume it's already base64
+    imageBase64 = imageUrl;
+  }
+
+  const messages: OllamaMessage[] = [];
+  
+  if (systemPrompt) {
+    messages.push({ role: 'system', content: systemPrompt });
+  }
+  
+  messages.push({
+    role: 'user',
+    content: prompt,
+    images: [imageBase64],
+  });
+
+  const response = await ollamaChat({
+    model,
+    messages,
+    format: 'json',
+  });
+
+  try {
+    return JSON.parse(response.message.content);
+  } catch (error) {
+    console.error('[Ollama] Failed to parse JSON response:', response.message.content);
+    throw new Error('Ollama returned invalid JSON');
+  }
+}
+
+/**
+ * Check if Ollama is available and running
+ */
+export async function checkOllamaHealth(): Promise<boolean> {
+  const ollamaUrl = ENV.OLLAMA_BASE_URL || 'http://localhost:11434';
+  
+  try {
+    const response = await fetch(`${ollamaUrl}/api/tags`, {
+      method: 'GET',
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('[Ollama] Health check failed:', error);
+    return false;
+  }
+}
+
+/**
+ * List available Ollama models
+ */
+export async function listOllamaModels(): Promise<string[]> {
+  const ollamaUrl = ENV.OLLAMA_BASE_URL || 'http://localhost:11434';
+  
+  try {
+    const response = await fetch(`${ollamaUrl}/api/tags`, {
+      method: 'GET',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to list models: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.models?.map((m: any) => m.name) || [];
+  } catch (error) {
+    console.error('[Ollama] Failed to list models:', error);
+    return [];
+  }
 }

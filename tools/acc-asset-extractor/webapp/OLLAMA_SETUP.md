@@ -1,277 +1,330 @@
-# Ollama Setup Guide for ACC Asset Extractor
+# Ollama Setup Guide - ACC Asset Extractor
 
-This guide will help you configure the ACC Asset Extractor to use your local Ollama instance with Qwen2.5:14b, Mistral:7b, and Llama3.1:8b models.
+This guide explains how to set up and use Ollama for local LLM inference in the ACC Asset Extractor application.
 
----
+## Overview
 
-## Model Configuration Strategy
+The ACC Asset Extractor supports **Ollama** as an alternative to the Manus LLM/Vision APIs. Ollama allows you to run AI models locally on your machine, providing:
 
-Based on your available models, here's the optimal configuration:
+- **Cost savings** - No API usage fees
+- **Privacy** - Data stays on your machine
+- **Offline capability** - Works without internet connection
+- **Customization** - Choose and configure your own models
 
-### Primary Configuration (Recommended)
+## Features
 
-```env
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_EXTRACTION_MODEL=qwen2.5:14b
-OLLAMA_CHAT_MODEL=mistral:7b
+### ✅ PDF Asset Extraction with Vision Models
+
+The asset extractor uses **vision models** to analyze PDF documents:
+
+1. **PDF-to-Image Conversion**: Converts each PDF page to a 300 DPI PNG image
+2. **Vision Analysis**: Ollama vision model analyzes the image to extract assets
+3. **Structured Output**: Returns JSON with asset details, specifications, and confidence scores
+
+**Supported Models:**
+- `llava:34b` - Best accuracy for document extraction (recommended)
+- `llava:13b` - Good balance of speed and accuracy
+- `llava:7b` - Fastest, suitable for simple documents
+
+## Installation
+
+### 1. Install Ollama
+
+**macOS / Linux:**
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-**Why this configuration?**
+**Windows:**
+Download from [https://ollama.com/download](https://ollama.com/download)
 
-- **Qwen2.5:14b for extraction**: Superior at structured data extraction and JSON generation. The 14B parameter size provides excellent accuracy for parsing complex engineering documents.
-- **Mistral:7b for chat**: Fast and efficient for conversational tasks, user assistance, and quick responses.
+### 2. Install PDF Processing Dependencies (REQUIRED)
 
-### Alternative Configuration
+The asset extractor converts PDFs to images before analysis. This requires **GraphicsMagick** and **Ghostscript**.
 
-If you experience performance issues or want faster extraction:
+**Windows:**
+```powershell
+# Using Chocolatey (recommended)
+choco install graphicsmagick
+choco install ghostscript
 
-```env
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_EXTRACTION_MODEL=llama3.1:8b
-OLLAMA_CHAT_MODEL=mistral:7b
+# Verify installation
+gm version
+gswin64c -version
 ```
 
----
+**macOS:**
+```bash
+brew install graphicsmagick
+brew install ghostscript
 
-## Performance Comparison
+# Verify installation
+gm version
+gs -version
+```
 
-| Model | Task | Speed | Accuracy | Memory | Best For |
-|-------|------|-------|----------|--------|----------|
-| **Qwen2.5:14b** | Extraction | ⭐⭐⭐ (8-12s/page) | ⭐⭐⭐⭐⭐ | ~10GB | Complex documents, high accuracy needs |
-| **Llama3.1:8b** | Extraction | ⭐⭐⭐⭐ (3-5s/page) | ⭐⭐⭐⭐ | ~6GB | Balanced speed/accuracy |
-| **Mistral:7b** | Chat | ⭐⭐⭐⭐⭐ (2-4s) | ⭐⭐⭐⭐ | ~5GB | Fast responses, conversations |
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install graphicsmagick ghostscript
 
----
+# Verify installation
+gm version
+gs -version
+```
 
-## Setup Instructions
+**Why these are needed:**
+- **GraphicsMagick**: Converts PDF pages to PNG images at 300 DPI
+- **Ghostscript**: PDF delegate for GraphicsMagick (handles PDF rendering)
 
-### 1. Verify Ollama Installation
+### 3. Pull Required Models
 
 ```bash
-# Check if Ollama is running
-curl http://localhost:11434/api/tags
+# Vision model for document analysis (REQUIRED - 20GB download)
+ollama pull llava:34b
 
-# If not running, start Ollama
+# Alternative: Smaller/faster vision models
+ollama pull llava:13b  # 7.4GB - good balance
+ollama pull llava:7b   # 4.7GB - fastest
+
+# Text model for chat (optional - 9GB download)
+ollama pull qwen2.5:14b
+```
+
+**Model Selection Guide:**
+
+| Model | Size | Speed | Quality | RAM Required |
+|-------|------|-------|---------|--------------|
+| llava:34b | 20GB | Slow (30-60s/page) | Excellent (95%+) | 32GB+ |
+| llava:13b | 7.4GB | Medium (15-30s/page) | Good (85-90%) | 16GB+ |
+| llava:7b | 4.7GB | Fast (10-20s/page) | Fair (70-80%) | 8GB+ |
+| qwen2.5:14b | 9GB | Fast | Excellent | 16GB+ |
+
+**Recommendation:**
+- For best results: `llava:34b`
+- For balanced performance: `llava:13b`
+- For limited hardware: `llava:7b`
+
+### 4. Start Ollama Server
+
+```bash
 ollama serve
 ```
 
-### 2. Verify Models are Pulled
+This starts the Ollama API server on `http://localhost:11434`.
+
+**Note**: On macOS/Windows, Ollama runs as a background service automatically after installation.
+
+## Configuration
+
+### Environment Variables
+
+Create or update `.env` file in the webapp directory:
 
 ```bash
-# List available models
-ollama list
+# Database
+DATABASE_URL="mysql://root:password@localhost:3306/acc_assets"
+NODE_ENV=development
 
-# You should see:
-# qwen2.5:14b
-# mistral:7b
-# llama3.1:8b
-```
-
-If any models are missing:
-
-```bash
-ollama pull qwen2.5:14b
-ollama pull mistral:7b
-ollama pull llama3.1:8b
-```
-
-### 3. Configure Environment
-
-Create a `.env` file in the project root (copy from ENV_TEMPLATE.md):
-
-```env
 # Ollama Configuration
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_EXTRACTION_MODEL=qwen2.5:14b
-OLLAMA_CHAT_MODEL=mistral:7b
-
-# Database
-DATABASE_URL=mysql://user:password@localhost:3306/acc_extractor
-
-# JWT Secret (generate with: openssl rand -base64 32)
-JWT_SECRET=your-generated-secret-here
+OLLAMA_TEXT_MODEL=qwen2.5:14b
+OLLAMA_VISION_MODEL=llava:34b
 ```
 
-### 4. Test Ollama Connection
+### Model Configuration
+
+You can change models by updating the environment variables:
 
 ```bash
-# Start the development server
+# Use faster but less accurate model
+OLLAMA_VISION_MODEL=llava:13b
+
+# Or use even faster model
+OLLAMA_VISION_MODEL=llava:7b
+```
+
+## Usage
+
+### Starting the Application
+
+```bash
+cd tools/acc-asset-extractor/webapp
+
+# Install dependencies (first time only)
+pnpm install
+
+# Start development server
 pnpm dev
-
-# The server will log Ollama health check on startup
-# Look for: "Ollama available: true, models: [...]"
 ```
 
----
+The application will automatically use Ollama if it's running and configured.
 
-## Model Selection Decision Tree
+### Extraction Process
 
-```
-┌─────────────────────────────────────┐
-│ What's your priority?               │
-└──────────┬──────────────────────────┘
-           │
-           ├─ High Accuracy (Engineering docs)
-           │  └─> Use Qwen2.5:14b for extraction
-           │
-           ├─ Fast Processing (Many documents)
-           │  └─> Use Llama3.1:8b for extraction
-           │
-           └─ Balanced (Default)
-              └─> Use Qwen2.5:14b + Mistral:7b
-```
+1. **Upload Documents**: Upload PDF engineering documents through the web interface
+2. **Start Extraction**: Click "Extract Assets" to begin processing
+3. **PDF Conversion**: Each PDF page is converted to a 300 DPI PNG image
+4. **Vision Analysis**: Ollama analyzes each page image to extract assets
+5. **Results**: Extracted assets appear in the validation table with confidence scores
 
----
+### Performance Expectations
+
+**Processing Time** (per page):
+- llava:34b: 30-60 seconds
+- llava:13b: 15-30 seconds
+- llava:7b: 10-20 seconds
+
+**Accuracy**:
+- llava:34b: Excellent (95%+ for clear documents)
+- llava:13b: Good (85-90% for clear documents)
+- llava:7b: Fair (70-80% for clear documents)
+
+**Hardware Requirements**:
+- llava:34b: 32GB+ RAM, GPU recommended
+- llava:13b: 16GB+ RAM
+- llava:7b: 8GB+ RAM
 
 ## Troubleshooting
 
-### Issue: "Ollama API error: ECONNREFUSED"
+### "Cannot connect to Ollama"
 
-**Solution:**
+**Cause**: Ollama server is not running.
+
+**Solution**:
 ```bash
-# Start Ollama server
 ollama serve
-
-# Verify it's running
-curl http://localhost:11434/api/tags
 ```
 
-### Issue: "Model not found: qwen2.5:14b"
+### "Model not found"
 
-**Solution:**
+**Cause**: Required model hasn't been downloaded.
+
+**Solution**:
 ```bash
-# Pull the model
-ollama pull qwen2.5:14b
-
-# Verify it's available
-ollama list
+ollama pull llava:34b
 ```
 
-### Issue: Extraction is too slow
+### "PDF conversion failed"
 
-**Solutions:**
-1. Switch to Llama3.1:8b for faster extraction:
-   ```env
-   OLLAMA_EXTRACTION_MODEL=llama3.1:8b
-   ```
+**Cause**: GraphicsMagick or Ghostscript not installed.
 
-2. Reduce context window (edit `server/_core/ollama.ts`):
-   ```typescript
-   max_tokens: 2048  // Reduce from 4096
-   ```
+**Solution**: Follow step 2 in Installation section above.
 
-3. Enable GPU acceleration (if available):
-   ```bash
-   # Ollama automatically uses GPU if CUDA is available
-   nvidia-smi  # Check GPU availability
-   ```
+**Verify installation:**
+```bash
+gm version
+gs -version
+```
 
-### Issue: Out of memory errors
+### "Out of memory"
 
-**Solutions:**
-1. Use smaller models:
-   ```env
-   OLLAMA_EXTRACTION_MODEL=llama3.1:8b  # 6GB instead of 10GB
-   ```
+**Cause**: Model is too large for available RAM.
 
-2. Process fewer documents concurrently (edit `server/extraction.ts`):
-   ```typescript
-   const MAX_CONCURRENT = 2  // Reduce from 5
-   ```
+**Solution**: Use a smaller model:
+```bash
+# In .env
+OLLAMA_VISION_MODEL=llava:13b
+```
 
-3. Increase system swap space:
-   ```bash
-   sudo fallocate -l 16G /swapfile
-   sudo chmod 600 /swapfile
-   sudo mkswap /swapfile
-   sudo swapon /swapfile
-   ```
+Or add swap space:
+```bash
+# Linux
+sudo fallocate -l 16G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+```
 
----
+### Slow Processing
+
+**Causes**:
+- Large model on CPU
+- High-resolution PDFs
+- Many pages
+
+**Solutions**:
+1. Use GPU acceleration (NVIDIA/AMD)
+2. Use smaller model (llava:13b or llava:7b)
+3. Reduce PDF resolution (edit `server/ollamaExtraction.ts`, change density from 300 to 150)
 
 ## Advanced Configuration
 
-### Custom Model Parameters
+### GPU Acceleration
 
-Edit `server/_core/ollama.ts` to customize model behavior:
-
-```typescript
-// For more creative/varied extraction
-temperature: 0.5  // Increase from 0.3
-
-// For more deterministic extraction
-temperature: 0.1  // Decrease from 0.3
-
-// For longer responses
-max_tokens: 8192  // Increase from 4096
-```
-
-### Using Different Models
-
-You can use any Ollama-compatible model:
-
-```env
-# Example: Using CodeLlama for code-heavy documents
-OLLAMA_EXTRACTION_MODEL=codellama:13b
-
-# Example: Using Mixtral for chat
-OLLAMA_CHAT_MODEL=mixtral:8x7b
-```
-
----
-
-## Performance Optimization Tips
-
-1. **Pre-warm models**: Run a test extraction before processing large batches to load models into memory.
-
-2. **Batch processing**: Process multiple documents in parallel (configured in `server/extraction.ts`).
-
-3. **GPU acceleration**: Ensure Ollama is using your GPU:
-   ```bash
-   # Check GPU usage while extraction is running
-   watch -n 1 nvidia-smi
-   ```
-
-4. **Model quantization**: Use quantized models for faster inference:
-   ```bash
-   ollama pull qwen2.5:14b-q4_0  # 4-bit quantized version
-   ```
-
----
-
-## Monitoring
-
-### Check Ollama Logs
+Ollama automatically uses GPU if available. To verify:
 
 ```bash
-# View Ollama server logs
-journalctl -u ollama -f
-
-# Or if running manually
-# Check terminal where you ran `ollama serve`
+ollama ps
 ```
 
-### Monitor Resource Usage
+Look for GPU utilization in the output.
+
+**Check GPU usage:**
+```bash
+# NVIDIA
+watch -n 1 nvidia-smi
+
+# AMD
+watch -n 1 rocm-smi
+```
+
+### Custom Models
+
+You can use custom fine-tuned models:
 
 ```bash
-# CPU and Memory
-htop
+# Pull your custom model
+ollama pull your-username/custom-llava
 
-# GPU (if available)
-nvidia-smi -l 1
-
-# Disk I/O
-iotop
+# Update .env
+OLLAMA_VISION_MODEL=your-username/custom-llava
 ```
 
----
+### Batch Processing
 
-## Next Steps
+For large document sets, consider:
 
-1. ✅ Verify Ollama is running and models are loaded
-2. ✅ Configure `.env` with your preferred models
-3. ✅ Start the development server: `pnpm dev`
-4. ✅ Test extraction with demo data
-5. ✅ Monitor performance and adjust configuration as needed
+1. Process during off-hours
+2. Use multiple Ollama instances on different ports
+3. Implement queue system for parallel processing
 
-For more help, see the main [README.md](README.md) or open an issue on GitHub.
+## Fallback to Manus API
+
+If Ollama is not available, the application can fall back to Manus APIs:
+
+```bash
+# In .env, add:
+BUILT_IN_FORGE_API_URL=https://forge.manus.im
+BUILT_IN_FORGE_API_KEY=your_api_key
+```
+
+The application will automatically use Manus APIs if Ollama connection fails.
+
+## Comparison: Ollama vs Manus API
+
+| Feature | Ollama | Manus API |
+|---------|--------|-----------|
+| Cost | Free | Pay per use |
+| Privacy | Local | Cloud |
+| Speed | Depends on hardware | Fast |
+| Setup | Complex | Simple |
+| Offline | Yes | No |
+| Accuracy | Model-dependent | High |
+| PDF Support | Yes (via vision models) | Yes |
+
+## Resources
+
+- [Ollama Documentation](https://github.com/ollama/ollama)
+- [LLaVA Model Card](https://ollama.com/library/llava)
+- [Qwen2.5 Model Card](https://ollama.com/library/qwen2.5)
+- [GraphicsMagick Documentation](http://www.graphicsmagick.org/)
+- [Solar Analyzer Ollama Setup](../../performance-assessment/solar-analyzer/OLLAMA_SETUP.md) - Similar implementation
+
+## Support
+
+For issues or questions:
+1. Check the [Troubleshooting](#troubleshooting) section
+2. Review Ollama logs: `ollama logs`
+3. Check application logs in the console
+4. Open an issue on the GitHub repository
