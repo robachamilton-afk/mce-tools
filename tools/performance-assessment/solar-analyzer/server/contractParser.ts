@@ -4,7 +4,7 @@ import { convertPdfUrlToImages } from "./pdfToImages";
 
 /**
  * Extract performance model from contract PDF using vision model
- * Converts PDF pages to images first, then analyzes with llama3.2-vision:11b
+ * Converts PDF pages to images first, then analyzes with llava:34b
  */
 export async function extractContractModel(contractFileUrl: string) {
   console.log('[Contract Parser] Fetching and converting PDF from:', contractFileUrl);
@@ -38,7 +38,14 @@ IMPORTANT:
 - If you cannot read something clearly, note it in ambiguities
 - Be thorough - missing a key formula means the analysis will fail
 
-Return valid JSON only. No markdown, no explanations.`;
+OUTPUT FORMAT:
+You MUST respond with ONLY a valid JSON object. Do not include:
+- Markdown code blocks (no \`\`\`json or \`\`\`)
+- HTML tags (no <h1>, <div>, etc.)
+- Explanatory text before or after the JSON
+- Any other formatting
+
+Start your response with { and end with }. Nothing else.`;
   
   const userPrompt = `Extract the complete performance model from this solar contract. The contract is provided as ${pages.length} page image(s). Analyze ALL pages to extract equations, parameters, tariffs, and guarantees.
 
@@ -57,7 +64,7 @@ Return a JSON object with this exact structure:
   
   try {
     console.log('[Contract Parser] Starting extraction with Ollama vision model...');
-    console.log(`[Contract Parser] Model: llama3.2-vision:11b`);
+    console.log(`[Contract Parser] Model: llava:34b`);
     console.log(`[Contract Parser] Processing ${pages.length} pages`);
     
     // For multi-page PDFs, we need to process all pages
