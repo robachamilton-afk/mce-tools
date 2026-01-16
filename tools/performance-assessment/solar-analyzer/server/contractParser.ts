@@ -6,7 +6,7 @@ import { ENV } from "./_core/env";
  */
 async function extractPdfText(pdfBuffer: ArrayBuffer): Promise<string> {
   // Use pdf-parse to extract text from PDF
-  const pdf = await import('pdf-parse/lib/pdf-parse.js');
+  const pdf = await import('pdf-parse');
   const data = await pdf.default(Buffer.from(pdfBuffer));
   return data.text;
 }

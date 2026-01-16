@@ -255,3 +255,6 @@
 - [ ] Add progress tracking for contract extraction
 - [ ] Add progress bar/status updates to frontend
 - [ ] Test with 6.71 MB contract PDF
+
+## Bug Fixes
+- [x] Fix pdf-parse import error in contract parser
