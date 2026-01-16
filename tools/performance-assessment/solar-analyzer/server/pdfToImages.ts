@@ -4,7 +4,6 @@
  * Converts PDF pages to PNG images for vision model processing
  */
 
-import pdf2pic from 'pdf2pic';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
@@ -49,8 +48,16 @@ export async function convertPdfToImages(
     console.log(`[PDF Converter] Temp directory: ${tempDir}`);
     console.log(`[PDF Converter] Settings: ${density} DPI, ${width}x${height}px, ${format}`);
     
+    // Dynamic import for better CommonJS/ESM interop
+    const pdf2picModule = await import('pdf2pic');
+    const fromPath = pdf2picModule.default?.fromPath || pdf2picModule.fromPath;
+    
+    if (!fromPath) {
+      throw new Error('pdf2pic module did not export fromPath function');
+    }
+    
     // Configure pdf2pic
-    const converter = pdf2pic.fromPath(pdfPath, {
+    const converter = fromPath(pdfPath, {
       density,
       saveFilename: 'page',
       savePath: tempDir,
