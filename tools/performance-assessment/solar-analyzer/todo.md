@@ -258,3 +258,4 @@
 
 ## Bug Fixes
 - [x] Fix pdf-parse import error in contract parser
+- [x] Replace pdf-parse with working PDF text extraction (pdfjs-dist)

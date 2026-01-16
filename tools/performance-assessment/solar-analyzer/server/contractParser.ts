@@ -2,13 +2,26 @@ import { ollamaGenerateJSON } from "./_core/ollama";
 import { ENV } from "./_core/env";
 
 /**
- * Extract text from PDF using pdf-parse
+ * Extract text from PDF using pdfjs-dist
  */
 async function extractPdfText(pdfBuffer: ArrayBuffer): Promise<string> {
-  // Use pdf-parse to extract text from PDF
-  const pdf = await import('pdf-parse');
-  const data = await pdf.default(Buffer.from(pdfBuffer));
-  return data.text;
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  
+  // Load the PDF document
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) });
+  const pdf = await loadingTask.promise;
+  
+  let fullText = '';
+  
+  // Extract text from each page
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.map((item: any) => item.str).join(' ');
+    fullText += pageText + '\n';
+  }
+  
+  return fullText;
 }
 
 /**
