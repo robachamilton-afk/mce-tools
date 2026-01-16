@@ -1,7 +1,8 @@
 /**
  * LaTeX OCR Module
  * 
- * Wrapper for RapidLaTeXOCR Python package to extract LaTeX from equation images
+ * Wrapper for Pix2Text Python package to extract LaTeX from equation images
+ * Pix2Text is a more mature alternative to RapidLaTeXOCR with better Windows support
  */
 
 import { spawn } from 'child_process';
@@ -22,7 +23,7 @@ export interface LaTeXResult {
 }
 
 /**
- * Extract LaTeX from equation image using RapidLaTeXOCR
+ * Extract LaTeX from equation image using Pix2Text
  * 
  * @param imageBuffer - PNG image buffer containing equation
  * @param region - Original equation region metadata
@@ -39,8 +40,8 @@ export async function extractLaTeX(
   await writeFile(tempPath, imageBuffer);
   
   try {
-    // Call RapidLaTeXOCR Python script
-    const latex = await callRapidLaTeXOCR(tempPath);
+    // Call Pix2Text Python script
+    const latex = await callPix2Text(tempPath);
     const elapsedMs = Date.now() - startTime;
     
     // Estimate confidence based on LaTeX complexity and OCR text match
@@ -101,11 +102,25 @@ export async function extractMultipleLaTeX(
 }
 
 /**
- * Call RapidLaTeXOCR Python command
+ * Call Pix2Text Python API via subprocess
  */
-async function callRapidLaTeXOCR(imagePath: string): Promise<string> {
+async function callPix2Text(imagePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const process = spawn('rapid_latex_ocr', [imagePath]);
+    // Python script that uses Pix2Text API
+    const pythonScript = `
+import sys
+from pix2text import LatexOCR
+
+try:
+    latex_ocr = LatexOCR()
+    result = latex_ocr("${imagePath.replace(/\\/g, '\\\\')}")
+    print(result, end='')
+except Exception as e:
+    print(f"ERROR: {str(e)}", file=sys.stderr)
+    sys.exit(1)
+`;
+    
+    const process = spawn('python3', ['-c', pythonScript]);
     
     let stdout = '';
     let stderr = '';
@@ -120,24 +135,21 @@ async function callRapidLaTeXOCR(imagePath: string): Promise<string> {
     
     process.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(`RapidLaTeXOCR failed with code ${code}: ${stderr}`));
+        reject(new Error(`Pix2Text failed with code ${code}: ${stderr}`));
         return;
       }
       
-      // Parse output - first line is LaTeX, second is elapsed time
-      const lines = stdout.trim().split('\n');
-      if (lines.length === 0) {
-        reject(new Error('RapidLaTeXOCR returned empty output'));
+      if (!stdout || stdout.length === 0) {
+        reject(new Error('Pix2Text returned empty output'));
         return;
       }
       
-      // First line contains the LaTeX
-      const latex = lines[0].trim();
-      resolve(latex);
+      // Return the LaTeX string
+      resolve(stdout.trim());
     });
     
     process.on('error', (error) => {
-      reject(new Error(`Failed to spawn RapidLaTeXOCR: ${error.message}`));
+      reject(new Error(`Failed to spawn Python: ${error.message}`));
     });
   });
 }
