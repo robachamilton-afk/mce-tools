@@ -15,13 +15,6 @@
  */
 
 import { execSync } from 'child_process';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const webappDir = path.join(__dirname, 'webapp');
 
 console.log('🚀 Starting ACC Asset Extractor database setup...\n');
 
@@ -29,7 +22,6 @@ try {
   // Step 1: Apply schema to database
   console.log('🔄 Step 1: Applying schema to database...');
   execSync('pnpm drizzle-kit push', { 
-    cwd: webappDir,
     stdio: 'inherit'
   });
   console.log('✅ Schema applied\n');
@@ -37,7 +29,6 @@ try {
   // Step 2: Seed data
   console.log('🌱 Step 2: Seeding database with data...');
   execSync('pnpm tsx seed.ts', { 
-    cwd: webappDir,
     stdio: 'inherit'
   });
   console.log('✅ Data seeded\n');
