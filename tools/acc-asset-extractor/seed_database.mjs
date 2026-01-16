@@ -32,9 +32,6 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-// Add webapp node_modules to module search path
-const modulePath = path.join(webappDir, 'node_modules');
-
 async function seedDatabase() {
   // Check for DATABASE_URL
   if (!process.env.DATABASE_URL) {
@@ -45,8 +42,8 @@ async function seedDatabase() {
   }
 
   try {
-    // Dynamically import mysql2 from webapp node_modules
-    const mysql = await import(path.join(modulePath, 'mysql2/promise/index.js'));
+    // Import mysql2 normally
+    const mysql = await import('mysql2/promise');
     
     console.log('🌱 Starting database seeding...');
     
@@ -116,7 +113,6 @@ async function seedDatabase() {
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding database:', error.message);
-    console.error(error);
     process.exit(1);
   }
 }
