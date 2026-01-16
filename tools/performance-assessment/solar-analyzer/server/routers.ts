@@ -1,0 +1,390 @@
+import { COOKIE_NAME } from "@shared/const";
+import { getSessionCookieOptions } from "./_core/cookies";
+import { systemRouter } from "./_core/systemRouter";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
+import * as db from "./db";
+import { z } from "zod";
+
+export const appRouter = router({
+    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
+  system: systemRouter,
+  auth: router({
+    me: publicProcedure.query(opts => opts.ctx.user),
+    logout: publicProcedure.mutation(({ ctx }) => {
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      return {
+        success: true,
+      } as const;
+    }),
+  }),
+
+  sites: router({
+    list: publicProcedure.query(async () => {
+      return await db.getAllSites();
+    }),
+
+    search: publicProcedure
+      .input(z.object({ query: z.string() }))
+      .query(async ({ input }) => {
+        return await db.searchSites(input.query);
+      }),
+
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getSiteById(input.id);
+      }),
+
+    getConfiguration: publicProcedure
+      .input(z.object({ siteId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getSiteConfiguration(input.siteId);
+      }),
+
+    getAssessments: publicProcedure
+      .input(z.object({ siteId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getSiteAssessments(input.siteId);
+      }),
+  }),
+
+  assessments: router({
+    list: publicProcedure.query(async () => {
+      return await db.getAllAssessments();
+    }),
+
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getAssessmentById(input.id);
+      }),
+  }),
+
+  equipment: router({
+    // Get all equipment detections for a site
+    getBySiteId: publicProcedure
+      .input(z.object({ siteId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getEquipmentDetections(input.siteId);
+      }),
+
+    // Add new equipment detection (user-added)
+    add: publicProcedure
+      .input(z.object({
+        siteId: z.number(),
+        type: z.enum(["pcu", "substation", "combiner_box", "transformer", "other"]),
+        latitude: z.number(),
+        longitude: z.number(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.addEquipmentDetection({
+          ...input,
+          status: "user_added",
+          verifiedBy: ctx.user?.id,
+        });
+      }),
+
+    // Update equipment location
+    updateLocation: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        latitude: z.number(),
+        longitude: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.updateEquipmentLocation(input.id, input.latitude, input.longitude);
+      }),
+
+    // Verify equipment detection (change status to user_verified)
+    verify: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.verifyEquipmentDetection(input.id, ctx.user?.id);
+      }),
+
+    // Delete equipment detection
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.deleteEquipmentDetection(input.id);
+      }),
+  }),
+
+  customAnalysis: router({
+    createDemo: protectedProcedure
+      .input(z.object({ siteId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const { generateMockContract, generateMockSCADAData, generateMockMeteoData, generateMockExtractedModel } = await import('./demoDataGenerator');
+        const db = await import('./db');
+        
+        // Get site info
+        const { sites, customAnalyses } = await import('../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+        const dbInstance = await db.getDb();
+        if (!dbInstance) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+        const site = await dbInstance.select().from(sites).where(eq(sites.id, input.siteId)).limit(1).then(r => r[0]);
+        if (!site) throw new TRPCError({ code: 'NOT_FOUND', message: 'Site not found' });
+        
+        // Create analysis
+        const analysis = await db.createCustomAnalysis({
+          siteId: input.siteId,
+          userId: ctx.user.id,
+          name: `Demo Analysis - ${site.name}`,
+          description: 'Demonstration analysis with mock data',
+        });
+        
+        // Generate and upload mock files
+        const contract = await generateMockContract(site.name || 'Solar Farm');
+        await db.uploadContractFile(analysis.id, contract.fileName, contract.url);
+        
+        const scada = await generateMockSCADAData(30);
+        await db.uploadScadaFile(analysis.id, scada.fileName, scada.url);
+        
+        const meteo = await generateMockMeteoData(30);
+        await db.uploadMeteoFile(analysis.id, meteo.fileName, meteo.url);
+        
+        // Store mock extracted model directly in database
+        const mockModel = generateMockExtractedModel();
+        await dbInstance.update(customAnalyses)
+          .set({
+            extractedModel: mockModel,
+            modelConfirmed: true,
+            modelConfirmedAt: new Date(),
+            status: 'mapping',
+          })
+          .where(eq(customAnalyses.id, analysis.id));
+        
+        return { id: analysis.id, message: 'Demo analysis created with mock data' };
+      }),
+    // Create new custom analysis
+    create: protectedProcedure
+      .input(z.object({
+        siteId: z.number(),
+        name: z.string(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return await db.createCustomAnalysis({
+          siteId: input.siteId,
+          userId: ctx.user.id,
+          name: input.name,
+          description: input.description,
+        });
+      }),
+
+    // Get custom analysis by ID
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getCustomAnalysisById(input.id);
+      }),
+
+    // List custom analyses for a site
+    listBySite: publicProcedure
+      .input(z.object({ siteId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getCustomAnalysesBySite(input.siteId);
+      }),
+
+    // Upload contract file
+    uploadContract: protectedProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        fileName: z.string(),
+        fileContent: z.string(), // base64 encoded
+      }))
+      .mutation(async ({ input }) => {
+        return await db.uploadContractFile(input.analysisId, input.fileName, input.fileContent);
+      }),
+
+    // Extract model from contract
+    extractModel: protectedProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.extractAndSaveContractModel(input.analysisId);
+      }),
+
+    // Confirm extracted model
+    confirmModel: protectedProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        model: z.any(), // Complex nested structure
+      }))
+      .mutation(async ({ input }) => {
+        return await db.confirmContractModel(input.analysisId, input.model);
+      }),
+
+    // Upload SCADA file
+    uploadScada: protectedProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        fileName: z.string(),
+        fileContent: z.string(), // base64 encoded
+      }))
+      .mutation(async ({ input }) => {
+        return await db.uploadScadaFile(input.analysisId, input.fileName, input.fileContent);
+      }),
+
+    // Upload meteo file
+    uploadMeteo: protectedProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        fileName: z.string(),
+        fileContent: z.string(), // base64 encoded
+      }))
+      .mutation(async ({ input }) => {
+        return await db.uploadMeteoFile(input.analysisId, input.fileName, input.fileContent);
+      }),
+
+    // Analyze column mappings with LLM
+    analyzeColumnMappings: protectedProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        const analysis = await db.getCustomAnalysisById(input.analysisId);
+        if (!analysis || !analysis.scadaFileUrl || !analysis.meteoFileUrl) {
+          throw new Error("SCADA and meteo files must be uploaded first");
+        }
+        return await db.analyzeAndStoreColumnMappings(
+          input.analysisId,
+          analysis.scadaFileUrl,
+          analysis.meteoFileUrl
+        );
+      }),
+
+    // Update column mappings
+    updateColumnMappings: protectedProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        scadaMappings: z.any(),
+        meteoMappings: z.any(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.updateColumnMappings(
+          input.analysisId,
+          input.scadaMappings,
+          input.meteoMappings
+        );
+      }),
+
+    // Execute analysis and generate results
+    execute: protectedProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.executeCustomAnalysis(input.analysisId);
+      }),
+
+    // Generate PDF report
+    generatePDFReport: protectedProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { generatePDFReport } = await import("./reportGenerator");
+        const analysis = await db.getCustomAnalysisById(input.analysisId);
+        
+        if (!analysis) throw new Error("Analysis not found");
+        
+        // TODO: Get actual results from assessment
+        const reportData = {
+          siteName: "Site Name", // TODO: Get from site
+          analysisName: analysis.name,
+          analysisDate: new Date(),
+          performanceRatio: 85.3,
+          availability: 98.5,
+          energyGeneration: 125000,
+          revenue: 12500,
+          penalties: 250,
+          contractTerms: analysis.extractedModel,
+          complianceStatus: {
+            prCompliant: true,
+            availabilityCompliant: true,
+          },
+        };
+        
+        const pdfUrl = await generatePDFReport(reportData);
+        return { url: pdfUrl };
+      }),
+
+    // Generate Excel report
+    generateExcelReport: protectedProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { generateExcelReport } = await import("./reportGenerator");
+        const analysis = await db.getCustomAnalysisById(input.analysisId);
+        
+        if (!analysis) throw new Error("Analysis not found");
+        
+        // TODO: Get actual results from assessment
+        const reportData = {
+          siteName: "Site Name",
+          analysisName: analysis.name,
+          analysisDate: new Date(),
+          performanceRatio: 85.3,
+          availability: 98.5,
+          energyGeneration: 125000,
+          revenue: 12500,
+          penalties: 250,
+          contractTerms: analysis.extractedModel,
+          complianceStatus: {
+            prCompliant: true,
+            availabilityCompliant: true,
+          },
+        };
+        
+        const excelUrl = await generateExcelReport(reportData);
+        return { url: excelUrl };
+      }),
+
+    // Analyze CSV/PDF headers with LLM
+    analyzeHeaders: publicProcedure
+      .input(z.object({
+        analysisId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        return await db.analyzeCSVHeaders(input.analysisId);
+      }),
+
+    // Save column mappings
+    saveColumnMappings: publicProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        scadaMapping: z.record(z.string(), z.string()),
+        meteoMapping: z.record(z.string(), z.string()),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.saveColumnMappings(
+          input.analysisId,
+          input.scadaMapping as Record<string, string>,
+          input.meteoMapping as Record<string, string>
+        );
+      }),
+
+    // Save contract details
+    saveContract: publicProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        capacityMw: z.number(),
+        tariffPerMwh: z.number(),
+        startDate: z.string(),
+        endDate: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.saveContractDetails(input.analysisId, {
+          capacityMw: input.capacityMw,
+          tariffPerMwh: input.tariffPerMwh,
+          startDate: input.startDate,
+          endDate: input.endDate,
+        });
+      }),
+
+    // Run performance analysis
+    runAnalysis: publicProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.runPerformanceAnalysis(input.analysisId);
+      }),
+  }),
+});
+
+export type AppRouter = typeof appRouter;
