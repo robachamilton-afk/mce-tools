@@ -20,6 +20,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const webappDir = path.join(__dirname, 'webapp');
 
+// Load .env file from webapp directory
+const envPath = path.join(webappDir, '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  envContent.split('\n').forEach(line => {
+    const [key, value] = line.split('=');
+    if (key && value && !process.env[key]) {
+      process.env[key] = value.trim();
+    }
+  });
+}
+
 // Add webapp node_modules to module search path
 const modulePath = path.join(webappDir, 'node_modules');
 
