@@ -259,3 +259,4 @@
 ## Bug Fixes
 - [x] Fix pdf-parse import error in contract parser
 - [x] Replace pdf-parse with working PDF text extraction (pdfjs-dist)
+- [x] Revert to original simple approach - just send PDF with large context window
