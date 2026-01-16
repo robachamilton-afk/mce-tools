@@ -1,21 +1,54 @@
 // Preconfigured storage helpers for Manus WebDev templates
 // Uses the Biz-provided storage proxy (Authorization: Bearer <token>)
+// Falls back to local file storage if Manus credentials not available
 
 import { ENV } from './_core/env';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LOCAL_STORAGE_DIR = path.join(__dirname, '../uploads');
 
 type StorageConfig = { baseUrl: string; apiKey: string };
 
-function getStorageConfig(): StorageConfig {
+function getStorageConfig(): StorageConfig | null {
   const baseUrl = ENV.forgeApiUrl;
   const apiKey = ENV.forgeApiKey;
 
   if (!baseUrl || !apiKey) {
-    throw new Error(
-      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
-    );
+    return null; // Will use local storage fallback
   }
 
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
+  return { baseUrl: baseUrl.replace(//+$/, ""), apiKey };
+}
+
+// Local storage fallback for development
+async function localStoragePut(
+  relKey: string,
+  data: Buffer | Uint8Array | string,
+  contentType: string
+): Promise<{ key: string; url: string }> {
+  const key = normalizeKey(relKey);
+  const filePath = path.join(LOCAL_STORAGE_DIR, key);
+  
+  // Ensure directory exists
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  
+  // Write file
+  const buffer = typeof data === 'string' ? Buffer.from(data) : Buffer.from(data);
+  await fs.writeFile(filePath, buffer);
+  
+  // Return local URL (served by Express static middleware)
+  const url = `/uploads/${key}`;
+  return { key, url };
+}
+
+async function localStorageGet(relKey: string): Promise<{ key: string; url: string }> {
+  const key = normalizeKey(relKey);
+  const url = `/uploads/${key}`;
+  return { key, url };
 }
 
 function buildUploadUrl(baseUrl: string, relKey: string): URL {
@@ -72,7 +105,15 @@ export async function storagePut(
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
-  const { baseUrl, apiKey } = getStorageConfig();
+  const config = getStorageConfig();
+  
+  // Use local storage if Manus credentials not available
+  if (!config) {
+    console.log('[Storage] Using local file storage (Manus credentials not configured)');
+    return localStoragePut(relKey, data, contentType);
+  }
+  
+  const { baseUrl, apiKey } = config;
   const key = normalizeKey(relKey);
   const uploadUrl = buildUploadUrl(baseUrl, key);
   const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
@@ -93,7 +134,14 @@ export async function storagePut(
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string; }> {
-  const { baseUrl, apiKey } = getStorageConfig();
+  const config = getStorageConfig();
+  
+  // Use local storage if Manus credentials not available
+  if (!config) {
+    return localStorageGet(relKey);
+  }
+  
+  const { baseUrl, apiKey } = config;
   const key = normalizeKey(relKey);
   return {
     key,

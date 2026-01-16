@@ -222,3 +222,17 @@
 - [x] Add Ollama setup documentation
 - [ ] Test contract parsing with local Ollama
 - [ ] Test satellite image analysis with local Ollama
+
+## Local Development Setup
+- [x] Make Manus API credentials optional for local development
+- [x] Fix storage proxy error when FORGE_API credentials missing
+- [x] Add local file storage fallback
+- [ ] Test fully local setup without Manus dependencies
+
+## Mapbox Integration
+- [x] Add MAPBOX_ACCESS_TOKEN to environment configuration
+- [x] Create Mapbox helper module for satellite imagery
+- [x] Update satellite vision analysis to use Mapbox
+- [x] Update satellite config analysis to use Mapbox
+- [x] Update PCU detection to use Mapbox
+- [ ] Test Mapbox satellite imagery fetching

@@ -5,6 +5,7 @@
  */
 
 import { invokeLLM } from "./_core/llm";
+import { getMapboxSatelliteUrl, isMapboxConfigured } from "./_core/mapbox";
 import { ENV } from "./_core/env";
 
 interface PCULocation {
@@ -24,11 +25,13 @@ interface PCUDetectionResult {
 }
 
 async function fetchSatelliteImage(lat: number, lon: number, zoom: number): Promise<string> {
-  const baseUrl = ENV.forgeApiUrl?.replace(/\/+$/, "") || "";
-  const apiKey = ENV.forgeApiKey || "";
-  const size = "640x640";
-  const mapType = "satellite";
-  return `${baseUrl}/v1/maps/proxy/maps/api/staticmap?center=${lat},${lon}&zoom=${zoom}&size=${size}&maptype=${mapType}&key=${apiKey}`;
+  if (!isMapboxConfigured()) {
+    throw new Error(
+      "Mapbox not configured. Add MAPBOX_ACCESS_TOKEN to your .env file. " +
+      "Get a free token at https://account.mapbox.com/"
+    );
+  }
+  return getMapboxSatelliteUrl(lat, lon, zoom, 640, 640);
 }
 
 export async function detectPCUs(
