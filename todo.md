@@ -253,3 +253,9 @@
 - [x] Improve JSON parsing to handle malformed responses
 - [x] Add extraction from markdown code blocks
 - [x] Reduce page count from 10 to 2 to avoid model overload
+
+## Debug llava:34b Contract Parser
+- [x] Fix misleading model references (was showing llama3.2-vision:11b in logs)
+- [x] Strengthen JSON format instruction in prompt
+- [ ] Test with updated prompt to see if model returns valid JSON
+- [ ] If still fails, try simpler extraction (just extract raw text first)
