@@ -38,7 +38,7 @@ try {
 
   // Step 2: Seed data
   console.log('🌱 Step 2: Seeding database with data...');
-  execSync('node --import tsx scripts/import-db-data.ts', { 
+  execSync('node seed.mjs', { 
     cwd: __dirname,
     stdio: 'inherit',
     env: { ...process.env }
