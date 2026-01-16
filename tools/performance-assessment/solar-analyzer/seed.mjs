@@ -44,6 +44,10 @@ async function seedDatabase() {
 
     console.log('✅ Connected to database');
 
+    // Disable foreign key checks during import
+    console.log('⚙️  Disabling foreign key checks...');
+    await connection.execute('SET FOREIGN_KEY_CHECKS=0');
+
     // Load seed data
     const seedDataPath = path.join(__dirname, 'database-export.json');
     if (!fs.existsSync(seedDataPath)) {
@@ -271,6 +275,11 @@ async function seedDatabase() {
     console.log('✅ Custom analyses inserted');
 
     console.log('🎉 Database seeding completed successfully!');
+
+    // Re-enable foreign key checks
+    console.log('⚙️  Re-enabling foreign key checks...');
+    await connection.execute('SET FOREIGN_KEY_CHECKS=1');
+
     await connection.end();
     process.exit(0);
   } catch (error) {
