@@ -15,6 +15,14 @@
  */
 
 import { execSync } from 'child_process';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Load .env file
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 console.log('🚀 Starting ACC Asset Extractor database setup...\n');
 
@@ -28,8 +36,10 @@ try {
 
   // Step 2: Seed data
   console.log('🌱 Step 2: Seeding database with data...');
+  // Pass environment variables to child process
   execSync('node seed.mjs', { 
-    stdio: 'inherit'
+    stdio: 'inherit',
+    env: { ...process.env }
   });
   console.log('✅ Data seeded\n');
 
