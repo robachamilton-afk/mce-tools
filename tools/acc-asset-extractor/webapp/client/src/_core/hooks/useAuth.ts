@@ -9,7 +9,17 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
+  // Lazily evaluate getLoginUrl to avoid errors during module load
+  const getRedirectPath = () => {
+    try {
+      return getLoginUrl();
+    } catch (error) {
+      console.warn("[Auth] Failed to get login URL:", error);
+      return "/";
+    }
+  };
+
+  const { redirectOnUnauthenticated = false, redirectPath = getRedirectPath() } =
     options ?? {};
   const utils = trpc.useUtils();
 
