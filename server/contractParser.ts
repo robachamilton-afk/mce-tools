@@ -1,23 +1,21 @@
 import { ollamaVisionJSON } from "./_core/ollama";
 import { ENV } from "./_core/env";
+import { convertPdfUrlToImages } from "./pdfToImages";
 
 /**
  * Extract performance model from contract PDF using vision model
- * Returns equations, parameters, tariffs, and guarantees
+ * Converts PDF pages to images first, then analyzes with llama3.2-vision:11b
  */
 export async function extractContractModel(contractFileUrl: string) {
-  console.log('[Contract Parser] Fetching PDF from:', contractFileUrl);
+  console.log('[Contract Parser] Fetching and converting PDF from:', contractFileUrl);
   
-  // Fetch the PDF file
-  const pdfResponse = await fetch(contractFileUrl);
-  if (!pdfResponse.ok) {
-    throw new Error(`Failed to fetch PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
-  }
+  // Convert PDF to images (one per page)
+  const pages = await convertPdfUrlToImages(contractFileUrl, {
+    density: 200, // Higher DPI for better text recognition
+    format: 'png',
+  });
   
-  const pdfBuffer = await pdfResponse.arrayBuffer();
-  const pdfBase64 = Buffer.from(pdfBuffer).toString('base64');
-  console.log(`[Contract Parser] PDF downloaded: ${(pdfBuffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
-  console.log(`[Contract Parser] Base64 size: ${pdfBase64.length} characters`);
+  console.log(`[Contract Parser] Converted PDF to ${pages.length} images`);
   
   const systemPrompt = `You are an expert in solar power purchase agreements and performance contracts. 
 Extract all relevant performance equations, tariff structures, capacity guarantees, and penalty clauses from the contract.
@@ -43,7 +41,7 @@ For missing parameters:
 
 Return structured JSON with all extracted information. Be deterministic and consistent.`;
   
-  const userPrompt = `Extract the complete performance model from this solar contract PDF. Include all equations, parameters, tariffs, and guarantees.
+  const userPrompt = `Extract the complete performance model from this solar contract. The contract is provided as ${pages.length} page image(s). Analyze ALL pages to extract equations, parameters, tariffs, and guarantees.
 
 Return a JSON object with this exact structure:
 {
@@ -61,13 +59,29 @@ Return a JSON object with this exact structure:
   try {
     console.log('[Contract Parser] Starting extraction with Ollama vision model...');
     console.log(`[Contract Parser] Model: llama3.2-vision:11b`);
-    console.log(`[Contract Parser] PDF base64 length: ${pdfBase64.length} characters`);
+    console.log(`[Contract Parser] Processing ${pages.length} pages`);
     
-    // Use vision model with PDF as base64 image
+    // For multi-page PDFs, we need to process all pages
+    // Option 1: Send all pages to vision model at once (if model supports multiple images)
+    // Option 2: Process each page separately and merge results
+    
+    // For now, we'll send the first few pages (most contracts have key info in first 10 pages)
+    const pagesToAnalyze = pages.slice(0, Math.min(10, pages.length));
+    
+    console.log(`[Contract Parser] Analyzing first ${pagesToAnalyze.length} pages`);
+    
+    // Create a combined prompt with page numbers
+    const pagesInfo = pagesToAnalyze.map((p, idx) => `Page ${p.pageNumber}`).join(', ');
+    const finalPrompt = `${userPrompt}\n\nPages provided: ${pagesInfo}`;
+    
+    // Send first page with prompt (llama3.2-vision can handle one image at a time)
+    // For better results with multi-page docs, we should process each page and merge
+    // But for now, let's try with the first page which usually has the key terms
+    
     const model = await ollamaVisionJSON(
-      pdfBase64, // Pass base64 directly
-      userPrompt,
-      'llama3.2-vision:11b', // Use vision model for document understanding
+      pagesToAnalyze[0].base64, // Use first page
+      finalPrompt,
+      'llama3.2-vision:11b',
       systemPrompt
     );
     

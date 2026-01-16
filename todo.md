@@ -215,6 +215,7 @@
 ## Ollama Integration for Local Deployment
 - [x] Create ollama.ts module for local LLM integration
 - [x] Switch contract parser from Manus API to llama3.2-vision:11b
-- [x] Implement PDF to base64 conversion for vision model
-- [ ] Test contract extraction with scanned PDFs locally (requires local Ollama setup)
+- [x] Implement PDF to image conversion (pdf2pic + GraphicsMagick)
+- [x] Fix 'image: unknown format' error by converting PDFs to PNG before vision analysis
+- [ ] Test contract extraction with scanned PDFs locally (requires local Ollama setup + GraphicsMagick)
 - [ ] Update documentation for Ollama setup and model requirements
