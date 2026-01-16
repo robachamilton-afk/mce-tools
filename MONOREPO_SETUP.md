@@ -42,13 +42,19 @@ Each tool is configured with a base path to work correctly under this structure.
 
 ### Installation
 
+Each tool manages its own dependencies independently to avoid version conflicts:
+
 ```bash
 # Install all dependencies for all three apps
-pnpm install
-
-# Or use the convenience script
 npm run install-all
+
+# Or install individually
+cd tools/oe-toolkit && pnpm install
+cd tools/acc-asset-extractor/webapp && pnpm install
+cd tools/performance-assessment/solar-analyzer && pnpm install
 ```
+
+**Note:** Each tool has its own `pnpm-lock.yaml` file and manages its dependencies separately. This prevents conflicts between different dependency versions across tools.
 
 ### Development
 
@@ -152,11 +158,10 @@ When deployed to production, these paths are preserved under the MCE website str
 1. Create the tool in `tools/[tool-name]/`
 2. Add dev and build scripts to the tool's `package.json`
 3. Update the root `package.json` with:
-   - New dev script: `"dev:[tool-name]": "cd tools/[tool-name] && pnpm dev --port [PORT]"`
-   - New build script: `"build:[tool-name]": "cd tools/[tool-name] && pnpm build"`
-   - Update the main `dev` script to include the new tool
-4. Add the tool to the `workspaces` array
-5. Update OE Toolkit to include the new tool card with the correct path
+   - New dev script: `"dev:[tool-name]": "cd tools/[tool-name] && pnpm install && pnpm dev --port [PORT]"`
+   - New build script: `"build:[tool-name]": "cd tools/[tool-name] && pnpm install && pnpm build"`
+   - Update the main `dev` script to include the new tool in the concurrently command
+4. Update OE Toolkit to include the new tool card with the correct path
 
 ### Updating Tool URLs
 
@@ -167,6 +172,20 @@ When changing tool URLs or paths:
 3. Test navigation locally before deploying
 
 ## Troubleshooting
+
+### Dependency Resolution Errors
+
+If you see `ERESOLVE` or dependency conflicts:
+
+1. Each tool manages its own dependencies independently
+2. This is intentional to avoid version conflicts between tools
+3. Clear node_modules and reinstall for a specific tool:
+
+```bash
+cd tools/[tool-name]
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
+```
 
 ### Port Already in Use
 
