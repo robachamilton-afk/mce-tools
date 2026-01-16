@@ -37,6 +37,7 @@ export interface OllamaGenerateOptions {
     top_p?: number;
     top_k?: number;
     num_predict?: number;
+    num_ctx?: number;
   };
 }
 

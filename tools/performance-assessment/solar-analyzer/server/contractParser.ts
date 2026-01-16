@@ -1,8 +1,8 @@
-import { ollamaGenerateJSON } from "./_core/ollama";
+import { ollamaVisionJSON } from "./_core/ollama";
 import { ENV } from "./_core/env";
 
 /**
- * Extract performance model from contract PDF
+ * Extract performance model from contract PDF using vision model
  * Returns equations, parameters, tariffs, and guarantees
  */
 export async function extractContractModel(contractFileUrl: string) {
@@ -48,7 +48,7 @@ Return structured JSON with all extracted information. Be deterministic and cons
 Return a JSON object with this exact structure:
 {
   "equations": [{ "name": string, "formula": string, "variables": [{ "name": string, "description": string, "unit": string }], "description": string }],
-  "parameters": { "contractCapacityMw": number, "contractStartDate": string, "contractEndDate": string, "guaranteedPR": number, "guaranteedAvailability": number, ... },
+  "parameters": { "contractCapacityMw": number, "contractStartDate": string, "contractEndDate": string, "guaranteedPR": number, "guaranteedAvailability": number },
   "tariffs": { "baseRate": number, "timeOfUse": [{ "period": string, "rate": number, "hours": string }], "escalation": number },
   "guarantees": [{ "metric": string, "threshold": number, "unit": string, "penaltyFormula": string }],
   "revenueCalculations": [{ "name": string, "formula": string, "description": string }],
@@ -56,26 +56,19 @@ Return a JSON object with this exact structure:
   "missingParameters": [{ "parameter": string, "description": string, "suggestedValue": string }],
   "ambiguities": [{ "issue": string, "location": string, "options": [string] }],
   "confidence": { "equations": number, "parameters": number, "tariffs": number, "overall": number }
-}
-
-PDF (base64):
-${pdfBase64}`;
+}`;
   
   try {
-  console.log('[Contract Parser] Starting extraction with Ollama...');
-  console.log(`[Contract Parser] Model: ${ENV.OLLAMA_TEXT_MODEL}`);
-  console.log(`[Contract Parser] PDF base64 length: ${pdfBase64.length} characters`);
-  console.log(`[Contract Parser] Context window: 128k tokens, Max response: 8k tokens`);
+    console.log('[Contract Parser] Starting extraction with Ollama vision model...');
+    console.log(`[Contract Parser] Model: llama3.2-vision:11b`);
+    console.log(`[Contract Parser] PDF base64 length: ${pdfBase64.length} characters`);
     
-    const model = await ollamaGenerateJSON(
-      ENV.OLLAMA_TEXT_MODEL,
+    // Use vision model with PDF as base64 image
+    const model = await ollamaVisionJSON(
+      pdfBase64, // Pass base64 directly
       userPrompt,
-      systemPrompt,
-      {
-        temperature: 0.1, // Low temperature for consistency
-        num_predict: 8192, // Allow long responses for complex contracts
-        num_ctx: 131072, // 128k context window (qwen2.5:14b supports up to 128k)
-      }
+      'llama3.2-vision:11b', // Use vision model for document understanding
+      systemPrompt
     );
     
     console.log('[Contract Parser] Ollama response received');
@@ -106,54 +99,27 @@ export function validateContractModel(model: any): {
   errors: string[];
   needsClarification: boolean;
   clarificationCount: number;
-  warnings: string[];
 } {
   const errors: string[] = [];
-  const warnings: string[] = [];
   
-  // Check if model exists
-  if (!model || typeof model !== 'object') {
-    errors.push("Invalid model: Expected object, got " + typeof model);
-    return {
-      valid: false,
-      errors,
-      warnings,
-      needsClarification: false,
-      clarificationCount: 0
-    };
-  }
-  
-  // Check required fields with detailed messages
   if (!model.equations || !Array.isArray(model.equations)) {
-    errors.push("Missing or invalid equations array" + (model.equations ? " (got: " + typeof model.equations + ")" : ""));
-  } else if (model.equations.length === 0) {
-    warnings.push("Equations array is empty - no performance equations found in contract");
+    errors.push("Missing or invalid equations array");
   }
   
   if (!model.parameters || typeof model.parameters !== 'object') {
-    errors.push("Missing or invalid parameters object" + (model.parameters ? " (got: " + typeof model.parameters + ")" : ""));
-  } else if (Object.keys(model.parameters).length === 0) {
-    warnings.push("Parameters object is empty - no contract parameters found");
+    errors.push("Missing or invalid parameters object");
   }
   
   if (!model.tariffs || typeof model.tariffs !== 'object') {
-    errors.push("Missing or invalid tariffs object" + (model.tariffs ? " (got: " + typeof model.tariffs + ")" : ""));
+    errors.push("Missing or invalid tariffs object");
   }
   
   if (!model.guarantees || !Array.isArray(model.guarantees)) {
-    errors.push("Missing or invalid guarantees array" + (model.guarantees ? " (got: " + typeof model.guarantees + ")" : ""));
+    errors.push("Missing or invalid guarantees array");
   }
   
   if (!model.revenueCalculations || !Array.isArray(model.revenueCalculations)) {
-    errors.push("Missing or invalid revenueCalculations array" + (model.revenueCalculations ? " (got: " + typeof model.revenueCalculations + ")" : ""));
-  }
-  
-  // Log validation results
-  if (errors.length > 0) {
-    console.error('[Contract Parser] Validation errors:', errors);
-  }
-  if (warnings.length > 0) {
-    console.warn('[Contract Parser] Validation warnings:', warnings);
+    errors.push("Missing or invalid revenueCalculations array");
   }
   
   // Check for clarifications needed
@@ -165,7 +131,6 @@ export function validateContractModel(model: any): {
   return {
     valid: errors.length === 0,
     errors,
-    warnings,
     needsClarification: clarificationCount > 0,
     clarificationCount
   };
