@@ -285,3 +285,15 @@
 - [x] Add elapsed time timer to contract extraction UI
 - [x] Show timer during "Extracting Model" phase
 - [x] Display final processing time after completion
+
+## Implement OCR-First Contract Extraction Pipeline
+- [x] Install OCR dependencies (Tesseract)
+- [x] Create OCR module for text extraction with bbox/confidence
+- [x] Create new JSON schema with evidence references
+- [ ] Implement PDF render → OCR → document assembly stages
+- [ ] Switch from vision model to qwen2.5:14b text model
+- [ ] Add JSON schema validation with self-healing retry logic
+- [ ] Implement 3-pass equation extraction (detect → reconstruct → validate)
+- [ ] Add evidence references (page + OCR snippet) to all fields
+- [ ] Create unit tests with TestSchedule.pdf fixture
+- [ ] Validate PR equation extraction produces correct AST
