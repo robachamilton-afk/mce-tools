@@ -55,8 +55,9 @@ export async function ollamaChat(options: OllamaGenerateOptions): Promise<Ollama
 
   try {
     // Vision models can take 60+ seconds, especially with high-res images
+    // qwen2.5vl can take 3-4 minutes for complex documents
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+    const timeout = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
 
     const response = await fetch(endpoint, {
       method: 'POST',

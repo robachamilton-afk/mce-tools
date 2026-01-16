@@ -11,8 +11,10 @@ export async function extractContractModel(contractFileUrl: string): Promise<Con
   console.log('[Contract Parser] Fetching and converting PDF from:', contractFileUrl);
   
   // Convert PDF to images (one per page)
+  // Reduced DPI to 150 for faster vision model processing
+  // qwen2.5vl can handle lower resolution for text extraction
   const pages = await convertPdfUrlToImages(contractFileUrl, {
-    density: 300, // High DPI for scanned document OCR
+    density: 150, // Balance between quality and speed
     format: 'png',
   });
   

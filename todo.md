@@ -268,3 +268,8 @@
 - [x] Set low temperature (0.1) for deterministic output
 - [ ] Test with real contract PDF
 - [ ] Push changes to mce-tools repository
+
+## Fix qwen2.5vl Timeout Issue
+- [x] Increase Ollama request timeout from 2 to 5 minutes
+- [x] Reduce image resolution from 300 DPI to 150 DPI
+- [ ] Test with single-page contract PDF
