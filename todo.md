@@ -302,3 +302,9 @@
 ## Fix Text Model Extraction Ollama Call
 - [x] Simplify format parameter to use 'json' string (more compatible than schema object)
 - [ ] Test with TestSchedule.pdf to verify extraction works
+
+## Verify Text-Only Ollama Implementation
+- [x] Confirm ollamaChat messages have no images array
+- [x] Add explicit logging to show text-only mode
+- [x] Add diagnostic error messages for common Ollama issues
+- [ ] User needs to install qwen2.5:14b model locally (run: ollama pull qwen2.5:14b)

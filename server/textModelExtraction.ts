@@ -223,10 +223,19 @@ export async function extractContractModel(
         continue;
       }
     } catch (error) {
-      console.error(`[Stage D] Attempt ${attempt} failed:`, error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[Stage D] Attempt ${attempt} failed:`, errorMsg);
+      
+      // Check for common Ollama errors
+      if (errorMsg.includes('GGML_ASSERT') || errorMsg.includes('500')) {
+        console.error(`[Stage D] Ollama model error detected. Possible causes:`);
+        console.error(`  - Model '${TEXT_MODEL}' not installed (run: ollama pull ${TEXT_MODEL})`);
+        console.error(`  - Model corrupted (run: ollama pull ${TEXT_MODEL} to reinstall)`);
+        console.error(`  - Ollama version incompatibility (update Ollama to latest)`);
+      }
       
       if (attempt > MAX_RETRIES) {
-        throw new Error(`Extraction failed after ${MAX_RETRIES} retries: ${error}`);
+        throw new Error(`Extraction failed after ${MAX_RETRIES} retries: ${errorMsg}`);
       }
       
       lastError = error instanceof Error ? error.message : String(error);
