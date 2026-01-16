@@ -34,9 +34,9 @@ try {
   });
   console.log('✅ Schema applied\n');
 
-  // Step 2: Seed data (run from webapp dir so it can find node_modules)
+  // Step 2: Seed data
   console.log('🌱 Step 2: Seeding database with data...');
-  execSync('node ../seed_database.mjs', { 
+  execSync('pnpm tsx seed.ts', { 
     cwd: webappDir,
     stdio: 'inherit'
   });
