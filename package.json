@@ -1,0 +1,26 @@
+{
+  "name": "mce-tools-monorepo",
+  "version": "1.0.0",
+  "description": "Main Character Energy Tools - Unified monorepo for OE Toolkit and all tools",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:oe-toolkit\" \"npm run dev:acc-extractor\" \"npm run dev:solar-analyzer\"",
+    "dev:oe-toolkit": "cd tools/oe-toolkit && pnpm dev",
+    "dev:acc-extractor": "cd tools/acc-asset-extractor/webapp && pnpm dev --port 3001",
+    "dev:solar-analyzer": "cd tools/performance-assessment/solar-analyzer && pnpm dev --port 3002",
+    "build": "npm run build:oe-toolkit && npm run build:acc-extractor && npm run build:solar-analyzer",
+    "build:oe-toolkit": "cd tools/oe-toolkit && pnpm build",
+    "build:acc-extractor": "cd tools/acc-asset-extractor/webapp && pnpm build",
+    "build:solar-analyzer": "cd tools/performance-assessment/solar-analyzer && pnpm build",
+    "install-all": "pnpm install && cd tools/oe-toolkit && pnpm install && cd ../../tools/acc-asset-extractor/webapp && pnpm install && cd ../../../../tools/performance-assessment/solar-analyzer && pnpm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  },
+  "workspaces": [
+    "tools/oe-toolkit",
+    "tools/acc-asset-extractor/webapp",
+    "tools/performance-assessment/solar-analyzer"
+  ]
+}
