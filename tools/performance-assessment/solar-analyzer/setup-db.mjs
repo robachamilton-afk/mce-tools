@@ -15,11 +15,15 @@
  */
 
 import { execSync } from 'child_process';
+import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load .env file
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 console.log('🚀 Starting Solar Analyzer database setup...\n');
 
@@ -36,7 +40,8 @@ try {
   console.log('🌱 Step 2: Seeding database with data...');
   execSync('node --import tsx scripts/import-db-data.ts', { 
     cwd: __dirname,
-    stdio: 'inherit'
+    stdio: 'inherit',
+    env: { ...process.env }
   });
   console.log('✅ Data seeded\n');
 
