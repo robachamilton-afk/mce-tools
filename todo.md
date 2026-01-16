@@ -248,3 +248,8 @@
 - [x] Create cleanup script to truncate all tables
 - [x] Reseed with clean APVI solar farm data
 - [x] Verify data integrity after reseed
+
+## Fix Ollama Contract Parser JSON Issues
+- [x] Improve JSON parsing to handle malformed responses
+- [x] Add extraction from markdown code blocks
+- [x] Reduce page count from 10 to 2 to avoid model overload

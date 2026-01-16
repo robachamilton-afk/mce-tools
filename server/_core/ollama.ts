@@ -252,11 +252,35 @@ export async function ollamaVisionJSON<T = any>(
     format: 'json',
   });
 
+  console.log(`[Ollama] Vision response received from ${model}`);
+  console.log(`[Ollama] Response length: ${response.message.content.length} characters`);
+
   try {
-    return JSON.parse(response.message.content);
+    // Try direct JSON parse first
+    const parsed = JSON.parse(response.message.content);
+    console.log(`[Ollama] Successfully parsed JSON`);
+    return parsed;
   } catch (error) {
-    console.error('[Ollama] Failed to parse JSON response:', response.message.content);
-    throw new Error('Ollama returned invalid JSON');
+    console.error('[Ollama] Failed to parse JSON response');
+    console.error('[Ollama] Raw response (first 1000 chars):', response.message.content.substring(0, 1000));
+    
+    // Try to extract JSON from markdown code blocks or mixed content
+    const jsonMatch = response.message.content.match(/```(?:json)?\s*([\s\S]*?)```/) ||
+                     response.message.content.match(/\{[\s\S]*\}/);
+    
+    if (jsonMatch) {
+      const jsonStr = jsonMatch[1] || jsonMatch[0];
+      console.log('[Ollama] Found JSON in response, attempting to parse...');
+      try {
+        const parsed = JSON.parse(jsonStr);
+        console.log(`[Ollama] Successfully parsed extracted JSON`);
+        return parsed;
+      } catch (innerError) {
+        console.error('[Ollama] Failed to parse extracted JSON:', innerError);
+      }
+    }
+    
+    throw new Error(`Ollama returned invalid JSON. Response preview: ${response.message.content.substring(0, 200)}...`);
   }
 }
 
