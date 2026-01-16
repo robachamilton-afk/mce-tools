@@ -21,7 +21,7 @@ function getStorageConfig(): StorageConfig | null {
     return null; // Will use local storage fallback
   }
 
-  return { baseUrl: baseUrl.replace(//+$/, ""), apiKey };
+  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
 }
 
 // Local storage fallback for development
