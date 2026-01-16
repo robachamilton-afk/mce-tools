@@ -16,9 +16,11 @@ The Solar Analyzer now supports **Ollama** as an alternative to the Manus LLM/Vi
 ### ✅ Fully Integrated (Ready to Use)
 
 1. **Contract Parser** (`server/contractParser.ts`)
-   - Model: `qwen2.5:14b`
-   - Extracts equations, tariffs, guarantees from PPA PDFs
+   - Model: `llava:34b` (vision model for document understanding)
+   - Converts PDF pages to 300 DPI images for analysis
+   - Extracts equations, tariffs, guarantees from PPA PDFs (including scanned documents)
    - Returns structured JSON with performance model
+   - **Note**: Requires GraphicsMagick + Ghostscript for PDF processing
 
 2. **Satellite Vision Analysis** (`server/satelliteVisionAnalysis.ts`)
    - Model: `llava:13b`
@@ -49,19 +51,64 @@ curl -fsSL https://ollama.com/install.sh | sh
 **Windows:**
 Download from [https://ollama.com/download](https://ollama.com/download)
 
+### 1.5. Install PDF Processing Dependencies (REQUIRED)
+
+The contract parser converts PDFs to images before analysis. This requires GraphicsMagick and Ghostscript.
+
+**Windows:**
+```powershell
+# Using Chocolatey (recommended)
+choco install graphicsmagick
+choco install ghostscript
+
+# Verify installation
+gm version
+gswin64c -version
+```
+
+**macOS:**
+```bash
+brew install graphicsmagick
+brew install ghostscript
+
+# Verify installation
+gm version
+gs -version
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install graphicsmagick ghostscript
+
+# Verify installation
+gm version
+gs -version
+```
+
+**Why these are needed:**
+- **GraphicsMagick**: Converts PDF pages to PNG images at 300 DPI
+- **Ghostscript**: PDF delegate for GraphicsMagick (handles PDF rendering)
+
 ### 2. Pull Required Models
 
 ```bash
-# Text model for contract parsing
-ollama pull qwen2.5:14b
+# Vision model for contract parsing (REQUIRED - 20GB download)
+ollama pull llava:34b
 
 # Vision model for satellite image analysis
 ollama pull llava:13b
 
+# Text model for general tasks
+ollama pull qwen2.5:14b
+
 # Optional: Smaller/faster alternatives
+ollama pull llava:13b          # Faster contract parsing (less accurate)
+ollama pull llava:7b           # Faster satellite analysis
 ollama pull llama3.1:8b        # Faster text model
-ollama pull llava:7b           # Faster vision model
 ```
+
+**Important**: The `llava:34b` model is ~20GB and requires 32GB+ RAM for contract extraction. If you have limited resources, use `llava:13b` instead (update `OLLAMA_VISION_MODEL` in `.env`).
 
 ### 3. Verify Installation
 
@@ -79,34 +126,43 @@ ollama run llava:13b "Describe this image" --image path/to/image.jpg
 ## Configuration
 
 ### Environment Variables
-
 Add to your `.env` file:
 
 ```env
 # Ollama Configuration
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_TEXT_MODEL=qwen2.5:14b
-OLLAMA_VISION_MODEL=llava:13b
+OLLAMA_VISION_MODEL=llava:34b
 ```
 
 **Defaults** (if not specified):
 - `OLLAMA_BASE_URL`: `http://localhost:11434`
 - `OLLAMA_TEXT_MODEL`: `qwen2.5:14b`
-- `OLLAMA_VISION_MODEL`: `llava:13b`
+- `OLLAMA_VISION_MODEL`: `llava:34b``
 
 ### Model Selection
 
 You can switch models by changing the environment variables:
 
 ```env
-# Use faster models
+# Use faster models (if you have limited RAM)
 OLLAMA_TEXT_MODEL=llama3.1:8b
-OLLAMA_VISION_MODEL=llava:7b
+OLLAMA_VISION_MODEL=llava:13b
 
-# Use larger models (if you have the resources)
+# Use larger models (if you have 64GB+ RAM)
 OLLAMA_TEXT_MODEL=qwen2.5:32b
-OLLAMA_VISION_MODEL=llava:34b
+OLLAMA_VISION_MODEL=llava:34b  # Default for contract parsing
 ```
+
+**Model comparison for contract parsing:**
+
+| Model | Size | RAM Required | Accuracy | Speed |
+|-------|------|--------------|----------|-------|
+| `llava:34b` | ~20GB | 32GB+ | ⭐⭐⭐⭐⭐ | Slow (3-5 min) |
+| `llava:13b` | ~8GB | 16GB+ | ⭐⭐⭐ | Medium (1-2 min) |
+| `llama3.2-vision:11b` | ~7GB | 16GB+ | ⭐ | Fast (30-60 sec) |
+
+**Recommendation**: Use `llava:34b` for production contract extraction. It provides significantly better accuracy for complex documents.
 
 ## Usage
 
@@ -121,13 +177,21 @@ const model = await extractContractModel(contractPdfUrl);
 
 **How it works:**
 1. Fetches PDF from URL
-2. Converts to base64
-3. Sends to Ollama qwen2.5:14b with structured JSON prompt
-4. Returns parsed contract model
+2. Converts each page to 300 DPI PNG image using GraphicsMagick
+3. Analyzes first 10 pages with llava:34b vision model
+4. Extracts structured data (equations, parameters, tariffs, guarantees)
+5. Returns parsed contract model with confidence scores
 
 **Performance:**
-- **qwen2.5:14b**: ~30-60 seconds per contract (accurate)
-- **llama3.1:8b**: ~15-30 seconds (faster, less accurate)
+- **llava:34b**: ~3-5 minutes per contract (high accuracy, handles scanned PDFs)
+- **llava:13b**: ~1-2 minutes (medium accuracy, may miss complex equations)
+- **llama3.2-vision:11b**: ~30-60 seconds (low accuracy, not recommended)
+
+**Why vision models?**
+- Handles scanned PDFs (no native text layer)
+- Understands document layout and structure
+- Extracts equations from images
+- More robust than text-only models
 
 ### Satellite Image Analysis
 
@@ -346,6 +410,80 @@ ollama pull qwen2.5:14b-q4_K_M
 3. Use `format: 'json'` parameter
 4. Try different model (Qwen is better at JSON than Llama)
 
+### PDF Processing Errors
+
+**Error:** `Command failed: gm identify` or `Postscript delegate failed`
+
+**Cause:** GraphicsMagick or Ghostscript not installed
+
+**Solution (Windows):**
+```powershell
+choco install graphicsmagick
+choco install ghostscript
+
+# Restart terminal and verify
+gm version
+gswin64c -version
+```
+
+**Solution (macOS):**
+```bash
+brew install graphicsmagick ghostscript
+```
+
+**Solution (Linux):**
+```bash
+sudo apt-get install graphicsmagick ghostscript
+```
+
+### Contract Extraction Quality Issues
+
+**Issue:** Model returns garbage like `Pr / Pr / Pr...` or very low confidence scores
+
+**Cause:** Model not capable enough for complex document understanding
+
+**Solutions:**
+1. **Upgrade to llava:34b** (recommended):
+   ```bash
+   ollama pull llava:34b
+   ```
+   Update `.env`: `OLLAMA_VISION_MODEL=llava:34b`
+
+2. **Try OCR + text model approach** (alternative):
+   - Use Tesseract OCR to extract text from PDF
+   - Feed text to qwen2.5:14b for structured extraction
+   - More reliable for text-heavy documents
+
+3. **Reduce image resolution** if model runs out of memory:
+   - Edit `server/pdfToImages.ts`
+   - Change `density: 300` to `density: 150`
+
+### Windows-Specific Issues
+
+**Issue:** `Cannot find package 'pdf2pic'` or module resolution errors
+
+**Solution:**
+```powershell
+# Delete lockfile and reinstall
+del pnpm-lock.yaml
+git checkout origin/master -- pnpm-lock.yaml
+pnpm install
+```
+
+**Issue:** `ECONNREFUSED` when connecting to Ollama
+
+**Solution:**
+```powershell
+# Check if Ollama is running
+Get-Process ollama
+
+# If not running, start it
+ollama serve
+
+# Verify API is accessible
+curl http://localhost:11434/api/tags
+```
+
 ## Comparison: Ollama vs Manus API
 
 | Feature | Ollama | Manus API |
@@ -387,14 +525,59 @@ To fully migrate to Ollama:
 - Pre-fetch all required images before LLM call
 - Use multi-image input instead of sequential requests
 
+## Implementation Notes
+
+### Recent Changes (2026-01-16)
+
+**✅ Switched from text-only to vision models for contract parsing:**
+- Previous: `qwen2.5:14b` (text model) - failed on scanned PDFs
+- Current: `llava:34b` (vision model) - handles scanned + native PDFs
+
+**✅ Added PDF-to-image conversion pipeline:**
+- Uses `pdf2pic` + GraphicsMagick + Ghostscript
+- Converts PDF pages to 300 DPI PNG images
+- Sends images to vision model for analysis
+
+**✅ Tested models:**
+- `llama3.2-vision:11b`: ❌ Poor quality (hallucinated formulas)
+- `llava:13b`: ⚠️ Medium quality (misses complex equations)
+- `llava:34b`: ✅ High quality (recommended)
+
+**Why vision models for contracts?**
+- Many contracts are scanned PDFs (no text layer)
+- Vision models understand document layout
+- Can extract equations from images
+- More robust than OCR + text model
+
+### Alternative Approach: OCR + Text Model
+
+If vision models don't work well:
+
+1. **Extract text with Tesseract OCR:**
+   ```bash
+   sudo apt-get install tesseract-ocr
+   ```
+
+2. **Feed text to qwen2.5:14b:**
+   - Faster processing
+   - More reliable structured extraction
+   - Better for text-heavy documents
+
+3. **Trade-offs:**
+   - Misses visual elements (charts, diagrams)
+   - May struggle with complex layouts
+   - Requires good OCR quality
+
 ## Future Enhancements
 
 - [ ] Add fallback to Manus API if Ollama unavailable
-- [ ] Implement caching for repeated analyses
+- [ ] Implement OCR + text model approach as alternative
+- [ ] Add caching for repeated analyses
 - [ ] Add model performance benchmarking
 - [ ] Support for custom fine-tuned models
 - [ ] Batch processing for multiple contracts/sites
 - [ ] Redesign config/PCU detection for Ollama compatibility
+- [ ] Add progress indicators for long-running extractions
 
 ## Support
 
