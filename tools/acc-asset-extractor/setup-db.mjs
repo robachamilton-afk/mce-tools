@@ -3,9 +3,8 @@
  * Database Setup Script for ACC Asset Extractor
  * 
  * This script:
- * 1. Generates Drizzle migrations from schema
- * 2. Applies migrations to create tables
- * 3. Seeds the database with data
+ * 1. Applies schema to database using drizzle-kit push
+ * 2. Seeds the database with data
  * 
  * Usage:
  *   node setup-db.mjs
@@ -27,24 +26,16 @@ const webappDir = path.join(__dirname, 'webapp');
 console.log('🚀 Starting ACC Asset Extractor database setup...\n');
 
 try {
-  // Step 1: Generate migrations
-  console.log('📝 Step 1: Generating migrations from schema...');
-  execSync('pnpm drizzle-kit generate', { 
+  // Step 1: Apply schema to database
+  console.log('🔄 Step 1: Applying schema to database...');
+  execSync('pnpm drizzle-kit push', { 
     cwd: webappDir,
     stdio: 'inherit'
   });
-  console.log('✅ Migrations generated\n');
+  console.log('✅ Schema applied\n');
 
-  // Step 2: Apply migrations
-  console.log('🔄 Step 2: Applying migrations to database...');
-  execSync('pnpm drizzle-kit migrate', { 
-    cwd: webappDir,
-    stdio: 'inherit'
-  });
-  console.log('✅ Migrations applied\n');
-
-  // Step 3: Seed data
-  console.log('🌱 Step 3: Seeding database with data...');
+  // Step 2: Seed data
+  console.log('🌱 Step 2: Seeding database with data...');
   execSync('node seed_database.mjs', { 
     cwd: __dirname,
     stdio: 'inherit'
