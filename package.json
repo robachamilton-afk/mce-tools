@@ -7,13 +7,16 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:oe-toolkit\" \"npm run dev:acc-extractor\" \"npm run dev:solar-analyzer\"",
     "dev:oe-toolkit": "cd tools/oe-toolkit && pnpm install && pnpm dev",
-    "dev:acc-extractor": "cd tools/acc-asset-extractor/webapp && pnpm install && pnpm dev --port 3001",
-    "dev:solar-analyzer": "cd tools/performance-assessment/solar-analyzer && pnpm install && pnpm dev --port 3002",
+    "dev:acc-extractor": "cd tools/acc-asset-extractor/webapp && pnpm install && pnpm dev",
+    "dev:solar-analyzer": "cd tools/performance-assessment/solar-analyzer && pnpm install && cross-env PORT=3002 pnpm dev",
     "build": "npm run build:oe-toolkit && npm run build:acc-extractor && npm run build:solar-analyzer",
     "build:oe-toolkit": "cd tools/oe-toolkit && pnpm install && pnpm build",
     "build:acc-extractor": "cd tools/acc-asset-extractor/webapp && pnpm install && pnpm build",
-    "build:solar-analyzer": "cd tools/performance-assessment/solar-analyzer && pnpm install && pnpm build",
-    "install-all": "cd tools/oe-toolkit && pnpm install && cd ../../tools/acc-asset-extractor/webapp && pnpm install && cd ../../../../tools/performance-assessment/solar-analyzer && pnpm install"
+    "build:solar-analyzer": "cd tools/performance-assessment/solar-analyzer && pnpm install && cross-env PORT=3002 pnpm build",
+    "install-all": "cd tools/oe-toolkit && pnpm install && cd ../../tools/acc-asset-extractor/webapp && pnpm install && cd ../../../../tools/performance-assessment/solar-analyzer && pnpm install",
+    "dev:oe-toolkit:only": "cd tools/oe-toolkit && pnpm dev",
+    "dev:acc-extractor:only": "cd tools/acc-asset-extractor/webapp && pnpm dev",
+    "dev:solar-analyzer:only": "cd tools/performance-assessment/solar-analyzer && cross-env PORT=3002 pnpm dev"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",
