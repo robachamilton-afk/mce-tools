@@ -308,3 +308,13 @@
 - [x] Add explicit logging to show text-only mode
 - [x] Add diagnostic error messages for common Ollama issues
 - [ ] User needs to install qwen2.5:14b model locally (run: ollama pull qwen2.5:14b)
+
+## Hybrid OCR Pipeline (Tesseract + RapidLaTeXOCR + Qwen)
+- [x] Install RapidLaTeXOCR Python package (ONNX-based, no PyTorch)
+- [x] Create equation region detection module (server/equationDetection.ts)
+- [x] Create image cropping and upscaling utility (server/imageCropping.ts)
+- [x] Create RapidLaTeXOCR wrapper (server/latexOCR.ts)
+- [x] Create contractParserV3 with hybrid pipeline (Tesseract + RapidLaTeXOCR + Qwen)
+- [ ] Test equation extraction quality with TestSchedule.pdf PR formula
+- [ ] Validate LaTeX output and computational AST generation
+- [ ] Push hybrid pipeline changes to mce-tools repository
