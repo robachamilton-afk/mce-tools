@@ -28,7 +28,7 @@ try {
 
   // Step 2: Seed data
   console.log('🌱 Step 2: Seeding database with data...');
-  execSync('pnpm tsx seed.ts', { 
+  execSync('node seed.mjs', { 
     stdio: 'inherit'
   });
   console.log('✅ Data seeded\n');
