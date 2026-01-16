@@ -148,8 +148,10 @@ export function validateContractModel(model: any): {
     errors.push("Missing or invalid guarantees array");
   }
   
-  if (!model.revenueCalculations || !Array.isArray(model.revenueCalculations)) {
-    errors.push("Missing or invalid revenueCalculations array");
+  // revenueCalculations is optional - not all contract excerpts have revenue formulas
+  // If present, it must be an array
+  if (model.revenueCalculations !== undefined && !Array.isArray(model.revenueCalculations)) {
+    errors.push("Invalid revenueCalculations - must be an array if provided");
   }
   
   // Check for clarifications needed
