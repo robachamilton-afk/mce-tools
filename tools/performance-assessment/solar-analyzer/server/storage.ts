@@ -24,6 +24,14 @@ function getStorageConfig(): StorageConfig | null {
   return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
 }
 
+// Get base URL for local storage
+function getLocalStorageBaseUrl(): string {
+  // Use environment variable if set, otherwise default to localhost:3002
+  const port = process.env.PORT || '3002';
+  const host = process.env.HOST || 'localhost';
+  return `http://${host}:${port}`;
+}
+
 // Local storage fallback for development
 async function localStoragePut(
   relKey: string,
@@ -40,14 +48,16 @@ async function localStoragePut(
   const buffer = typeof data === 'string' ? Buffer.from(data) : Buffer.from(data);
   await fs.writeFile(filePath, buffer);
   
-  // Return local URL (served by Express static middleware)
-  const url = `/uploads/${key}`;
+  // Return absolute URL for local access
+  const baseUrl = getLocalStorageBaseUrl();
+  const url = `${baseUrl}/uploads/${key}`;
   return { key, url };
 }
 
 async function localStorageGet(relKey: string): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
-  const url = `/uploads/${key}`;
+  const baseUrl = getLocalStorageBaseUrl();
+  const url = `${baseUrl}/uploads/${key}`;
   return { key, url };
 }
 
