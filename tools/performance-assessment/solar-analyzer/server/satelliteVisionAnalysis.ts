@@ -10,7 +10,8 @@
  * - Tracking configuration validation
  */
 
-import { invokeLLM } from "./_core/llm";
+import { ollamaVisionJSON } from "./_core/ollama";
+import { ENV } from "./_core/env";
 
 export interface SatelliteAnalysisResult {
   // Refined location
@@ -117,85 +118,16 @@ Return ONLY valid JSON in this exact format:
 }`;
 
   try {
-    console.log("Calling LLM with vision analysis...");
-    const response = await invokeLLM({
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: prompt,
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: imageUrl,
-                detail: "high",
-              },
-            },
-          ],
-        },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "satellite_analysis",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              refinedLat: { type: "number" },
-              refinedLon: { type: "number" },
-              coordinateConfidence: { type: "number" },
-              trackingType: { type: "string", enum: ["fixed", "single_axis", "dual_axis"] },
-              axisAzimuth: { type: "number" },
-              tiltAngle: { type: "number" },
-              gcr: { type: "number" },
-              pitch: { type: "number" },
-              inverterCount: { type: "number", description: "Number of inverters detected, or -1 if not visible" },
-              pcuCount: { type: "number", description: "Number of PCUs detected, or -1 if not visible" },
-              trackingConfidence: { type: "number" },
-              gcrConfidence: { type: "number" },
-              pitchConfidence: { type: "number" },
-              equipmentConfidence: { type: "number" },
-              notes: { type: "string" },
-            },
-            required: [
-              "refinedLat",
-              "refinedLon",
-              "coordinateConfidence",
-              "trackingType",
-              "axisAzimuth",
-              "tiltAngle",
-              "gcr",
-              "pitch",
-              "inverterCount",
-              "pcuCount",
-              "trackingConfidence",
-              "gcrConfidence",
-              "pitchConfidence",
-              "equipmentConfidence",
-              "notes",
-            ],
-            additionalProperties: false,
-          },
-        },
-      },
-    });
-
-    console.log("LLM response received:", JSON.stringify(response, null, 2));
+    console.log("Calling Ollama vision analysis...");
     
-    if (!response.choices || response.choices.length === 0) {
-      throw new Error("No choices in LLM response");
-    }
+    const analysis = await ollamaVisionJSON(
+      imageUrl,
+      prompt,
+      ENV.OLLAMA_VISION_MODEL,
+      "You are an expert solar energy engineer analyzing satellite imagery of solar farms. Provide detailed, accurate analysis in JSON format."
+    );
     
-    const content = response.choices[0].message.content;
-    if (!content || typeof content !== 'string') {
-      throw new Error("No valid response from vision API");
-    }
-
-    const analysis = JSON.parse(content);
+    console.log("Ollama vision response received:", JSON.stringify(analysis, null, 2));
 
     return {
       ...analysis,

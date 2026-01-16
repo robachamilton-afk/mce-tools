@@ -6,7 +6,7 @@
  * PCU detection is handled separately in satellitePCUDetection.ts
  */
 
-import { invokeLLM } from "./_core/llm";
+import { ollamaVisionJSON } from "./_core/ollama";
 import { ENV } from "./_core/env";
 
 interface ConfigAnalysisResult {

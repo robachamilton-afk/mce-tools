@@ -211,3 +211,14 @@
 - [x] Add demo data generation for contract, SCADA, and meteo files
 - [x] Add "Run Demo Analysis" button to site detail page
 - [x] Fix 404 error when clicking Run Demo Analysis button
+
+## Ollama Integration
+- [x] Create Ollama client wrapper module (server/_core/ollama.ts)
+- [x] Add Ollama configuration to environment variables
+- [x] Update contract parser to use Ollama qwen2.5:14b
+- [x] Update satellite vision analysis to use Ollama llava:13b
+- [ ] Update satellite config analysis to use Ollama llava:13b (requires redesign - uses iterative function calling)
+- [ ] Update satellite PCU detection to use Ollama llava:13b (requires redesign - uses iterative function calling)
+- [x] Add Ollama setup documentation
+- [ ] Test contract parsing with local Ollama
+- [ ] Test satellite image analysis with local Ollama
