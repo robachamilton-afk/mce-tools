@@ -16,6 +16,7 @@
     "install-all": "cd tools/oe-toolkit && pnpm install && cd ../../tools/acc-asset-extractor/webapp && pnpm install && cd ../../../../tools/performance-assessment/solar-analyzer && pnpm install"
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "^9.0.0",
+    "cross-env": "^7.0.3"
   }
 }
