@@ -1,0 +1,15 @@
+{
+  "query": "\nSELECT duid, COUNT(*) as duplicate_count, GROUP_CONCAT(id) as site_ids\nFROM sites\nGROUP BY duid\nHAVING COUNT(*) > 1\nORDER BY duplicate_count DESC\nLIMIT 20;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2R5G6YVYACRzXTL.b7be434eb6e1 --database V5ZBFm3AoRBaVCbSk5TE94 --execute \nSELECT duid, COUNT(*) as duplicate_count, GROUP_CONCAT(id) as site_ids\nFROM sites\nGROUP BY duid\nHAVING COUNT(*) > 1\nORDER BY duplicate_count DESC\nLIMIT 20;\n",
+  "rows": [
+    {
+      "duid": "NULL",
+      "duplicate_count": "16",
+      "site_ids": "6,9,13,16,23,44,52,84,131,134,138,141,148,169,177,209"
+    }
+  ],
+  "messages": [],
+  "stdout": "duid\tduplicate_count\tsite_ids\nNULL\t16\t6,9,13,16,23,44,52,84,131,134,138,141,148,169,177,209\n",
+  "stderr": "",
+  "execution_time_ms": 1500
+}

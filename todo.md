@@ -219,3 +219,32 @@
 - [x] Fix 'image: unknown format' error by converting PDFs to PNG before vision analysis
 - [ ] Test contract extraction with scanned PDFs locally (requires local Ollama setup + GraphicsMagick)
 - [ ] Update documentation for Ollama setup and model requirements
+
+## Improve Contract Extraction Quality
+- [x] Increase PDF rendering resolution from 150 DPI to 300 DPI for better OCR
+- [x] Optimize extraction prompt for llama3.2-vision model
+- [ ] Test extraction accuracy with real scanned contract (ready for user testing)
+
+## Fix Ollama Connection Error
+- [ ] Add detailed error logging to Ollama API calls to identify fetch failure cause
+- [ ] Configure fetch timeout (vision models can take 60+ seconds)
+- [ ] Add connection retry logic for transient failures
+- [ ] Test with curl to verify Ollama API is accessible
+
+## Switch to llava:34b for Better Document Extraction
+- [x] Update contractParser to use llava:34b instead of llama3.2-vision:11b
+- [ ] User needs to pull model locally: `ollama pull llava:34b` (~20GB)
+- [ ] Test extraction quality with real contract PDF
+
+## Create Ollama Integration Documentation
+- [x] Write OLLAMA_SETUP.md with installation instructions
+- [x] Document model requirements and system specifications
+- [x] Add troubleshooting guide for common issues
+- [x] Document alternative local LLM options (LM Studio, vLLM, etc.)
+- [x] Push documentation to mce-tools repository
+
+## Database Cleanup and Reseed
+- [x] Analyze current database for duplicates
+- [x] Create cleanup script to truncate all tables
+- [x] Reseed with clean APVI solar farm data
+- [x] Verify data integrity after reseed

@@ -11,35 +11,34 @@ export async function extractContractModel(contractFileUrl: string) {
   
   // Convert PDF to images (one per page)
   const pages = await convertPdfUrlToImages(contractFileUrl, {
-    density: 200, // Higher DPI for better text recognition
+    density: 300, // High DPI for scanned document OCR
     format: 'png',
   });
   
   console.log(`[Contract Parser] Converted PDF to ${pages.length} images`);
   
-  const systemPrompt = `You are an expert in solar power purchase agreements and performance contracts. 
-Extract all relevant performance equations, tariff structures, capacity guarantees, and penalty clauses from the contract.
+  const systemPrompt = `You are an expert document analyzer specializing in solar power purchase agreements.
 
-Focus on:
-- Performance Ratio (PR) calculation formulas
-- Availability calculations
-- Energy generation requirements
-- Tariff rates ($/MWh) and time-of-use structures
-- Capacity guarantees (MW)
-- Revenue and penalty formulas
-- Any mathematical equations or thresholds
+Your task:
+1. READ the entire document image carefully - this is a scanned PDF converted to high-resolution image
+2. EXTRACT all text, numbers, formulas, and equations you can see
+3. IDENTIFY performance metrics, tariffs, guarantees, and penalties
+4. STRUCTURE the extracted information into the requested JSON format
 
-For undefined terms:
-- ONLY flag a term as undefined if it is explicitly referenced in the contract but its definition is NOT provided anywhere in the document
-- Do NOT flag terms that are standard industry terminology (e.g., "Performance Ratio", "Availability", "Force Majeure")
-- Do NOT flag terms that can be reasonably inferred from context
-- Be consistent: the same contract should always produce the same list of undefined terms
+Key information to find:
+- Mathematical formulas (Performance Ratio, Availability, Revenue, Penalties)
+- Numeric values (capacity in MW, percentages, dollar amounts, dates)
+- Tariff rates and time-of-use schedules
+- Threshold values and penalty structures
 
-For missing parameters:
-- ONLY flag parameters that are required for calculations but not specified
-- Do NOT flag optional or industry-standard default values
+IMPORTANT:
+- Read ALL visible text in the image
+- Pay attention to tables, equations, and fine print
+- Extract exact numbers and formulas as written
+- If you cannot read something clearly, note it in ambiguities
+- Be thorough - missing a key formula means the analysis will fail
 
-Return structured JSON with all extracted information. Be deterministic and consistent.`;
+Return valid JSON only. No markdown, no explanations.`;
   
   const userPrompt = `Extract the complete performance model from this solar contract. The contract is provided as ${pages.length} page image(s). Analyze ALL pages to extract equations, parameters, tariffs, and guarantees.
 
@@ -81,7 +80,7 @@ Return a JSON object with this exact structure:
     const model = await ollamaVisionJSON(
       pagesToAnalyze[0].base64, // Use first page
       finalPrompt,
-      'llama3.2-vision:11b',
+      'llava:34b', // Larger model for better document understanding
       systemPrompt
     );
     
