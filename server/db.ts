@@ -738,7 +738,8 @@ export async function extractAndSaveContractModel(analysisId: number) {
   if (!db) throw new Error("Database not available");
   
   const { customAnalyses } = await import("../drizzle/schema");
-  const { extractContractModel, validateContractModel } = await import("./contractParser");
+  // Use V2 OCR-first pipeline
+  const { extractContractFromPdf, convertToLegacyFormat } = await import("./contractParserV2");
   
   // Get analysis record
   const [analysis] = await db
@@ -751,19 +752,26 @@ export async function extractAndSaveContractModel(analysisId: number) {
   if (!analysis.contractFileUrl) throw new Error("No contract file uploaded");
   
   try {
-    // Extract model from contract PDF
-    const model = await extractContractModel(analysis.contractFileUrl);
+    // Download PDF to temp file
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(analysis.contractFileUrl);
+    if (!response.ok) throw new Error(`Failed to download PDF: ${response.statusText}`);
     
-    // Validate extracted model
-    const validation = validateContractModel(model);
-    if (!validation.valid) {
-      throw new Error(`Invalid model: ${validation.errors.join(', ')}`);
-    }
+    const buffer = await response.buffer();
+    const tempPdfPath = `/tmp/contract-${analysisId}.pdf`;
+    await (await import('fs/promises')).writeFile(tempPdfPath, buffer);
     
-    // Add validation info to model (cast to any to allow dynamic property)
+    // Extract model using V2 OCR-first pipeline
+    const modelV2 = await extractContractFromPdf(tempPdfPath);
+    
+    // Convert to legacy format for backwards compatibility
+    const model = convertToLegacyFormat(modelV2);
+    
+    // Add validation info based on exceptions
+    const needsClarification = modelV2.exceptions.length > 0;
     (model as any)._validation = {
-      needsClarification: validation.needsClarification,
-      clarificationCount: validation.clarificationCount
+      needsClarification,
+      clarificationCount: modelV2.exceptions.length
     };
     
     // Save extracted model

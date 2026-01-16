@@ -290,10 +290,11 @@
 - [x] Install OCR dependencies (Tesseract)
 - [x] Create OCR module for text extraction with bbox/confidence
 - [x] Create new JSON schema with evidence references
-- [ ] Implement PDF render → OCR → document assembly stages
-- [ ] Switch from vision model to qwen2.5:14b text model
-- [ ] Add JSON schema validation with self-healing retry logic
-- [ ] Implement 3-pass equation extraction (detect → reconstruct → validate)
-- [ ] Add evidence references (page + OCR snippet) to all fields
-- [ ] Create unit tests with TestSchedule.pdf fixture
-- [ ] Validate PR equation extraction produces correct AST
+- [x] Implement PDF render → OCR → document assembly stages
+- [x] Switch from vision model to qwen2.5:14b text model
+- [x] Add JSON schema validation with self-healing retry logic
+- [x] Implement 3-pass equation extraction (detect → reconstruct → validate)
+- [x] Add evidence references (page + OCR snippet) to all fields
+- [x] Integrate V2 pipeline into existing router
+- [ ] Test with TestSchedule.pdf to validate extraction quality
+- [ ] Verify PR equation produces correct computational form
