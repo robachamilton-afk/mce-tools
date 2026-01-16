@@ -80,7 +80,7 @@ Return a JSON object with this exact structure:
     const model = await ollamaVisionJSON(
       pagesToAnalyze[0].base64, // Use first page
       finalPrompt,
-      'llama3.2-vision:11b',
+      'llava:34b', // Larger model for better document understanding
       systemPrompt
     );
     

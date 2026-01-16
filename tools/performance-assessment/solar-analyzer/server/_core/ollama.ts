@@ -48,7 +48,15 @@ export async function ollamaChat(options: OllamaGenerateOptions): Promise<Ollama
   const ollamaUrl = ENV.OLLAMA_BASE_URL || 'http://localhost:11434';
   const endpoint = `${ollamaUrl}/api/chat`;
 
+  console.log(`[Ollama] Calling ${endpoint} with model ${options.model}`);
+  console.log(`[Ollama] Message count: ${options.messages.length}`);
+  console.log(`[Ollama] Has images: ${options.messages.some(m => m.images?.length)}`);
+
   try {
+    // Vision models can take 60+ seconds, especially with high-res images
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -58,7 +66,10 @@ export async function ollamaChat(options: OllamaGenerateOptions): Promise<Ollama
         ...options,
         stream: false, // Always disable streaming for now
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -69,6 +80,18 @@ export async function ollamaChat(options: OllamaGenerateOptions): Promise<Ollama
     return data;
   } catch (error) {
     console.error('[Ollama] Chat API error:', error);
+    console.error('[Ollama] Endpoint:', endpoint);
+    console.error('[Ollama] Model:', options.model);
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Ollama request timed out after 2 minutes. The model may be overloaded or the image is too large.');
+      }
+      if (error.message.includes('ECONNREFUSED')) {
+        throw new Error(`Cannot connect to Ollama at ${ollamaUrl}. Make sure Ollama is running (try: ollama serve)`);
+      }
+    }
+    
     throw error;
   }
 }
