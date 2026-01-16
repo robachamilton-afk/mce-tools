@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Simple database seed script for Solar Analyzer
- * Uses direct SQL to avoid ORM type mismatches
+ * Uses direct SQL to match actual schema
  */
 
 import mysql from 'mysql2/promise';
@@ -10,6 +10,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Helper to convert ISO datetime to MySQL format
+const toMySQLDateTime = (isoString) => {
+  if (!isoString) return null;
+  try {
+    // Remove the .000Z and replace with nothing
+    return isoString.replace(/\.\d{3}Z$/, '');
+  } catch {
+    return null;
+  }
+};
 
 async function seedDatabase() {
   if (!process.env.DATABASE_URL) {
@@ -43,9 +54,6 @@ async function seedDatabase() {
     const seedData = JSON.parse(fs.readFileSync(seedDataPath, 'utf-8'));
     console.log(`📦 Loaded seed data`);
 
-    // Helper to convert camelCase to snake_case
-    const toSnakeCase = (str) => str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-
     // Insert users
     console.log(`📝 Inserting ${seedData.users?.length || 0} users...`);
     if (seedData.users && seedData.users.length > 0) {
@@ -62,9 +70,9 @@ async function seedDatabase() {
             user.email || null,
             user.loginMethod || null,
             user.role || 'user',
-            user.createdAt || new Date().toISOString(),
-            user.updatedAt || new Date().toISOString(),
-            user.lastSignedIn || new Date().toISOString()
+            toMySQLDateTime(user.createdAt) || new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+            toMySQLDateTime(user.updatedAt) || new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+            toMySQLDateTime(user.lastSignedIn) || new Date().toISOString().replace(/\.\d{3}Z$/, '')
           ]);
         } catch (err) {
           console.warn(`  ⚠️  User ${user.openId}: ${err.message}`);
@@ -82,7 +90,7 @@ async function seedDatabase() {
             INSERT INTO sites (duid, name, capacity_dc_mw, capacity_ac_mw, region, latitude, longitude, 
                               commissioning_date, owner, status, data_source, user_modified, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE duid=duid
+            ON DUPLICATE KEY UPDATE duid=VALUES(duid)
           `;
           await connection.execute(query, [
             site.duid || null,
@@ -92,13 +100,13 @@ async function seedDatabase() {
             site.region || null,
             site.latitude || null,
             site.longitude || null,
-            site.commissioningDate || null,
+            toMySQLDateTime(site.commissioningDate) || null,
             site.owner || null,
             site.status || null,
             site.dataSource || 'APVI',
             site.userModified || 0,
-            site.createdAt || new Date().toISOString(),
-            site.updatedAt || new Date().toISOString()
+            toMySQLDateTime(site.createdAt) || new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+            toMySQLDateTime(site.updatedAt) || new Date().toISOString().replace(/\.\d{3}Z$/, '')
           ]);
         } catch (err) {
           console.warn(`  ⚠️  Site ${site.name}: ${err.message}`);
@@ -120,7 +128,7 @@ async function seedDatabase() {
                                             satellite_image_date, inverter_make, inverter_model, inverter_count, 
                                             pcu_count, module_make, module_model, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE site_id=site_id
+            ON DUPLICATE KEY UPDATE site_id=VALUES(site_id)
           `;
           await connection.execute(query, [
             config.siteId,
@@ -139,17 +147,17 @@ async function seedDatabase() {
             config.equipmentConfidence || null,
             config.imagesAnalyzed || null,
             config.detectionNotes || null,
-            config.lastValidated || null,
+            toMySQLDateTime(config.lastValidated) || null,
             config.satelliteImageUrl || null,
-            config.satelliteImageDate || null,
+            toMySQLDateTime(config.satelliteImageDate) || null,
             config.inverterMake || null,
             config.inverterModel || null,
             config.inverterCount || null,
             config.pcuCount || null,
             config.moduleMake || null,
             config.moduleModel || null,
-            config.createdAt || new Date().toISOString(),
-            config.updatedAt || new Date().toISOString()
+            toMySQLDateTime(config.createdAt) || new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+            toMySQLDateTime(config.updatedAt) || new Date().toISOString().replace(/\.\d{3}Z$/, '')
           ]);
         } catch (err) {
           console.warn(`  ⚠️  Config ${config.siteId}: ${err.message}`);
@@ -164,16 +172,28 @@ async function seedDatabase() {
       for (const assessment of seedData.assessments) {
         try {
           const query = `
-            INSERT INTO assessments (site_id, assessment_date, report_url, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE site_id=site_id
+            INSERT INTO assessments (site_id, assessment_date, date_range_start, date_range_end, 
+                                    technical_pr, overall_pr, curtailment_mwh, curtailment_pct, 
+                                    underperformance_mwh, lost_revenue_estimate, report_pdf_url, 
+                                    data_csv_url, visualization_png_url, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE site_id=VALUES(site_id)
           `;
           await connection.execute(query, [
             assessment.siteId,
-            assessment.assessmentDate || new Date().toISOString(),
-            assessment.reportUrl || null,
-            assessment.createdAt || new Date().toISOString(),
-            assessment.updatedAt || new Date().toISOString()
+            toMySQLDateTime(assessment.assessmentDate) || new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+            toMySQLDateTime(assessment.dateRangeStart) || new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+            toMySQLDateTime(assessment.dateRangeEnd) || new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+            assessment.technicalPr || null,
+            assessment.overallPr || null,
+            assessment.curtailmentMwh || null,
+            assessment.curtailmentPct || null,
+            assessment.underperformanceMwh || null,
+            assessment.lostRevenueEstimate || null,
+            assessment.reportPdfUrl || null,
+            assessment.dataCsvUrl || null,
+            assessment.visualizationPngUrl || null,
+            toMySQLDateTime(assessment.createdAt) || new Date().toISOString().replace(/\.\d{3}Z$/, '')
           ]);
         } catch (err) {
           console.warn(`  ⚠️  Assessment ${assessment.siteId}: ${err.message}`);
@@ -182,48 +202,32 @@ async function seedDatabase() {
     }
     console.log('✅ Assessments inserted');
 
-    // Insert custom analyses
-    console.log(`📝 Inserting ${seedData.customAnalyses?.length || 0} custom analyses...`);
-    if (seedData.customAnalyses && seedData.customAnalyses.length > 0) {
-      for (const analysis of seedData.customAnalyses) {
-        try {
-          const query = `
-            INSERT INTO custom_analyses (site_id, analysis_type, parameters, results, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE site_id=site_id
-          `;
-          await connection.execute(query, [
-            analysis.siteId,
-            analysis.analysisType || null,
-            analysis.parameters ? JSON.stringify(analysis.parameters) : null,
-            analysis.results ? JSON.stringify(analysis.results) : null,
-            analysis.createdAt || new Date().toISOString(),
-            analysis.updatedAt || new Date().toISOString()
-          ]);
-        } catch (err) {
-          console.warn(`  ⚠️  Analysis ${analysis.siteId}: ${err.message}`);
-        }
-      }
-    }
-    console.log('✅ Custom analyses inserted');
-
     // Insert equipment detections
     console.log(`📝 Inserting ${seedData.equipmentDetections?.length || 0} equipment detections...`);
     if (seedData.equipmentDetections && seedData.equipmentDetections.length > 0) {
       for (const detection of seedData.equipmentDetections) {
         try {
           const query = `
-            INSERT INTO equipment_detections (site_id, equipment_type, confidence, metadata, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE site_id=site_id
+            INSERT INTO equipment_detections (site_id, type, latitude, longitude, status, confidence, 
+                                            detection_method, detected_at, verified_at, verified_by, notes, metadata, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE site_id=VALUES(site_id)
           `;
           await connection.execute(query, [
             detection.siteId,
-            detection.equipmentType || null,
+            detection.type || 'other',
+            detection.latitude || null,
+            detection.longitude || null,
+            detection.status || 'auto_detected',
             detection.confidence || null,
+            detection.detectionMethod || 'satellite_llm',
+            toMySQLDateTime(detection.detectedAt) || new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+            toMySQLDateTime(detection.verifiedAt) || null,
+            detection.verifiedBy || null,
+            detection.notes || null,
             detection.metadata ? JSON.stringify(detection.metadata) : null,
-            detection.createdAt || new Date().toISOString(),
-            detection.updatedAt || new Date().toISOString()
+            toMySQLDateTime(detection.createdAt) || new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+            toMySQLDateTime(detection.updatedAt) || new Date().toISOString().replace(/\.\d{3}Z$/, '')
           ]);
         } catch (err) {
           console.warn(`  ⚠️  Detection ${detection.siteId}: ${err.message}`);
@@ -231,6 +235,40 @@ async function seedDatabase() {
       }
     }
     console.log('✅ Equipment detections inserted');
+
+    // Insert custom analyses (if any exist in seed data)
+    console.log(`📝 Inserting ${seedData.customAnalyses?.length || 0} custom analyses...`);
+    if (seedData.customAnalyses && seedData.customAnalyses.length > 0) {
+      for (const analysis of seedData.customAnalyses) {
+        try {
+          const query = `
+            INSERT INTO custom_analyses (site_id, user_id, name, description, analysis_mode, is_demo, status, 
+                                        contract_capacity_mw, tariff_per_mwh, contract_start_date, contract_end_date,
+                                        created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE site_id=VALUES(site_id)
+          `;
+          await connection.execute(query, [
+            analysis.siteId,
+            analysis.userId || 1, // Default to first user if not specified
+            analysis.name || `Analysis for Site ${analysis.siteId}`,
+            analysis.description || null,
+            analysis.analysisMode || 'contract',
+            analysis.isDemo || false,
+            analysis.status || 'completed',
+            analysis.contractCapacityMw || null,
+            analysis.tariffPerMwh || null,
+            toMySQLDateTime(analysis.contractStartDate) || null,
+            toMySQLDateTime(analysis.contractEndDate) || null,
+            toMySQLDateTime(analysis.createdAt) || new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+            toMySQLDateTime(analysis.updatedAt) || new Date().toISOString().replace(/\.\d{3}Z$/, '')
+          ]);
+        } catch (err) {
+          console.warn(`  ⚠️  Analysis ${analysis.siteId}: ${err.message}`);
+        }
+      }
+    }
+    console.log('✅ Custom analyses inserted');
 
     console.log('🎉 Database seeding completed successfully!');
     await connection.end();
