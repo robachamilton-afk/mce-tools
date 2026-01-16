@@ -1,4 +1,3 @@
-import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -9,17 +8,7 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  // Lazily evaluate getLoginUrl to avoid errors during module load
-  const getRedirectPath = () => {
-    try {
-      return getLoginUrl();
-    } catch (error) {
-      console.warn("[Auth] Failed to get login URL:", error);
-      return "/";
-    }
-  };
-
-  const { redirectOnUnauthenticated = false, redirectPath = getRedirectPath() } =
+  const { redirectOnUnauthenticated = false, redirectPath = "/" } =
     options ?? {};
   const utils = trpc.useUtils();
 

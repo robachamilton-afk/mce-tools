@@ -1,20 +1,9 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
 import { LogOut } from "lucide-react";
 
 export default function Header() {
   const { isAuthenticated, user, logout, loading } = useAuth();
-
-  const handleLogin = () => {
-    try {
-      window.location.href = getLoginUrl();
-    } catch (error) {
-      console.error("Login error:", error);
-      // In development mode, OAuth might not be configured
-      // The user should already be auto-authenticated via mock user
-    }
-  };
 
   return (
     <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-50">
@@ -37,34 +26,29 @@ export default function Header() {
             </div>
           </div>
 
-          {/* Auth Section */}
-          <div className="flex items-center gap-3">
-            {loading ? (
-              <span className="text-sm text-slate-600 dark:text-slate-400">Loading...</span>
-            ) : isAuthenticated && user ? (
-              <>
-                <span className="text-sm text-slate-600 dark:text-slate-400">
-                  {user.name || user.email || "User"}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={logout}
-                  className="flex items-center gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <Button
-                size="sm"
-                onClick={handleLogin}
-              >
-                Login
-              </Button>
-            )}
-          </div>
+          {/* Auth Section - Only show in production */}
+          {process.env.NODE_ENV === 'production' && (
+            <div className="flex items-center gap-3">
+              {loading ? (
+                <span className="text-sm text-slate-600 dark:text-slate-400">Loading...</span>
+              ) : isAuthenticated && user ? (
+                <>
+                  <span className="text-sm text-slate-600 dark:text-slate-400">
+                    {user.name || user.email || "User"}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={logout}
+                    className="flex items-center gap-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
     </header>
