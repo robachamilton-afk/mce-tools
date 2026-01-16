@@ -26,6 +26,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    port: parseInt(process.env.PORT || "3002"),
     host: true,
     allowedHosts: [
       ".manuspre.computer",
