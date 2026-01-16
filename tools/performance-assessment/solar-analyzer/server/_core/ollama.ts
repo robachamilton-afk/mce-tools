@@ -122,11 +122,19 @@ export async function ollamaGenerateJSON<T = any>(
     options,
   });
 
+  console.log(`[Ollama] Response received from ${model}`);
+  console.log(`[Ollama] Response length: ${response.message.content.length} characters`);
+  console.log(`[Ollama] Generation time: ${response.total_duration ? (response.total_duration / 1e9).toFixed(2) + 's' : 'unknown'}`);
+
   try {
-    return JSON.parse(response.message.content);
+    const parsed = JSON.parse(response.message.content);
+    console.log(`[Ollama] Successfully parsed JSON with keys:`, Object.keys(parsed));
+    return parsed;
   } catch (error) {
-    console.error('[Ollama] Failed to parse JSON response:', response.message.content);
-    throw new Error('Ollama returned invalid JSON');
+    console.error('[Ollama] Failed to parse JSON response');
+    console.error('[Ollama] Raw response (first 500 chars):', response.message.content.substring(0, 500));
+    console.error('[Ollama] Parse error:', error);
+    throw new Error(`Ollama returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

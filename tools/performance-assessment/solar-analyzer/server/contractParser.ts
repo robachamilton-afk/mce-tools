@@ -52,17 +52,39 @@ Return a JSON object with this exact structure:
 
 PDF (base64): ${pdfBase64}`;
   
-  const model = await ollamaGenerateJSON(
-    ENV.OLLAMA_TEXT_MODEL,
-    userPrompt,
-    systemPrompt,
-    {
-      temperature: 0.1, // Low temperature for consistency
-      num_predict: 4096, // Allow long responses
+  try {
+    console.log('[Contract Parser] Starting extraction with Ollama...');
+    console.log(`[Contract Parser] Model: ${ENV.OLLAMA_TEXT_MODEL}`);
+    console.log(`[Contract Parser] PDF size: ${pdfBase64.length} bytes (base64)`);
+    
+    const model = await ollamaGenerateJSON(
+      ENV.OLLAMA_TEXT_MODEL,
+      userPrompt,
+      systemPrompt,
+      {
+        temperature: 0.1, // Low temperature for consistency
+        num_predict: 4096, // Allow long responses
+      }
+    );
+    
+    console.log('[Contract Parser] Ollama response received');
+    console.log('[Contract Parser] Response keys:', Object.keys(model || {}));
+    
+    // Log what we got for debugging
+    if (model) {
+      console.log('[Contract Parser] Equations:', model.equations?.length || 0);
+      console.log('[Contract Parser] Parameters:', Object.keys(model.parameters || {}).length);
+      console.log('[Contract Parser] Tariffs:', Object.keys(model.tariffs || {}).length);
+      console.log('[Contract Parser] Guarantees:', model.guarantees?.length || 0);
+    } else {
+      console.error('[Contract Parser] ERROR: Ollama returned null/undefined');
     }
-  );
-  
-  return model;
+    
+    return model;
+  } catch (error) {
+    console.error('[Contract Parser] Extraction failed:', error);
+    throw new Error(`Contract extraction failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 /**
@@ -73,27 +95,54 @@ export function validateContractModel(model: any): {
   errors: string[];
   needsClarification: boolean;
   clarificationCount: number;
+  warnings: string[];
 } {
   const errors: string[] = [];
+  const warnings: string[] = [];
   
+  // Check if model exists
+  if (!model || typeof model !== 'object') {
+    errors.push("Invalid model: Expected object, got " + typeof model);
+    return {
+      valid: false,
+      errors,
+      warnings,
+      needsClarification: false,
+      clarificationCount: 0
+    };
+  }
+  
+  // Check required fields with detailed messages
   if (!model.equations || !Array.isArray(model.equations)) {
-    errors.push("Missing or invalid equations array");
+    errors.push("Missing or invalid equations array" + (model.equations ? " (got: " + typeof model.equations + ")" : ""));
+  } else if (model.equations.length === 0) {
+    warnings.push("Equations array is empty - no performance equations found in contract");
   }
   
   if (!model.parameters || typeof model.parameters !== 'object') {
-    errors.push("Missing or invalid parameters object");
+    errors.push("Missing or invalid parameters object" + (model.parameters ? " (got: " + typeof model.parameters + ")" : ""));
+  } else if (Object.keys(model.parameters).length === 0) {
+    warnings.push("Parameters object is empty - no contract parameters found");
   }
   
   if (!model.tariffs || typeof model.tariffs !== 'object') {
-    errors.push("Missing or invalid tariffs object");
+    errors.push("Missing or invalid tariffs object" + (model.tariffs ? " (got: " + typeof model.tariffs + ")" : ""));
   }
   
   if (!model.guarantees || !Array.isArray(model.guarantees)) {
-    errors.push("Missing or invalid guarantees array");
+    errors.push("Missing or invalid guarantees array" + (model.guarantees ? " (got: " + typeof model.guarantees + ")" : ""));
   }
   
   if (!model.revenueCalculations || !Array.isArray(model.revenueCalculations)) {
-    errors.push("Missing or invalid revenueCalculations array");
+    errors.push("Missing or invalid revenueCalculations array" + (model.revenueCalculations ? " (got: " + typeof model.revenueCalculations + ")" : ""));
+  }
+  
+  // Log validation results
+  if (errors.length > 0) {
+    console.error('[Contract Parser] Validation errors:', errors);
+  }
+  if (warnings.length > 0) {
+    console.warn('[Contract Parser] Validation warnings:', warnings);
   }
   
   // Check for clarifications needed
@@ -105,6 +154,7 @@ export function validateContractModel(model: any): {
   return {
     valid: errors.length === 0,
     errors,
+    warnings,
     needsClarification: clarificationCount > 0,
     clarificationCount
   };

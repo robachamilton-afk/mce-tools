@@ -236,3 +236,9 @@
 - [x] Update satellite config analysis to use Mapbox
 - [x] Update PCU detection to use Mapbox
 - [ ] Test Mapbox satellite imagery fetching
+
+## Contract Parser Improvements
+- [x] Add better error handling for incomplete Ollama responses
+- [x] Add detailed logging of Ollama responses for debugging
+- [x] Add validation with specific missing field messages
+- [ ] Add partial extraction support (accept incomplete data)
