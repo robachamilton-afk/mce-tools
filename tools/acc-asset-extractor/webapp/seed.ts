@@ -28,7 +28,7 @@ async function seedDatabase() {
     console.log('✅ Connected to database');
 
     // Load seed data
-    const seedDataPath = path.join(__dirname, '..', 'seed_data.json');
+    const seedDataPath = path.join(__dirname, 'seed_data.json');
     if (!fs.existsSync(seedDataPath)) {
       console.error(`❌ Seed data file not found: ${seedDataPath}`);
       process.exit(1);
