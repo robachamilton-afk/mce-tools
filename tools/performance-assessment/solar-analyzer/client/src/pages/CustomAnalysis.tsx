@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ export default function CustomAnalysis() {
   const [scadaFile, setScadaFile] = useState<File | null>(null);
   const [meteoFile, setMeteoFile] = useState<File | null>(null);
   const [extractedModel, setExtractedModel] = useState<any>(null);
+  const [extractionStartTime, setExtractionStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
   
   const contractInputRef = useRef<HTMLInputElement>(null);
   const scadaInputRef = useRef<HTMLInputElement>(null);
@@ -58,17 +60,27 @@ export default function CustomAnalysis() {
   });
 
   const extractModelMutation = trpc.customAnalysis.extractModel.useMutation({
+    onMutate: () => {
+      // Start timer when extraction begins
+      setExtractionStartTime(Date.now());
+      setElapsedTime(0);
+    },
     onSuccess: (data: any) => {
+      // Stop timer
+      const duration = extractionStartTime ? Math.round((Date.now() - extractionStartTime) / 1000) : 0;
+      setExtractionStartTime(null);
       setExtractedModel(data.model);
       toast({ 
         title: "Model extracted", 
-        description: data.model._validation?.needsClarification 
+        description: `Completed in ${duration}s. ${data.model._validation?.needsClarification 
           ? `${data.model._validation.clarificationCount} items need clarification`
-          : "Ready for review"
+          : "Ready for review"}`
       });
       setStep("confirm_model");
     },
     onError: (error: any) => {
+      // Stop timer on error
+      setExtractionStartTime(null);
       toast({ title: "Extraction failed", description: error.message, variant: "destructive" });
     },
   });
@@ -90,6 +102,16 @@ export default function CustomAnalysis() {
       });
     },
   });
+
+  // Update elapsed time every second while extracting
+  useEffect(() => {
+    if (extractionStartTime) {
+      const interval = setInterval(() => {
+        setElapsedTime(Math.round((Date.now() - extractionStartTime) / 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [extractionStartTime]);
 
   const handleCreateAnalysis = () => {
     if (!analysisName.trim()) {
@@ -361,7 +383,9 @@ export default function CustomAnalysis() {
                 {uploadContractMutation.isPending || extractModelMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {uploadContractMutation.isPending ? "Uploading..." : "Extracting Model..."}
+                    {uploadContractMutation.isPending 
+                      ? "Uploading..." 
+                      : `Extracting Model... (${elapsedTime}s)`}
                   </>
                 ) : (
                   "Upload & Extract Model"

@@ -137,6 +137,7 @@ export const contractExtractionSchema = {
     }
   },
   required: ["equations", "parameters", "tariffs", "guarantees", "confidence"]
+  // Note: revenueCalculations is optional - not all contract excerpts contain revenue formulas
 };
 
 export type ContractExtraction = {
@@ -172,7 +173,7 @@ export type ContractExtraction = {
     unit?: string | null;
     penaltyFormula?: string | null;
   }>;
-  revenueCalculations: Array<{
+  revenueCalculations?: Array<{
     name: string;
     formula: string;
     description?: string | null;
