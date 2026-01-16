@@ -12,13 +12,16 @@
  *   - Database schema must be already created (run: pnpm db:push)
  */
 
-import mysql from 'mysql2/promise';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const webappDir = path.join(__dirname, 'webapp');
+
+// Add webapp node_modules to module search path
+const modulePath = path.join(webappDir, 'node_modules');
 
 async function seedDatabase() {
   // Check for DATABASE_URL
@@ -29,18 +32,12 @@ async function seedDatabase() {
     process.exit(1);
   }
 
-  console.log('🌱 Starting database seeding...');
-  
-  // Parse DATABASE_URL
-  const url = new URL(process.env.DATABASE_URL);
-  const connection = await mysql.createConnection({
-    host: url.hostname,
-    user: url.username,
-    password: url.password,
-    database: url.pathname.slice(1),
-  });
-
   try {
+    // Dynamically import mysql2 from webapp node_modules
+    const mysql = await import(path.join(modulePath, 'mysql2/promise/index.js'));
+    
+    console.log('🌱 Starting database seeding...');
+    
     // Load seed data
     const seedDataPath = path.join(__dirname, 'seed_data.json');
     if (!fs.existsSync(seedDataPath)) {
@@ -51,8 +48,20 @@ async function seedDatabase() {
     const seedData = JSON.parse(fs.readFileSync(seedDataPath, 'utf-8'));
     console.log(`📦 Loaded ${seedData.extractionJobs.length} extraction jobs and ${seedData.assets.length} assets`);
 
+    // Parse DATABASE_URL
+    const url = new URL(process.env.DATABASE_URL);
+    const connection = await mysql.createConnection({
+      host: url.hostname,
+      user: url.username,
+      password: url.password,
+      database: url.pathname.slice(1),
+    });
+
+    console.log('✅ Connected to database');
+
     // Insert extraction jobs
     console.log('📝 Inserting extraction jobs...');
+    let jobsInserted = 0;
     for (const job of seedData.extractionJobs) {
       const columns = Object.keys(job);
       const values = Object.values(job);
@@ -63,14 +72,16 @@ async function seedDatabase() {
       
       try {
         await connection.execute(sql, values);
+        jobsInserted++;
       } catch (err) {
         console.warn(`  ⚠️  Job ${job.id}: ${err.message}`);
       }
     }
-    console.log(`✅ Inserted ${seedData.extractionJobs.length} extraction jobs`);
+    console.log(`✅ Inserted ${jobsInserted}/${seedData.extractionJobs.length} extraction jobs`);
 
     // Insert assets
     console.log('📝 Inserting assets...');
+    let assetsInserted = 0;
     for (const asset of seedData.assets) {
       const columns = Object.keys(asset);
       const values = Object.values(asset);
@@ -81,18 +92,19 @@ async function seedDatabase() {
       
       try {
         await connection.execute(sql, values);
+        assetsInserted++;
       } catch (err) {
         console.warn(`  ⚠️  Asset ${asset.id}: ${err.message}`);
       }
     }
-    console.log(`✅ Inserted ${seedData.assets.length} assets`);
+    console.log(`✅ Inserted ${assetsInserted}/${seedData.assets.length} assets`);
 
     console.log('🎉 Database seeding completed successfully!');
     await connection.end();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error seeding database:', error.message);
-    await connection.end();
+    console.error(error);
     process.exit(1);
   }
 }

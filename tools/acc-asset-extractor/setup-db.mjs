@@ -22,7 +22,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const webappDir = path.join(__dirname, 'webapp');
-const rootDir = __dirname;
 
 console.log('🚀 Starting ACC Asset Extractor database setup...\n');
 
@@ -35,11 +34,15 @@ try {
   });
   console.log('✅ Schema applied\n');
 
-  // Step 2: Seed data (run from webapp dir so it can find node_modules)
+  // Step 2: Seed data (run from root dir where seed_database.mjs is located)
   console.log('🌱 Step 2: Seeding database with data...');
-  execSync(`node ${path.join(rootDir, 'seed_database.mjs')}`, { 
-    cwd: webappDir,
-    stdio: 'inherit'
+  execSync('node seed_database.mjs', { 
+    cwd: __dirname,
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      NODE_PATH: path.join(webappDir, 'node_modules')
+    }
   });
   console.log('✅ Data seeded\n');
 
