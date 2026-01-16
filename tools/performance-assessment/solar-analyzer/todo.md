@@ -242,3 +242,16 @@
 - [x] Add detailed logging of Ollama responses for debugging
 - [x] Add validation with specific missing field messages
 - [ ] Add partial extraction support (accept incomplete data)
+
+## PDF Processing Fix
+- [x] Add PDF text extraction using pdf-parse or similar library
+- [x] Update contract parser to extract text before sending to Ollama
+- [x] Remove base64 PDF from Ollama prompt (too large for context window)
+- [ ] Test with 6.71 MB contract PDF
+
+## Ollama Context Window & Progress Tracking
+- [x] Configure Ollama with larger context window (128k tokens)
+- [x] Update contract parser to use increased context
+- [ ] Add progress tracking for contract extraction
+- [ ] Add progress bar/status updates to frontend
+- [ ] Test with 6.71 MB contract PDF

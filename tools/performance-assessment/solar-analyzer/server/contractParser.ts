@@ -2,14 +2,36 @@ import { ollamaGenerateJSON } from "./_core/ollama";
 import { ENV } from "./_core/env";
 
 /**
+ * Extract text from PDF using pdf-parse
+ */
+async function extractPdfText(pdfBuffer: ArrayBuffer): Promise<string> {
+  // Use pdf-parse to extract text from PDF
+  const pdf = await import('pdf-parse/lib/pdf-parse.js');
+  const data = await pdf.default(Buffer.from(pdfBuffer));
+  return data.text;
+}
+
+/**
  * Extract performance model from contract PDF
  * Returns equations, parameters, tariffs, and guarantees
  */
 export async function extractContractModel(contractFileUrl: string) {
+  console.log('[Contract Parser] Fetching PDF from:', contractFileUrl);
+  
   // Fetch the PDF file
   const pdfResponse = await fetch(contractFileUrl);
+  if (!pdfResponse.ok) {
+    throw new Error(`Failed to fetch PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
+  }
+  
   const pdfBuffer = await pdfResponse.arrayBuffer();
-  const pdfBase64 = Buffer.from(pdfBuffer).toString('base64');
+  console.log(`[Contract Parser] PDF downloaded: ${(pdfBuffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
+  
+  // Extract text from PDF
+  console.log('[Contract Parser] Extracting text from PDF...');
+  const pdfText = await extractPdfText(pdfBuffer);
+  console.log(`[Contract Parser] Extracted ${pdfText.length} characters of text`);
+  console.log(`[Contract Parser] First 200 chars: ${pdfText.substring(0, 200)}...`);
   
   const systemPrompt = `You are an expert in solar power purchase agreements and performance contracts. 
 Extract all relevant performance equations, tariff structures, capacity guarantees, and penalty clauses from the contract.
@@ -50,12 +72,14 @@ Return a JSON object with this exact structure:
   "confidence": { "equations": number, "parameters": number, "tariffs": number, "overall": number }
 }
 
-PDF (base64): ${pdfBase64}`;
+Contract text:
+${pdfText}`;
   
   try {
     console.log('[Contract Parser] Starting extraction with Ollama...');
     console.log(`[Contract Parser] Model: ${ENV.OLLAMA_TEXT_MODEL}`);
-    console.log(`[Contract Parser] PDF size: ${pdfBase64.length} bytes (base64)`);
+    console.log(`[Contract Parser] Text length: ${pdfText.length} characters`);
+    console.log(`[Contract Parser] Context window: 128k tokens, Max response: 8k tokens`);
     
     const model = await ollamaGenerateJSON(
       ENV.OLLAMA_TEXT_MODEL,
@@ -63,7 +87,8 @@ PDF (base64): ${pdfBase64}`;
       systemPrompt,
       {
         temperature: 0.1, // Low temperature for consistency
-        num_predict: 4096, // Allow long responses
+        num_predict: 8192, // Allow long responses for complex contracts
+        num_ctx: 131072, // 128k context window (qwen2.5:14b supports up to 128k)
       }
     );
     
