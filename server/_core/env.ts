@@ -7,4 +7,10 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  // Ollama configuration
+  OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434",
+  OLLAMA_TEXT_MODEL: process.env.OLLAMA_TEXT_MODEL ?? "qwen2.5:14b",
+  OLLAMA_VISION_MODEL: process.env.OLLAMA_VISION_MODEL ?? "llava:13b",
+  // Mapbox configuration
+  MAPBOX_ACCESS_TOKEN: process.env.MAPBOX_ACCESS_TOKEN ?? "",
 };
