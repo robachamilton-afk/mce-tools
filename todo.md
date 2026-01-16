@@ -259,3 +259,12 @@
 - [x] Strengthen JSON format instruction in prompt
 - [ ] Test with updated prompt to see if model returns valid JSON
 - [ ] If still fails, try simpler extraction (just extract raw text first)
+
+## Switch to Qwen2.5-VL for Contract Extraction
+- [x] Create proper JSON schema for contract extraction (contractSchema.ts)
+- [x] Update ollama.ts to support JSON schema in format parameter
+- [x] Update contract parser to use qwen2.5vl:7b instead of llava:34b
+- [x] Add stop tokens to prevent HTML tag spill
+- [x] Set low temperature (0.1) for deterministic output
+- [ ] Test with real contract PDF
+- [ ] Push changes to mce-tools repository

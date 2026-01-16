@@ -760,8 +760,8 @@ export async function extractAndSaveContractModel(analysisId: number) {
       throw new Error(`Invalid model: ${validation.errors.join(', ')}`);
     }
     
-    // Add validation info to model
-    model._validation = {
+    // Add validation info to model (cast to any to allow dynamic property)
+    (model as any)._validation = {
       needsClarification: validation.needsClarification,
       clarificationCount: validation.clarificationCount
     };

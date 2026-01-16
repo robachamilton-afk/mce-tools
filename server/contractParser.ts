@@ -1,12 +1,13 @@
 import { ollamaVisionJSON } from "./_core/ollama";
 import { ENV } from "./_core/env";
 import { convertPdfUrlToImages } from "./pdfToImages";
+import { contractExtractionSchema, type ContractExtraction } from "./contractSchema";
 
 /**
  * Extract performance model from contract PDF using vision model
- * Converts PDF pages to images first, then analyzes with llava:34b
+ * Converts PDF pages to images first, then analyzes with qwen2.5vl:7b
  */
-export async function extractContractModel(contractFileUrl: string) {
+export async function extractContractModel(contractFileUrl: string): Promise<ContractExtraction> {
   console.log('[Contract Parser] Fetching and converting PDF from:', contractFileUrl);
   
   // Convert PDF to images (one per page)
@@ -64,7 +65,7 @@ Return a JSON object with this exact structure:
   
   try {
     console.log('[Contract Parser] Starting extraction with Ollama vision model...');
-    console.log(`[Contract Parser] Model: llava:34b`);
+    console.log(`[Contract Parser] Model: qwen2.5vl:7b`);
     console.log(`[Contract Parser] Processing ${pages.length} pages`);
     
     // For multi-page PDFs, we need to process all pages
@@ -84,11 +85,18 @@ Return a JSON object with this exact structure:
     // For better results with multi-page docs, we should process each page and merge
     // But for now, let's try with the first page which usually has the key terms
     
-    const model = await ollamaVisionJSON(
+    const model = await ollamaVisionJSON<ContractExtraction>(
       pagesToAnalyze[0].base64, // Use first page
       finalPrompt,
-      'llava:34b', // Larger model for better document understanding
-      systemPrompt
+      'qwen2.5vl:7b', // Qwen2.5-VL is better at structured outputs from scans
+      systemPrompt,
+      {
+        format: contractExtractionSchema, // Pass JSON schema for structured output
+        options: {
+          temperature: 0.1, // Low temperature for more deterministic output
+          stop: ['</', '<h', '<reserved', '\n\n\n'], // Stop tokens to prevent tag spill
+        }
+      }
     );
     
     console.log('[Contract Parser] Ollama response received');
