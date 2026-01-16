@@ -64,8 +64,8 @@ Return a JSON object with this exact structure:
     // Option 1: Send all pages to vision model at once (if model supports multiple images)
     // Option 2: Process each page separately and merge results
     
-    // For now, we'll send the first few pages (most contracts have key info in first 10 pages)
-    const pagesToAnalyze = pages.slice(0, Math.min(10, pages.length));
+    // For now, we'll send the first few pages (most contracts have key info in first 2 pages)
+    const pagesToAnalyze = pages.slice(0, Math.min(2, pages.length));
     
     console.log(`[Contract Parser] Analyzing first ${pagesToAnalyze.length} pages`);
     
