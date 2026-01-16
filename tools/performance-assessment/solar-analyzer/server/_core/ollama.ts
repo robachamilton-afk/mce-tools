@@ -31,13 +31,14 @@ export interface OllamaGenerateOptions {
   model: string;
   messages: OllamaMessage[];
   stream?: boolean;
-  format?: 'json'; // Request JSON output
+  format?: 'json' | object; // Request JSON output or provide JSON schema
   options?: {
     temperature?: number;
     top_p?: number;
     top_k?: number;
     num_predict?: number;
     num_ctx?: number;
+    stop?: string[]; // Stop tokens to prevent tag spill
   };
 }
 
@@ -217,7 +218,8 @@ export async function ollamaVisionJSON<T = any>(
   imageUrl: string,
   prompt: string,
   model: string = 'llava:13b',
-  systemPrompt?: string
+  systemPrompt?: string,
+  additionalOptions?: Partial<OllamaGenerateOptions>
 ): Promise<T> {
   // If imageUrl is a URL, fetch and convert to base64
   let imageBase64: string;
@@ -249,7 +251,8 @@ export async function ollamaVisionJSON<T = any>(
   const response = await ollamaChat({
     model,
     messages,
-    format: 'json',
+    format: additionalOptions?.format || 'json',
+    options: additionalOptions?.options,
   });
 
   console.log(`[Ollama] Vision response received from ${model}`);
