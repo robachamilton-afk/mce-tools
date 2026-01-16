@@ -178,7 +178,7 @@ export async function extractContractModel(
       const response = await ollamaChat({
         model: TEXT_MODEL,
         messages,
-        format: contractJsonSchema,
+        format: 'json', // Use simple JSON mode instead of schema (more compatible)
         options: {
           temperature: 0.1, // Low temperature for deterministic output
           stop: ['```', '</', '</json>'], // Stop tokens to prevent garbage

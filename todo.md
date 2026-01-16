@@ -298,3 +298,7 @@
 - [x] Integrate V2 pipeline into existing router
 - [ ] Test with TestSchedule.pdf to validate extraction quality
 - [ ] Verify PR equation produces correct computational form
+
+## Fix Text Model Extraction Ollama Call
+- [x] Simplify format parameter to use 'json' string (more compatible than schema object)
+- [ ] Test with TestSchedule.pdf to verify extraction works
