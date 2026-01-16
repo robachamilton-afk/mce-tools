@@ -2,11 +2,16 @@
  * PDF to Images Converter
  * 
  * Converts PDF pages to PNG images for vision model processing
+ * Uses require() for better CommonJS module compatibility
  */
 
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
+import { createRequire } from 'module';
+
+// Use require for CommonJS modules
+const require = createRequire(import.meta.url);
 
 export interface PdfToImagesOptions {
   density?: number; // DPI (default: 150)
@@ -48,9 +53,9 @@ export async function convertPdfToImages(
     console.log(`[PDF Converter] Temp directory: ${tempDir}`);
     console.log(`[PDF Converter] Settings: ${density} DPI, ${width}x${height}px, ${format}`);
     
-    // Dynamic import for better CommonJS/ESM interop
-    const pdf2picModule = await import('pdf2pic');
-    const fromPath = pdf2picModule.default?.fromPath || pdf2picModule.fromPath;
+    // Use require() for CommonJS module
+    const pdf2pic = require('pdf2pic');
+    const fromPath = pdf2pic.fromPath || pdf2pic.default?.fromPath;
     
     if (!fromPath) {
       throw new Error('pdf2pic module did not export fromPath function');
