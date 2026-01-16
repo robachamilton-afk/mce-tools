@@ -213,8 +213,8 @@
 - [x] Fix 404 error when clicking Run Demo Analysis button
 
 ## Ollama Integration for Local Deployment
-- [ ] Create ollama.ts module for local LLM integration
-- [ ] Switch contract parser from Manus API to llama3.2-vision:11b
-- [ ] Implement PDF to base64 conversion for vision model
-- [ ] Test contract extraction with scanned PDFs locally
+- [x] Create ollama.ts module for local LLM integration
+- [x] Switch contract parser from Manus API to llama3.2-vision:11b
+- [x] Implement PDF to base64 conversion for vision model
+- [ ] Test contract extraction with scanned PDFs locally (requires local Ollama setup)
 - [ ] Update documentation for Ollama setup and model requirements
