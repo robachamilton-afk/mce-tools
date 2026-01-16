@@ -273,3 +273,15 @@
 - [x] Increase Ollama request timeout from 2 to 5 minutes
 - [x] Reduce image resolution from 300 DPI to 150 DPI
 - [ ] Test with single-page contract PDF
+
+## Add Processing Timer to Contract Extraction
+- [ ] Make revenueCalculations optional in JSON schema
+- [ ] Add elapsed time timer to contract extraction UI
+- [ ] Show timer during "Extracting Model" phase
+- [ ] Display final processing time after completion
+
+## Add Processing Timer and Fix Validation
+- [x] Make revenueCalculations optional in JSON schema (not required)
+- [x] Add elapsed time timer to contract extraction UI
+- [x] Show timer during "Extracting Model" phase
+- [x] Display final processing time after completion
