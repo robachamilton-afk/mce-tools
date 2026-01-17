@@ -384,6 +384,51 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return await db.runPerformanceAnalysis(input.analysisId);
       }),
+
+    // Detect equations from contract (without full extraction)
+    detectEquations: protectedProcedure
+      .input(z.object({ analysisId: z.number() }))
+      .mutation(async ({ input }) => {
+        return await db.detectContractEquations(input.analysisId);
+      }),
+
+    // Extract LaTeX from a specific region (for manual tagging)
+    extractRegion: protectedProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        pageNumber: z.number(),
+        bbox: z.object({
+          x: z.number(),
+          y: z.number(),
+          width: z.number(),
+          height: z.number(),
+        }),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.extractEquationFromRegion(
+          input.analysisId,
+          input.pageNumber,
+          input.bbox
+        );
+      }),
+
+    // Build model from verified equations
+    buildModelFromEquations: protectedProcedure
+      .input(z.object({
+        analysisId: z.number(),
+        verifiedEquations: z.array(z.object({
+          id: z.string(),
+          pageNumber: z.number(),
+          latex: z.string(),
+          context: z.string(),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        return await db.buildModelFromVerifiedEquations(
+          input.analysisId,
+          input.verifiedEquations
+        );
+      }),
   }),
 });
 

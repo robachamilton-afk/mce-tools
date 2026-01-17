@@ -1013,3 +1013,142 @@ export async function executeCustomAnalysis(analysisId: number) {
     throw error;
   }
 }
+
+// Equation detection and review functions
+export async function detectContractEquations(analysisId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  const { detectEquationsOnly } = await import("./contractParserV3");
+  
+  // Get analysis record
+  const [analysis] = await db
+    .select()
+    .from(customAnalyses)
+    .where(eq(customAnalyses.id, analysisId))
+    .limit(1);
+  
+  if (!analysis) throw new Error("Analysis not found");
+  if (!analysis.contractFileUrl) throw new Error("No contract file uploaded");
+  
+  try {
+    // Download PDF to temp file
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(analysis.contractFileUrl);
+    if (!response.ok) throw new Error(`Failed to download PDF: ${response.statusText}`);
+    
+    const buffer = await response.buffer();
+    const tempPdfPath = `/tmp/contract-${analysisId}.pdf`;
+    await (await import('fs/promises')).writeFile(tempPdfPath, buffer);
+    
+    // Detect equations (without full Qwen interpretation)
+    const detectedEquations = await detectEquationsOnly(tempPdfPath);
+    
+    return {
+      success: true,
+      pdfUrl: analysis.contractFileUrl,
+      equations: detectedEquations,
+    };
+  } catch (error: any) {
+    throw new Error(`Equation detection failed: ${error.message}`);
+  }
+}
+
+export async function extractEquationFromRegion(
+  analysisId: number,
+  pageNumber: number,
+  bbox: { x: number; y: number; width: number; height: number }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  const { extractLatexFromRegion } = await import("./contractParserV3");
+  
+  // Get analysis record
+  const [analysis] = await db
+    .select()
+    .from(customAnalyses)
+    .where(eq(customAnalyses.id, analysisId))
+    .limit(1);
+  
+  if (!analysis) throw new Error("Analysis not found");
+  if (!analysis.contractFileUrl) throw new Error("No contract file uploaded");
+  
+  try {
+    // Download PDF to temp file
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(analysis.contractFileUrl);
+    if (!response.ok) throw new Error(`Failed to download PDF: ${response.statusText}`);
+    
+    const buffer = await response.buffer();
+    const tempPdfPath = `/tmp/contract-${analysisId}.pdf`;
+    await (await import('fs/promises')).writeFile(tempPdfPath, buffer);
+    
+    // Extract LaTeX from the specified region
+    const latex = await extractLatexFromRegion(tempPdfPath, pageNumber, bbox);
+    
+    return { latex };
+  } catch (error: any) {
+    throw new Error(`LaTeX extraction failed: ${error.message}`);
+  }
+}
+
+export async function buildModelFromVerifiedEquations(
+  analysisId: number,
+  verifiedEquations: Array<{
+    id: string;
+    pageNumber: number;
+    latex: string;
+    context: string;
+  }>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { customAnalyses } = await import("../drizzle/schema");
+  const { buildModelFromEquations, convertToLegacyFormat } = await import("./contractParserV3");
+  
+  try {
+    // Build model using Qwen with verified equations only
+    const modelV2 = await buildModelFromEquations(verifiedEquations);
+    
+    // Convert to legacy format for backwards compatibility
+    const model = convertToLegacyFormat(modelV2);
+    
+    // Add validation info
+    const needsClarification = modelV2.exceptions.length > 0;
+    (model as any)._validation = {
+      needsClarification,
+      clarificationCount: modelV2.exceptions.length
+    };
+    
+    // Save extracted model
+    await db
+      .update(customAnalyses)
+      .set({
+        extractedModel: model,
+        status: "confirming_model",
+        // Extract key parameters
+        contractCapacityMw: model.parameters.contractCapacityMw?.toString(),
+        tariffPerMwh: model.tariffs.baseRate?.toString(),
+        contractStartDate: parseDate(model.parameters.contractStartDate),
+        contractEndDate: parseDate(model.parameters.contractEndDate),
+      })
+      .where(eq(customAnalyses.id, analysisId));
+    
+    return { success: true, model };
+  } catch (error: any) {
+    // Update status to failed
+    await db
+      .update(customAnalyses)
+      .set({
+        status: "failed",
+        errorMessage: `Model building failed: ${error.message}`,
+      })
+      .where(eq(customAnalyses.id, analysisId));
+    
+    throw error;
+  }
+}

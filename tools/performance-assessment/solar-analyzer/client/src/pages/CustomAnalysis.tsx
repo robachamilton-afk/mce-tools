@@ -44,9 +44,10 @@ export default function CustomAnalysis() {
 
   const uploadContractMutation = trpc.customAnalysis.uploadContract.useMutation({
     onSuccess: () => {
-      toast({ title: "Contract uploaded", description: "Extracting model..." });
+      toast({ title: "Contract uploaded", description: "Proceeding to equation review..." });
+      // Navigate to equation review page
       if (analysisId) {
-        extractModelMutation.mutate({ analysisId });
+        setLocation(`/custom-analysis/${analysisId}/review-equations`);
       }
     },
     onError: (error: any) => {

@@ -468,3 +468,238 @@ export function convertToLegacyFormat(model: ContractModel): any {
     }
   };
 }
+
+/**
+ * Detect equations from PDF without full model extraction
+ * Returns detected equation regions with LaTeX for user review
+ */
+export async function detectEquationsOnly(pdfPath: string): Promise<Array<{
+  id: string;
+  pageNumber: number;
+  bbox: { x: number; y: number; width: number; height: number };
+  latex: string;
+  context: string;
+  confidence: number;
+  status: 'detected';
+}>> {
+  const startTime = Date.now();
+  
+  // Step 1: Convert PDF to images
+  console.log('[Equation Detection] Converting PDF to images...');
+  const pdfBuffer = await readFile(pdfPath);
+  const convertedPages = await convertPdfToImages(pdfBuffer, { density: 200 });
+  const imagePaths = convertedPages.map(p => p.path);
+  
+  const allDetectedEquations: Array<{
+    id: string;
+    pageNumber: number;
+    bbox: { x: number; y: number; width: number; height: number };
+    latex: string;
+    context: string;
+    confidence: number;
+    status: 'detected';
+  }> = [];
+  
+  // Step 2: Process each page
+  for (let pageIdx = 0; pageIdx < imagePaths.length; pageIdx++) {
+    const imagePath = imagePaths[pageIdx];
+    const pageNumber = pageIdx + 1;
+    
+    console.log(`[Equation Detection] Processing page ${pageNumber}...`);
+    
+    // OCR the page
+    const ocrResult = await extractTextFromImage(imagePath, pageNumber);
+    const ocrLines = ocrResult.lines.map(line => ({ ...line, page: pageNumber }));
+    
+    // Detect equation regions
+    const regions = detectEquationRegions(ocrLines, pageNumber);
+    const mergedRegions = mergeNearbyRegions(regions);
+    
+    console.log(`[Equation Detection] Found ${mergedRegions.length} potential equations on page ${pageNumber}`);
+    
+    if (mergedRegions.length === 0) continue;
+    
+    // Crop equation images
+    const croppedImages = await cropMultipleRegions(imagePath, mergedRegions, true, 200);
+    
+    // Extract LaTeX from all equations
+    const latexResults = await extractMultipleLaTeX(croppedImages);
+    
+    // Add to results with page number and bounding boxes
+    for (let i = 0; i < latexResults.length; i++) {
+      const result = latexResults[i];
+      const region = mergedRegions[i];
+      
+      // Validate LaTeX quality
+      if (!isValidEquation(result.latex)) {
+        console.log(`[Equation Detection] Rejected equation ${i + 1} on page ${pageNumber} (failed validation)`);
+        continue;
+      }
+      
+      allDetectedEquations.push({
+        id: `eq-p${pageNumber}-${i}`,
+        pageNumber,
+        bbox: region.bbox,
+        latex: result.latex,
+        context: result.latex.substring(0, 100), // Preview for UI
+        confidence: result.confidence,
+        status: 'detected',
+      });
+    }
+  }
+  
+  const processingTime = Date.now() - startTime;
+  console.log(`[Equation Detection] Completed in ${processingTime}ms. Found ${allDetectedEquations.length} equations.`);
+  
+  return allDetectedEquations;
+}
+
+/**
+ * Extract LaTeX from a specific region of a PDF page
+ * Used for manual equation tagging by users
+ */
+export async function extractLatexFromRegion(
+  pdfPath: string,
+  pageNumber: number,
+  bbox: { x: number; y: number; width: number; height: number }
+): Promise<string> {
+  console.log(`[Manual Extraction] Extracting LaTeX from page ${pageNumber}, bbox:`, bbox);
+  
+  // Convert PDF to images
+  const pdfBuffer = await readFile(pdfPath);
+  const convertedPages = await convertPdfToImages(pdfBuffer, { density: 200 });
+  
+  if (pageNumber < 1 || pageNumber > convertedPages.length) {
+    throw new Error(`Invalid page number: ${pageNumber} (PDF has ${convertedPages.length} pages)`);
+  }
+  
+  const imagePath = convertedPages[pageNumber - 1].path;
+  
+  // Crop the specified region
+  const croppedImages = await cropMultipleRegions(imagePath, [{
+    bbox,
+    text: '',
+    confidence: 1.0,
+    lines: [],
+    page: pageNumber,
+  }], true, 200);
+  
+  if (croppedImages.length === 0) {
+    throw new Error('Failed to crop region from PDF');
+  }
+  
+  // Extract LaTeX
+  const latexResults = await extractMultipleLaTeX(croppedImages);
+  
+  if (latexResults.length === 0 || !latexResults[0].latex) {
+    throw new Error('Failed to extract LaTeX from region');
+  }
+  
+  return latexResults[0].latex;
+}
+
+/**
+ * Build contract model from user-verified equations
+ * Skips equation detection, uses provided LaTeX directly
+ */
+export async function buildModelFromEquations(
+  verifiedEquations: Array<{
+    id: string;
+    pageNumber: number;
+    latex: string;
+    context: string;
+  }>
+): Promise<ContractModel> {
+  console.log(`[Model Building] Building model from ${verifiedEquations.length} verified equations...`);
+  
+  if (verifiedEquations.length === 0) {
+    throw new Error('No verified equations provided');
+  }
+  
+  // Format equations for Qwen prompt
+  const equationsText = verifiedEquations.map((eq, idx) => 
+    `Equation ${idx + 1} (Page ${eq.pageNumber}):\n${eq.latex}\n`
+  ).join('\n');
+  
+  // Use Qwen to interpret the equations and build the model
+  const prompt = `You are analyzing performance guarantee equations from a solar farm contract. Extract the following information from the provided LaTeX equations:
+
+EQUATIONS:
+${equationsText}
+
+Your task:
+1. Identify performance metrics (PR, availability, degradation, etc.)
+2. Extract the mathematical formula for each metric
+3. List all variables used in the formulas with their meanings
+4. Identify any contract parameters (capacity, tariffs, dates)
+5. Note any undefined terms or ambiguities
+
+Respond in JSON format following this schema:
+{
+  "performanceMetrics": [
+    {
+      "metricName": "Performance Ratio",
+      "symbol": "PR",
+      "expressionString": "LaTeX formula",
+      "variables": [
+        {"name": "E_act", "meaning": "Actual energy production", "units": "kWh"}
+      ]
+    }
+  ],
+  "parameters": [
+    {"name": "Contract Capacity", "value": "100", "units": "MW"}
+  ],
+  "tariffs": [
+    {"type": "base_rate", "rate": 50, "currency": "USD", "unit": "MWh"}
+  ],
+  "exceptions": [
+    {"category": "undefined_term", "description": "Variable X not defined"}
+  ]
+}
+
+IMPORTANT: Only use the equations provided above. Do not invent new equations or formulas.`;
+
+  const response = await ollamaChat({
+    model: 'qwen2.5:14b',
+    messages: [
+      { role: 'system', content: 'You are a contract analysis expert. Extract structured information from mathematical equations.' },
+      { role: 'user', content: prompt }
+    ],
+    format: 'json',
+  });
+  
+  // Parse Qwen response
+  let modelData;
+  try {
+    modelData = JSON.parse(response.message.content);
+  } catch (error) {
+    console.error('[Model Building] Failed to parse Qwen response:', response.message.content);
+    throw new Error('Failed to parse AI response');
+  }
+  
+  // Build ContractModel structure
+  const model: ContractModel = {
+    contractMetadata: {
+      filename: 'contract.pdf',
+      pageCount: Math.max(...verifiedEquations.map(eq => eq.pageNumber)),
+      extractedAt: new Date().toISOString()
+    },
+    performanceMetrics: modelData.performanceMetrics || [],
+    parameters: modelData.parameters || [],
+    tariffs: modelData.tariffs || [],
+    guarantees: [],
+    tests: [],
+    exclusions: [],
+    exceptions: modelData.exceptions || [],
+    overallConfidence: {
+      equations: 0.95, // High confidence since equations are user-verified
+      parameters: modelData.parameters?.length > 0 ? 0.85 : 0.5,
+      tariffs: modelData.tariffs?.length > 0 ? 0.85 : 0.5,
+      overall: 0.9
+    }
+  };
+  
+  console.log(`[Model Building] Model built successfully with ${model.performanceMetrics.length} metrics`);
+  
+  return model;
+}
