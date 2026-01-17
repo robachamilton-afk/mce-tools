@@ -18,7 +18,7 @@ import { readFile } from 'fs/promises';
 import { extractTextFromImage, type OCRLine } from './ocr';
 import { detectEquationRegions, mergeNearbyRegions, type EquationRegion } from './equationDetection';
 import { cropMultipleRegions, type CroppedImage } from './imageCropping';
-import { extractMultipleLaTeX, cleanLaTeX, isValidEquation, type LaTeXResult } from './latexOCR';
+import { extractMultipleLaTeX, cleanLaTeX, type LaTeXResult } from './latexOCR';
 import { ollamaChat } from './_core/ollama';
 import type { ContractModel } from './contractSchemaV2';
 import { join, resolve, dirname } from 'path';
@@ -68,7 +68,7 @@ export async function extractContractHybrid(
     });
     
     const pdfBuffer = await readFile(pdfPath);
-    const convertedPages = await convertPdfToImages(pdfBuffer, { density: 300 });
+    const convertedPages = await convertPdfToImages(pdfBuffer, { density: 200 });
     const imagePaths = convertedPages.map(p => p.path);
     console.log(`[Hybrid Parser] Rendered ${imagePaths.length} pages`);
     
@@ -148,18 +148,6 @@ export async function extractContractHybrid(
     const latexResults = await extractMultipleLaTeX(allCroppedImages);
     console.log(`[Hybrid Parser] Extracted ${latexResults.length} LaTeX equations`);
     
-    // Validate extracted LaTeX - filter out prose before sending to Qwen
-    const validResults = latexResults.filter(result => {
-      const cleaned = cleanLaTeX(result.latex);
-      const isValid = isValidEquation(cleaned);
-      if (!isValid) {
-        console.log(`[Hybrid Parser] Filtered out invalid equation from page ${result.region.page}`);
-      }
-      return isValid;
-    });
-    
-    console.log(`[Hybrid Parser] ${validResults.length} valid equations after filtering (removed ${latexResults.length - validResults.length} prose/garbage)`);
-    
     // Stage 5: Interpret with Qwen text model
     onProgress?.({
       stage: 'interpretation',
@@ -171,12 +159,10 @@ export async function extractContractHybrid(
       .map((line: OCRLine) => line.text)
       .join('\n');
     
-    const equationsText = validResults
+    const equationsText = latexResults
       .map((result, idx) => {
         const cleaned = cleanLaTeX(result.latex);
-        // Use cleaned LaTeX as context instead of garbage OCR text
-        const preview = cleaned.length > 100 ? cleaned.slice(0, 100) + '...' : cleaned;
-        return `Equation ${idx + 1} (Page ${result.region.page}, confidence ${result.confidence}%):\nLaTeX: ${cleaned}\nContext: ${preview}`;
+        return `Equation ${idx + 1} (Page ${result.region.page}, confidence ${result.confidence}%):\nLaTeX: ${cleaned}\nContext: ${result.region.text}`;
       })
       .join('\n\n');
     
@@ -214,12 +200,7 @@ async function interpretContractWithQwen(
   proseText: string,
   equationsText: string
 ): Promise<ContractModel> {
-  // Debug: Log extracted LaTeX before Qwen interpretation
-  console.log('[Hybrid Parser] === EXTRACTED LATEX EQUATIONS ===');
-  console.log(equationsText);
-  console.log('[Hybrid Parser] === END EXTRACTED LATEX ===');
-  
-  const prompt = `You are analyzing a solar power purchase agreement (PPA) contract. Your task is to structure the extracted LaTeX equations and identify their variables.
+  const prompt = `You are analyzing a solar power purchase agreement (PPA) contract. Extract the following information:
 
 ## Contract Text (OCR):
 ${proseText.slice(0, 30000)} ${proseText.length > 30000 ? '...(truncated)' : ''}
@@ -227,61 +208,58 @@ ${proseText.slice(0, 30000)} ${proseText.length > 30000 ? '...(truncated)' : ''}
 ## Extracted Equations (LaTeX):
 ${equationsText}
 
-**CRITICAL INSTRUCTIONS**:
-1. **DO NOT invent new equations.** Only use the LaTeX formulas listed above in "Extracted Equations".
-2. **DO NOT create equations from variable definitions.** If the contract says "EN_Act means actual energy", this is NOT an equation - it's a definition.
-3. **Only include formulas with mathematical operations** (=, +, -, *, /, fractions, summations, etc.).
-4. **Correct OCR errors** in the extracted LaTeX based on context:
-   - "ace" or "gce" in subscripts → "Act" (if prose mentions "actual")
-   - "S T C" with spaces → "STC" (if prose mentions "standard test conditions")
-   - "E N" with spaces → "EN" (if prose mentions "energy")
+**IMPORTANT**: The LaTeX equations above may contain OCR errors. Common issues:
+- Subscripts misread: "Act" may appear as "ace", "gce", or "A c t"
+- Superscripts misread: asterisk (*) may appear in wrong positions
+- Spacing errors: "STC" may appear as "S T C"
+- Variable names split: "EN" may appear as "E N"
 
-**Your task**: For each extracted LaTeX equation above:
-1. Identify what it calculates (e.g., "Performance Ratio", "Temperature Correction")
-2. Correct any OCR errors in the LaTeX
-3. List all variables used in that equation with their meanings from the prose text
+When extracting equations, correct these OCR errors based on context from the prose text. For example:
+- If prose mentions "PR_Act" or "actual performance ratio", the LaTeX "PR_{ace}" should be corrected to "PR_{Act}"
+- If prose mentions "EN_Act" or "actual energy", the LaTeX "EN_{gce}" should be corrected to "EN_{Act}"
+- If prose mentions "P_STC" or "standard test conditions", correct spacing and symbols accordingly
 
-Return JSON in this format:
+Extract the following contract terms and return as JSON:
 
 {
   "performanceModel": {
-    "equations": [
+    "equations": {
+      "performanceRatio": "LaTeX formula for PR calculation",
+      "availability": "LaTeX formula for availability calculation",
+      "energyGeneration": "LaTeX formula for energy generation"
+    },
+    "parameters": [
       {
-        "name": "Performance Ratio",
-        "latex": "corrected LaTeX formula from extraction",
-        "description": "what this equation calculates",
-        "variables": [
-          {
-            "symbol": "PR_{Act}",
-            "meaning": "actual PAC Performance Ratio measured",
-            "value": null,
-            "unit": "%"
-          }
-        ]
+        "name": "parameter name",
+        "symbol": "variable symbol",
+        "value": "numeric value if specified",
+        "unit": "unit of measurement",
+        "description": "what this parameter represents"
       }
-    ],
-    "parameters": []
+    ]
   },
   "tariffStructure": {
-    "baseRate": { "value": null, "unit": "$/MWh" },
-    "escalation": { "value": null, "unit": "%/year" },
-    "timeOfUseRates": []
+    "baseRate": { "value": number, "unit": "$/MWh" },
+    "escalation": { "value": number, "unit": "%/year" },
+    "timeOfUseRates": [
+      { "period": "peak/off-peak", "rate": number, "hours": "time range" }
+    ]
   },
   "capacityGuarantees": {
-    "guaranteedCapacity": { "value": null, "unit": "MW" },
-    "degradationLimit": { "value": null, "unit": "%/year" },
-    "testingFrequency": null,
-    "penaltyRate": { "value": null, "unit": "$/MW" }
+    "guaranteedCapacity": { "value": number, "unit": "MW" },
+    "degradationLimit": { "value": number, "unit": "%/year" },
+    "testingFrequency": "annual/biannual/etc",
+    "penaltyRate": { "value": number, "unit": "$/MW" }
   },
   "performanceRequirements": {
-    "minimumPR": { "value": null, "unit": "%" },
-    "minimumAvailability": { "value": null, "unit": "%" },
-    "measurementPeriod": null,
-    "penaltyStructure": null
+    "minimumPR": { "value": number, "unit": "%" },
+    "minimumAvailability": { "value": number, "unit": "%" },
+    "measurementPeriod": "monthly/annual",
+    "penaltyStructure": "description of penalty calculation"
   }
 }
 
-Return ONLY valid JSON. Use null for missing values. DO NOT create equations - only structure the ones already extracted.`;
+Return ONLY valid JSON. Use null for missing values. For equations, use the LaTeX format extracted above.`;
 
   const response = await ollamaChat({
     model: 'qwen2.5:14b',
@@ -323,31 +301,48 @@ Return ONLY valid JSON. Use null for missing values. DO NOT create equations - o
  */
 function convertToContractModel(qwenResponse: any): ContractModel {
   const performanceModel = qwenResponse.performanceModel || {};
-  const equationsArray = performanceModel.equations || [];
+  const equations = performanceModel.equations || {};
   const parameters = performanceModel.parameters || [];
   
-  // Build performance metrics from equations array
-  const performanceMetrics = equationsArray.map((eq: any) => {
-    const variables = (eq.variables || []).map((v: any) => ({
-      name: v.symbol || v.name,
-      meaning: v.meaning || v.description,
-      units: v.unit,
-      evidence: { page: 1, snippet: v.meaning || v.name }
-    }));
-    
-    return {
-      metricName: eq.name || 'Unknown Metric',
-      symbol: eq.symbol || extractSymbolFromLatex(eq.latex),
-      expressionString: eq.latex,
-      variables: variables,
-      evidence: { page: 1, snippet: eq.description || eq.name }
-    };
-  });
+  // Convert Qwen parameters to EquationVariable format
+  const variables = parameters.map((param: any) => ({
+    name: param.symbol || param.name,
+    meaning: param.description || param.name,
+    units: param.unit,
+    evidence: { page: 1, snippet: param.name }
+  }));
   
-  // Helper to extract left-hand symbol from LaTeX (e.g., "PR_{Act}" from "PR_{Act} = ...")
-  function extractSymbolFromLatex(latex: string): string {
-    const match = latex.match(/^([A-Za-z_{}^]+)\s*=/);
-    return match ? match[1] : 'Unknown';
+  // Build performance metrics from equations
+  const performanceMetrics = [];
+  
+  if (equations.performanceRatio) {
+    performanceMetrics.push({
+      metricName: 'Performance Ratio',
+      symbol: 'PR',
+      expressionString: equations.performanceRatio,
+      variables: variables,
+      evidence: { page: 1, snippet: 'Performance Ratio calculation' }
+    });
+  }
+  
+  if (equations.availability) {
+    performanceMetrics.push({
+      metricName: 'Availability',
+      symbol: 'A',
+      expressionString: equations.availability,
+      variables: variables,
+      evidence: { page: 1, snippet: 'Availability calculation' }
+    });
+  }
+  
+  if (equations.energyGeneration) {
+    performanceMetrics.push({
+      metricName: 'Energy Generation',
+      symbol: 'E',
+      expressionString: equations.energyGeneration,
+      variables: variables,
+      evidence: { page: 1, snippet: 'Energy generation calculation' }
+    });
   }
   
   // Convert parameters to ContractParameter format

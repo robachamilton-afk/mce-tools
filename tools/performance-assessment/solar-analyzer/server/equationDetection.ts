@@ -67,6 +67,14 @@ export function detectEquationRegions(
       if (verticalGap > maxVerticalGap) break;
       if (expandedIndices.has(i)) break;
       
+      // Stop at "whereby:", "where:", or variable definition markers
+      const lowerText = nextLine.text.toLowerCase();
+      if (lowerText.includes('whereby:') || lowerText.includes('where:') || 
+          /^\s*[a-z_][a-z0-9_]*\s*=\s*[a-z]/i.test(nextLine.text)) {
+        console.log(`[Equation Detection] Stopping expansion at marker: "${nextLine.text}"`);
+        break;
+      }
+      
       // Include if it's close and not obviously prose
       if (nextLine.text.length < 100) {
         expandedIndices.add(i);
