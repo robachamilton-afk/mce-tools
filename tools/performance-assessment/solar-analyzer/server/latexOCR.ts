@@ -284,3 +284,53 @@ export function cleanLaTeX(latex: string): string {
     .replace(/\s+/g, ' ') // Normalize whitespace
     .trim();
 }
+
+/**
+ * Validate that extracted LaTeX is actually an equation, not prose
+ * Returns true if valid equation, false if prose/garbage
+ */
+export function isValidEquation(latex: string): boolean {
+  if (!latex || latex.length < 3) return false;
+  
+  // Common English words that indicate prose, not equations
+  const proseWords = /\b(the|is|are|was|were|been|being|have|has|had|do|does|did|will|would|should|could|may|might|can|shall|must|this|that|these|those|elapsed|time|between|radiation|average|values|hours|minutes|case|five)\b/gi;
+  const proseMatches = (latex.match(proseWords) || []).length;
+  
+  // If more than 3 prose words, it's likely prose
+  if (proseMatches > 3) {
+    console.log(`[LaTeX Validation] Rejected (${proseMatches} prose words): "${latex.slice(0, 100)}..."`);
+    return false;
+  }
+  
+  // Check math symbol density
+  const mathSymbols = /[=+\-×÷∑∫√π∞≈≠≤≥±∂∇^_{}\[\]()]/g;
+  const mathCount = (latex.match(mathSymbols) || []).length;
+  const totalChars = latex.length;
+  const mathDensity = mathCount / totalChars;
+  
+  // Require at least 15% math symbols
+  if (mathDensity < 0.15) {
+    console.log(`[LaTeX Validation] Rejected (low math density ${(mathDensity * 100).toFixed(1)}%): "${latex.slice(0, 100)}..."`);
+    return false;
+  }
+  
+  // Check for excessive \text{} blocks (indicates prose)
+  const textBlocks = (latex.match(/\\text\s*{[^}]+}/g) || []);
+  const textBlockChars = textBlocks.join('').length;
+  const textBlockRatio = textBlockChars / totalChars;
+  
+  // If more than 60% is \text{} blocks, it's prose
+  if (textBlockRatio > 0.6) {
+    console.log(`[LaTeX Validation] Rejected (${(textBlockRatio * 100).toFixed(1)}% text blocks): "${latex.slice(0, 100)}..."`);
+    return false;
+  }
+  
+  // Check for repeated garbage patterns (e.g., "of of of of...")
+  const repeatedWords = /\b(\w+)\s+\1\s+\1/i;
+  if (repeatedWords.test(latex)) {
+    console.log(`[LaTeX Validation] Rejected (repeated words): "${latex.slice(0, 100)}..."`);
+    return false;
+  }
+  
+  return true;
+}

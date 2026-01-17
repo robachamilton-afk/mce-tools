@@ -18,7 +18,7 @@ import { readFile } from 'fs/promises';
 import { extractTextFromImage, type OCRLine } from './ocr';
 import { detectEquationRegions, mergeNearbyRegions, type EquationRegion } from './equationDetection';
 import { cropMultipleRegions, type CroppedImage } from './imageCropping';
-import { extractMultipleLaTeX, cleanLaTeX, type LaTeXResult } from './latexOCR';
+import { extractMultipleLaTeX, cleanLaTeX, isValidEquation, type LaTeXResult } from './latexOCR';
 import { ollamaChat } from './_core/ollama';
 import type { ContractModel } from './contractSchemaV2';
 import { join, resolve, dirname } from 'path';
@@ -148,6 +148,18 @@ export async function extractContractHybrid(
     const latexResults = await extractMultipleLaTeX(allCroppedImages);
     console.log(`[Hybrid Parser] Extracted ${latexResults.length} LaTeX equations`);
     
+    // Validate extracted LaTeX - filter out prose before sending to Qwen
+    const validResults = latexResults.filter(result => {
+      const cleaned = cleanLaTeX(result.latex);
+      const isValid = isValidEquation(cleaned);
+      if (!isValid) {
+        console.log(`[Hybrid Parser] Filtered out invalid equation from page ${result.region.page}`);
+      }
+      return isValid;
+    });
+    
+    console.log(`[Hybrid Parser] ${validResults.length} valid equations after filtering (removed ${latexResults.length - validResults.length} prose/garbage)`);
+    
     // Stage 5: Interpret with Qwen text model
     onProgress?.({
       stage: 'interpretation',
@@ -159,7 +171,7 @@ export async function extractContractHybrid(
       .map((line: OCRLine) => line.text)
       .join('\n');
     
-    const equationsText = latexResults
+    const equationsText = validResults
       .map((result, idx) => {
         const cleaned = cleanLaTeX(result.latex);
         // Use cleaned LaTeX as context instead of garbage OCR text
