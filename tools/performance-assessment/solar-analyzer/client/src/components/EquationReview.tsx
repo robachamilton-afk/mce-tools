@@ -395,11 +395,7 @@ export default function EquationReview({
         <ScrollArea className="flex-1">
           <div className="p-8 flex justify-center">
             <div 
-              ref={pageRef}
               className="relative"
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
               style={{ cursor: isDrawing ? "crosshair" : "default" }}
             >
               <Document
@@ -407,6 +403,13 @@ export default function EquationReview({
                 onLoadSuccess={onDocumentLoadSuccess}
                 loading={<div className="text-center py-8">Loading PDF...</div>}
               >
+                <div
+                  ref={pageRef}
+                  className="relative"
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                >
                 <Page 
                   pageNumber={currentPage} 
                   scale={scale}
@@ -430,9 +433,8 @@ export default function EquationReview({
                     });
                   }}
                 />
-              </Document>
 
-              {/* Overlay bounding boxes for equations on current page */}
+                {/* Overlay bounding boxes for equations on current page */}
               {equations
                 .filter(eq => eq.pageNumber === currentPage && eq.status !== "rejected")
                 .map((equation) => (
@@ -480,6 +482,8 @@ export default function EquationReview({
                   </div>
                 </div>
               )}
+                </div>
+              </Document>
             </div>
           </div>
         </ScrollArea>
