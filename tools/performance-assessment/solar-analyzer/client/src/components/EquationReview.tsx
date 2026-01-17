@@ -447,7 +447,8 @@ export default function EquationReview({
                       height: canvasH,
                     }}
                   />
-                )})
+                );
+                })}
 
               {/* Drawing rectangle */}
               {isDrawing && drawStart && drawCurrent && (
