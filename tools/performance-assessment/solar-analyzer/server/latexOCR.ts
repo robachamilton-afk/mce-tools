@@ -131,8 +131,8 @@ import json
 from pix2text import LatexOCR
 
 # Load model once at startup
-print("READY", flush=True)
 latex_ocr = LatexOCR()
+print("READY", flush=True)
 
 # Process images from stdin
 for line in sys.stdin:
@@ -216,7 +216,8 @@ async function callPix2Text(imagePath: string): Promise<string> {
  * Compares LaTeX output with original OCR text to estimate accuracy
  */
 function estimateConfidence(latex: string, ocrText: string): number {
-  if (!latex || latex.length === 0) return 0;
+  // Handle non-string inputs (e.g., READY message leak)
+  if (typeof latex !== 'string' || !latex || latex.length === 0) return 0;
   
   // Base confidence
   let confidence = 50;

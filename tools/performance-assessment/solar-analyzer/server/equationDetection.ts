@@ -117,8 +117,23 @@ function isMathLine(line: OCRLine): boolean {
     return false;
   }
   
-  // Reject lines that are mostly prose (long sentences)
-  if (text.length > 100 && !/[=+\-×÷∑∫]/.test(text)) {
+  // Reject headings (all caps, no equals sign)
+  if (text === text.toUpperCase() && text.length > 10 && !/=/.test(text)) {
+    return false;
+  }
+  
+  // Reject bullet points and definitions (starts with • or "..." means)
+  if (/^\s*[•·-]/.test(text) || /"[^"]+"\s+means\s+/i.test(text)) {
+    return false;
+  }
+  
+  // Reject table-like content (month names, percentages without equations)
+  if (/\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(text) && !/=/.test(text)) {
+    return false;
+  }
+  
+  // Reject prose-heavy lines (long text without equals sign)
+  if (text.length > 80 && !/=/.test(text)) {
     return false;
   }
   
@@ -153,7 +168,13 @@ function isMathLine(line: OCRLine): boolean {
     hasKeywords
   ].filter(Boolean).length;
   
-  // Require at least 2 indicators to reduce false positives
+  // MUST have equals sign to be considered an equation (not just math notation)
+  const hasEqualsSign = /=/.test(text);
+  if (!hasEqualsSign) {
+    return false;
+  }
+  
+  // Require at least 2 indicators AND equals sign
   return indicators >= 2;
 }
 
