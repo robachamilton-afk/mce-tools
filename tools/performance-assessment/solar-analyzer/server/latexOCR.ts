@@ -168,15 +168,29 @@ for line in sys.stdin:
         const task = processQueue.shift();
         if (task) {
           if (response.success) {
-            task.resolve(response.latex);
+            // Validate that latex is a string
+            const latex = response.latex;
+            if (typeof latex === 'string') {
+              task.resolve(latex);
+            } else {
+              console.error('[Pix2Text] Invalid latex type:', typeof latex, latex);
+              task.reject(new Error(`Invalid LaTeX response type: ${typeof latex}`));
+            }
           } else {
-            task.reject(new Error(response.error));
+            task.reject(new Error(response.error || 'Unknown error'));
           }
         }
         isProcessing = false;
         processNextInQueue();
       } catch (error) {
         console.error('[Pix2Text] Failed to parse response:', line);
+        // Reject the current task if JSON parsing fails
+        const task = processQueue.shift();
+        if (task) {
+          task.reject(new Error(`Failed to parse Pix2Text response: ${line}`));
+        }
+        isProcessing = false;
+        processNextInQueue();
       }
     }
   });
@@ -257,6 +271,12 @@ function estimateConfidence(latex: string, ocrText: string): number {
  * Clean LaTeX output (remove common artifacts)
  */
 export function cleanLaTeX(latex: string): string {
+  // Handle non-string inputs gracefully
+  if (typeof latex !== 'string') {
+    console.error('[cleanLaTeX] Received non-string input:', typeof latex, latex);
+    return '';
+  }
+  
   return latex
     .trim()
     .replace(/^#\s*/, '') // Remove leading # from command output
