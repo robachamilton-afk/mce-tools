@@ -289,3 +289,20 @@ function convertToContractModel(qwenResponse: any): ContractModel {
     }
   };
 }
+
+/**
+ * Wrapper function for backwards compatibility with V2 interface
+ * Extracts contract from PDF using hybrid pipeline
+ */
+export async function extractContractFromPdf(pdfPath: string): Promise<ContractModel> {
+  const result = await extractContractHybrid(pdfPath);
+  return result.model;
+}
+
+/**
+ * Wrapper function for backwards compatibility with V2 interface
+ * V3 already returns the correct format, so this is a pass-through
+ */
+export function convertToLegacyFormat(model: ContractModel): any {
+  return model;
+}
