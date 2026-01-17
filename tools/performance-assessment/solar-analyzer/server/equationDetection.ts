@@ -112,8 +112,15 @@ export function detectEquationRegions(
 function isMathLine(line: OCRLine): boolean {
   const text = line.text;
   
+  // Debug logging
+  const hasEquals = /=/.test(text);
+  if (hasEquals) {
+    console.log(`[Equation Detection] Line with =: "${text}"`);
+  }
+  
   // Reject "Where:" sections and variable definition prose
   if (/^\s*where\s*:?\s*$/i.test(text)) {
+    console.log(`[Equation Detection] Rejected (where section): "${text}"`);
     return false;
   }
   
@@ -130,6 +137,7 @@ function isMathLine(line: OCRLine): boolean {
   // Reject variable definition prose (e.g., "t is the elapsed time = 1/12 hour")
   // These have equals signs but are explanatory text, not equations
   if (/\b(is the|means the|represents the|denotes the)\b/i.test(text)) {
+    console.log(`[Equation Detection] Rejected (variable definition): "${text}"`);
     return false;
   }
   
@@ -181,7 +189,11 @@ function isMathLine(line: OCRLine): boolean {
   }
   
   // Require at least 2 indicators AND equals sign
-  return indicators >= 2;
+  const isEquation = indicators >= 2;
+  if (isEquation) {
+    console.log(`[Equation Detection] ACCEPTED as equation (${indicators} indicators): "${text}"`);
+  }
+  return isEquation;
 }
 
 /**
