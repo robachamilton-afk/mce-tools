@@ -638,3 +638,17 @@
 - [x] Fixed convertToLegacyFormat to properly map Exception.issue to UI-expected format
 - [x] Added regex extraction to parse term names from issue text
 - [x] Now displays actual term names instead of 'undefined'
+
+## Fix Manual Equation Extraction Coordinate Bug (Jan 17, 2026)
+- [x] Blue bounding box moves/resizes incorrectly when drawn on PDF
+- [x] Box captures wrong content (text instead of equation)
+- [x] Fixed coordinate conversion to use actual PNG dimensions instead of DPI ratio
+- [x] Now matches the coordinate scaling used for automatic yellow boxes
+- [x] Uses scaleX = pngWidth / pdfWidth and scaleY = pngHeight / pdfHeight
+
+## Add Progress Status Updates (Jan 17, 2026)
+- [x] Loading page shows generic "Detecting equations..." message
+- [x] Added simulated progress updates with time-based message cycling
+- [x] Shows messages like "Loading contract...", "Converting pages...", "Detecting equations...", "Extracting LaTeX...", etc.
+- [x] Displays both main message and detailed sub-message for better UX
+- [x] Progress messages update every 3-15 seconds during detection

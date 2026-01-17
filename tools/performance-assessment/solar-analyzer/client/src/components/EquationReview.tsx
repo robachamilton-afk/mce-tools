@@ -180,7 +180,7 @@ export default function EquationReview({
   };
 
   const handleMouseUp = async () => {
-    if (!isDrawing || !drawStart || !drawCurrent || !onExtractRegion) {
+    if (!isDrawing || !drawStart || !drawCurrent || !onExtractRegion || !pageDimensions) {
       setIsDrawing(false);
       return;
     }
@@ -193,20 +193,22 @@ export default function EquationReview({
       height: Math.abs(drawCurrent.y - drawStart.y),
     };
 
-    // Convert from PDF points to PNG pixels
-    // PDF points × (200 DPI / 72 DPI) = PNG pixels
-    const DPI_RATIO = 200 / 72;
+    // Convert from PDF points to PNG pixels using actual PNG dimensions
+    // This matches the coordinate scaling used for automatic yellow boxes
+    const scaleX = pageDimensions.pngWidth / pageDimensions.width;
+    const scaleY = pageDimensions.pngHeight / pageDimensions.height;
     const bboxPNG = {
-      x: Math.round(bboxPDF.x * DPI_RATIO),
-      y: Math.round(bboxPDF.y * DPI_RATIO),
-      width: Math.round(bboxPDF.width * DPI_RATIO),
-      height: Math.round(bboxPDF.height * DPI_RATIO),
+      x: Math.round(bboxPDF.x * scaleX),
+      y: Math.round(bboxPDF.y * scaleY),
+      width: Math.round(bboxPDF.width * scaleX),
+      height: Math.round(bboxPDF.height * scaleY),
     };
 
     console.log('[EquationReview] Manual extraction:', {
       pdfCoords: bboxPDF,
       pngCoords: bboxPNG,
-      dpiRatio: DPI_RATIO,
+      scaleX,
+      scaleY,
       pageDimensions
     });
 

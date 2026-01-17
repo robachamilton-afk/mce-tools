@@ -12,6 +12,8 @@ export default function EquationReviewPage() {
   const [detectedEquations, setDetectedEquations] = useState<DetectedEquation[]>([]);
   const [pdfUrl, setPdfUrl] = useState<string>("");
   const [isDetecting, setIsDetecting] = useState(true);
+  const [progressMessage, setProgressMessage] = useState("Initializing...");
+  const [progressDetail, setProgressDetail] = useState("Preparing contract analysis");
 
   const detectMutation = trpc.customAnalysis.detectEquations.useMutation({
     onSuccess: (data) => {
@@ -45,6 +47,31 @@ export default function EquationReviewPage() {
     }
   }, [analysisId]);
 
+  // Simulated progress updates while detection is running
+  useEffect(() => {
+    if (!isDetecting) return;
+
+    const progressSteps = [
+      { message: "Loading contract...", detail: "Downloading PDF file", delay: 0 },
+      { message: "Converting pages...", detail: "Rendering PDF to images", delay: 3000 },
+      { message: "Detecting equations...", detail: "Scanning for mathematical expressions", delay: 8000 },
+      { message: "Extracting LaTeX...", detail: "Converting equations to LaTeX format", delay: 15000 },
+      { message: "Analyzing structure...", detail: "Identifying equation components", delay: 25000 },
+      { message: "Finalizing results...", detail: "Preparing equation review interface", delay: 40000 },
+    ];
+
+    const timers = progressSteps.map(step => 
+      setTimeout(() => {
+        if (isDetecting) {
+          setProgressMessage(step.message);
+          setProgressDetail(step.detail);
+        }
+      }, step.delay)
+    );
+
+    return () => timers.forEach(timer => clearTimeout(timer));
+  }, [isDetecting]);
+
   const handleExtractRegion = async (
     pageNumber: number,
     bbox: { x: number; y: number; width: number; height: number }
@@ -77,14 +104,19 @@ export default function EquationReviewPage() {
   if (isDetecting || buildModelMutation.isPending) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
+        <div className="text-center max-w-md">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-lg">
-            {isDetecting ? "Detecting equations in contract..." : "Building model from verified equations..."}
+          <p className="text-lg font-medium mb-2">
+            {isDetecting ? progressMessage : "Building model from verified equations..."}
           </p>
-          <p className="text-sm text-muted-foreground">
-            {isDetecting ? "This may take 1-2 minutes" : "Interpreting equations with AI..."}
+          <p className="text-sm text-muted-foreground mb-4">
+            {isDetecting ? progressDetail : "Interpreting equations with AI..."}
           </p>
+          {isDetecting && (
+            <p className="text-xs text-muted-foreground">
+              This may take 1-2 minutes
+            </p>
+          )}
         </div>
       </div>
     );
