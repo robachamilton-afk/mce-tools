@@ -63,6 +63,7 @@ export default function EquationReview({
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number; pngWidth: number; pngHeight: number } | null>(null);
+  const [canvasDimensions, setCanvasDimensions] = useState<{ internalWidth: number; internalHeight: number; displayWidth: number; displayHeight: number } | null>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -132,20 +133,19 @@ export default function EquationReview({
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!pageDimensions) return;
+    if (!pageDimensions || !canvasDimensions) return;
     // Use currentTarget (the element with the event handler) instead of pageRef
     const rect = e.currentTarget.getBoundingClientRect();
-    // Mouse position in canvas pixels (relative to PDF canvas)
-    const canvasX = e.clientX - rect.left;
-    const canvasY = e.clientY - rect.top;
+    // Mouse position in display pixels (relative to PDF canvas display)
+    const displayX = e.clientX - rect.left;
+    const displayY = e.clientY - rect.top;
     console.log('[Mouse Down] Mouse clientX/Y:', { clientX: e.clientX, clientY: e.clientY });
     console.log('[Mouse Down] Rect (from currentTarget):', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
-    console.log('[Mouse Down] Calculated canvas pixels:', { canvasX, canvasY });
-    console.log('[Mouse Down] PDF dimensions:', pageDimensions);
-    console.log('[Mouse Down] Scale:', scale);
-    // Store in canvas pixels (we'll convert to PNG pixels on mouse up)
-    setDrawStart({ x: canvasX, y: canvasY });
-    setDrawCurrent({ x: canvasX, y: canvasY });
+    console.log('[Mouse Down] Display pixels:', { displayX, displayY });
+    console.log('[Mouse Down] Canvas dimensions:', canvasDimensions);
+    // Store in display pixels (we'll convert to PNG pixels on mouse up)
+    setDrawStart({ x: displayX, y: displayY });
+    setDrawCurrent({ x: displayX, y: displayY });
     setIsDrawing(true);
   };
 
@@ -157,43 +157,57 @@ export default function EquationReview({
     const canvasY = e.clientY - rect.top;
     setDrawCurrent({ x: canvasX, y: canvasY });
   };
-
   const handleMouseUp = async () => {
-    if (!isDrawing || !drawStart || !drawCurrent || !onExtractRegion) {
+    if (!isDrawing || !drawStart || !drawCurrent || !onExtractRegion || !canvasDimensions) {
       setIsDrawing(false);
       return;
     }
 
-    // drawStart and drawCurrent are in canvas pixels
-    const bboxCanvas = {
+    // Calculate bounding box in display pixels
+    const bboxDisplay = {
       x: Math.min(drawStart.x, drawCurrent.x),
       y: Math.min(drawStart.y, drawCurrent.y),
       width: Math.abs(drawCurrent.x - drawStart.x),
       height: Math.abs(drawCurrent.y - drawStart.y),
     };
 
-    // Convert canvas pixels to PNG pixels
-    // Canvas: 595px wide, PNG: 1653px wide
-    // Conversion: canvas pixels × (PNG width / canvas width)
-    const canvasWidth = pageDimensions.width * scale;
-    const canvasToPngRatio = pageDimensions.pngWidth / canvasWidth;
+    // Minimum size check (10x10 pixels)
+    if (bboxDisplay.width < 10 || bboxDisplay.height < 10) {
+      setIsDrawing(false);
+      setDrawStart(null);
+      setDrawCurrent(null);
+      return;
+    }
+
+    // Convert: Display pixels → Internal canvas pixels → PNG pixels
+    // Step 1: Display pixels × (internal width / display width) = Internal canvas pixels
+    const displayToInternalRatio = canvasDimensions.internalWidth / canvasDimensions.displayWidth;
+    const bboxInternal = {
+      x: bboxDisplay.x * displayToInternalRatio,
+      y: bboxDisplay.y * displayToInternalRatio,
+      width: bboxDisplay.width * displayToInternalRatio,
+      height: bboxDisplay.height * displayToInternalRatio,
+    };
+    
+    // Step 2: Internal canvas pixels × (PNG width / internal canvas width) = PNG pixels
+    const internalToPngRatio = pageDimensions!.pngWidth / canvasDimensions.internalWidth;
     const bboxPNG = {
-      x: Math.round(bboxCanvas.x * canvasToPngRatio),
-      y: Math.round(bboxCanvas.y * canvasToPngRatio),
-      width: Math.round(bboxCanvas.width * canvasToPngRatio),
-      height: Math.round(bboxCanvas.height * canvasToPngRatio),
+      x: Math.round(bboxInternal.x * internalToPngRatio),
+      y: Math.round(bboxInternal.y * internalToPngRatio),
+      width: Math.round(bboxInternal.width * internalToPngRatio),
+      height: Math.round(bboxInternal.height * internalToPngRatio),
     };
 
     console.log('[EquationReview] Manual extraction:', {
-      canvasCoords: bboxCanvas,
+      displayCoords: bboxDisplay,
+      internalCoords: bboxInternal,
       pngCoords: bboxPNG,
-      canvasToPngRatio,
-      pageDimensions
+      displayToInternalRatio,
+      internalToPngRatio,
+      totalRatio: displayToInternalRatio * internalToPngRatio,
     });
 
-    // Only extract if bbox is large enough (minimum 20x20 pixels in canvas space)
-    if (bboxCanvas.width > 20 && bboxCanvas.height > 20) {
-      setIsExtracting(true);
+    setIsExtracting(true);
       try {
         const latex = await onExtractRegion(currentPage, bboxPNG);
         const newEquation: DetectedEquation = {
@@ -434,19 +448,22 @@ export default function EquationReview({
                     // Find the actual canvas element rendered by react-pdf
                     setTimeout(() => {
                       if (pageRef.current) {
-                        const allCanvases = pageRef.current.querySelectorAll('canvas');
-                        console.log('[EquationReview] Found', allCanvases.length, 'canvas elements');
-                        allCanvases.forEach((canvas, index) => {
+                        const canvas = pageRef.current.querySelector('canvas');
+                        if (canvas) {
                           const canvasRect = canvas.getBoundingClientRect();
-                          console.log(`[EquationReview] Canvas ${index}:`, {
-                            canvasWidth: canvas.width,
-                            canvasHeight: canvas.height,
+                          setCanvasDimensions({
+                            internalWidth: canvas.width,
+                            internalHeight: canvas.height,
                             displayWidth: canvasRect.width,
                             displayHeight: canvasRect.height,
-                            left: canvasRect.left,
-                            top: canvasRect.top,
                           });
-                        });
+                          console.log('[EquationReview] Canvas dimensions stored:', {
+                            internalWidth: canvas.width,
+                            internalHeight: canvas.height,
+                            displayWidth: canvasRect.width,
+                            displayHeight: canvasRect.height,
+                          });
+                        }
                       }
                     }, 100);
                   }}
