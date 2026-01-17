@@ -68,15 +68,16 @@ export default function EquationReview({
   const pageRef = useRef<HTMLDivElement>(null);
 
   // Calculate scale factor from PNG coordinates to PDF canvas coordinates
-  // PNG was rendered at 200 DPI, PDF is 72 DPI
-  // Scale = (PDF rendered width) / (PNG width)
+  // PNG was rendered at 200 DPI (1654px wide for A4)
+  // PDF page is 72 DPI (595 points wide for A4)
+  // Canvas rendering = PDF points × scale (zoom level)
+  // Conversion: PNG pixels → PDF points → Canvas pixels
   const getCoordinateScale = () => {
     if (!pageDimensions) return 1;
-    // PNG dimensions at 200 DPI = PDF points * (200/72)
-    const pngWidth = pageDimensions.width * (200 / 72);
-    const pngHeight = pageDimensions.height * (200 / 72);
-    // Scale factor to convert PNG pixels to current PDF canvas pixels
-    return pageDimensions.width / pngWidth;
+    // Convert PNG pixels to PDF points: divide by DPI ratio
+    // Then convert PDF points to canvas pixels: multiply by zoom scale
+    // Combined: PNG pixels × (72/200) × scale = PNG pixels × (scale × 72/200)
+    return (scale * 72) / 200;
   };
 
   const coordinateScale = getCoordinateScale();
@@ -137,10 +138,11 @@ export default function EquationReview({
     // Mouse position in canvas pixels
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
-    // Convert to PDF base coordinates (remove zoom scale)
+    // Convert canvas pixels to PDF points (72 DPI)
+    // Canvas pixels = PDF points × scale, so PDF points = canvas pixels / scale
     const pdfX = canvasX / scale;
     const pdfY = canvasY / scale;
-    console.log('[Mouse Down] Canvas:', { canvasX, canvasY }, 'PDF:', { pdfX, pdfY }, 'Scale:', scale);
+    console.log('[Mouse Down] Canvas:', { canvasX, canvasY }, 'PDF points:', { pdfX, pdfY }, 'Scale:', scale);
     setDrawStart({ x: pdfX, y: pdfY });
     setDrawCurrent({ x: pdfX, y: pdfY });
     setIsDrawing(true);
@@ -152,7 +154,7 @@ export default function EquationReview({
     // Mouse position in canvas pixels
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
-    // Convert to PDF base coordinates (remove zoom scale)
+    // Convert canvas pixels to PDF points (72 DPI)
     const pdfX = canvasX / scale;
     const pdfY = canvasY / scale;
     setDrawCurrent({ x: pdfX, y: pdfY });
@@ -164,7 +166,8 @@ export default function EquationReview({
       return;
     }
 
-    // Bbox in PDF coordinate space (after dividing by scale)
+    // drawStart and drawCurrent are in PDF points (72 DPI)
+    // because we divided canvas pixels by scale
     const bboxPDF = {
       x: Math.min(drawStart.x, drawCurrent.x),
       y: Math.min(drawStart.y, drawCurrent.y),
@@ -172,8 +175,8 @@ export default function EquationReview({
       height: Math.abs(drawCurrent.y - drawStart.y),
     };
 
-    // Convert from PDF points to PNG pixels
-    // PDF points × (200 DPI / 72 DPI) = PNG pixels
+    // Convert from PDF points (72 DPI) to PNG pixels (200 DPI)
+    // PNG pixels = PDF points × (200 / 72)
     const DPI_RATIO = 200 / 72;
     const bboxPNG = {
       x: Math.round(bboxPDF.x * DPI_RATIO),
@@ -437,10 +440,10 @@ export default function EquationReview({
                     key={equation.id}
                     className={`absolute border-2 ${getStatusColor(equation.status)} pointer-events-none`}
                     style={{
-                      left: equation.bbox.x * coordinateScale * scale,
-                      top: equation.bbox.y * coordinateScale * scale,
-                      width: equation.bbox.width * coordinateScale * scale,
-                      height: equation.bbox.height * coordinateScale * scale,
+                      left: equation.bbox.x * coordinateScale,
+                      top: equation.bbox.y * coordinateScale,
+                      width: equation.bbox.width * coordinateScale,
+                      height: equation.bbox.height * coordinateScale,
                     }}
                     onClick={() => {
                       console.log('[EquationReview] Clicked equation:', {
