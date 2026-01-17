@@ -137,8 +137,9 @@ export default function EquationReview({
     // Mouse position in canvas pixels (relative to PDF canvas)
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
-    console.log('[Mouse Down] Canvas pixels:', { canvasX, canvasY });
-    console.log('[Mouse Down] Actual rendered size:', { width: rect.width, height: rect.height });
+    console.log('[Mouse Down] Mouse clientX/Y:', { clientX: e.clientX, clientY: e.clientY });
+    console.log('[Mouse Down] Rect:', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+    console.log('[Mouse Down] Calculated canvas pixels:', { canvasX, canvasY });
     console.log('[Mouse Down] PDF dimensions:', pageDimensions);
     console.log('[Mouse Down] Scale:', scale);
     // Store in canvas pixels (we'll convert to PNG pixels on mouse up)
