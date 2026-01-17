@@ -20,16 +20,21 @@ type WorkflowStep = {
 
 export default function CustomAnalysis() {
   const params = useParams<{ id: string }>();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const toast = (opts: { title: string; description?: string; variant?: string }) => {
     alert(`${opts.title}${opts.description ? '\n' + opts.description : ''}`);
   };
 
-  const siteId = parseInt(params.id || "0");
+  // Determine if we're on site-based or analysis-based route
+  const isAnalysisRoute = location.startsWith('/custom-analysis/');
+  const routeId = parseInt(params.id || "0");
+  
+  // If analysis route, routeId is analysisId; if site route, it's siteId
+  const [siteId, setSiteId] = useState<number>(isAnalysisRoute ? 0 : routeId);
   const [step, setStep] = useState<AnalysisStep>("details");
   const [analysisName, setAnalysisName] = useState("");
   const [analysisDescription, setAnalysisDescription] = useState("");
-  const [analysisId, setAnalysisId] = useState<number | null>(null);
+  const [analysisId, setAnalysisId] = useState<number | null>(isAnalysisRoute ? routeId : null);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [scadaFile, setScadaFile] = useState<File | null>(null);
   const [meteoFile, setMeteoFile] = useState<File | null>(null);
@@ -47,7 +52,35 @@ export default function CustomAnalysis() {
   const scadaInputRef = useRef<HTMLInputElement>(null);
   const meteoInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: site, isLoading: siteLoading } = trpc.sites.getById.useQuery({ id: siteId });
+  const { data: site, isLoading: siteLoading } = trpc.sites.getById.useQuery(
+    { id: siteId },
+    { enabled: siteId > 0 }
+  );
+
+  // Load analysis if on analysis route
+  const { data: loadedAnalysis, isLoading: analysisLoading } = trpc.customAnalysis.getById.useQuery(
+    { id: analysisId || 0 },
+    { enabled: isAnalysisRoute && (analysisId || 0) > 0 }
+  );
+
+  // Initialize state from loaded analysis
+  useEffect(() => {
+    if (loadedAnalysis) {
+      setSiteId(loadedAnalysis.siteId);
+      setAnalysisName(loadedAnalysis.name);
+      setAnalysisDescription(loadedAnalysis.description || "");
+      
+      // Set step and extracted model based on analysis status
+      if (loadedAnalysis.status === "confirming_model" && loadedAnalysis.extractedModel) {
+        setExtractedModel(loadedAnalysis.extractedModel);
+        setStep("contract");
+        setCompletedSteps(new Set<AnalysisStep>(["details"]));
+      } else if (loadedAnalysis.status === "mapping") {
+        setStep("upload_scada");
+        setCompletedSteps(new Set<AnalysisStep>(["details", "contract"]));
+      }
+    }
+  }, [loadedAnalysis]);
 
   const uploadContractMutation = trpc.customAnalysis.uploadContract.useMutation({
     onSuccess: () => {
@@ -256,7 +289,7 @@ export default function CustomAnalysis() {
     e.preventDefault();
   };
 
-  if (siteLoading) {
+  if (siteLoading || (isAnalysisRoute && analysisLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -264,7 +297,7 @@ export default function CustomAnalysis() {
     );
   }
 
-  if (!site) {
+  if (!site && siteId > 0) {
     return (
       <div className="container py-8">
         <p>Site not found</p>
@@ -279,7 +312,7 @@ export default function CustomAnalysis() {
           ← Back to Site
         </Button>
         <h1 className="text-3xl font-bold mt-4">Custom Performance Analysis</h1>
-        <p className="text-muted-foreground">{site.name}</p>
+        <p className="text-muted-foreground">{site?.name || "Loading..."}</p>
       </div>
 
       {/* Progress Steps */}

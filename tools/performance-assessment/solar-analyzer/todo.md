@@ -617,3 +617,17 @@
 - [x] Add completion tracking with green checkmarks for completed steps
 - [x] Mark Details step complete when analysis is created
 - [x] Mark Contract step complete when model is confirmed
+
+## Fix 404 Error After Equation Verification (Jan 17, 2026)
+- [x] 404 error when navigating to /custom-analysis/:id after equation verification
+- [x] Added missing /custom-analysis/:id route to App.tsx
+- [x] Updated CustomAnalysis to detect and handle both site-based and analysis-based routes
+- [x] Added query to load analysis by ID and initialize state from loaded analysis
+- [x] Fixed loading states to handle both site and analysis loading
+
+## Capture Variable Definitions in Model (Jan 17, 2026)
+- [x] Extract variable definitions from contract text (not just equations)
+- [x] Updated buildModelFromEquations to include context text in Qwen prompt
+- [x] Modified prompt to emphasize extracting variable definitions from context
+- [x] Definitions are now extracted and stored in model.performanceMetrics[].variables
+- [ ] Display definitions in model confirmation UI (future enhancement)
