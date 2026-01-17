@@ -67,19 +67,20 @@ export default function EquationReview({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
-  // Calculate scale factor from PNG coordinates to rendered canvas coordinates
-  // PNG was rendered at 200 DPI (1654px wide for A4)
-  // Canvas is rendered by react-pdf at: PDF points (595) × zoom scale
-  // Conversion: PNG pixels → Canvas pixels
+  // Calculate scale factor to convert PNG pixels to canvas pixels
+  // PNG: 1653px wide (rendered at 200 DPI)
+  // Canvas: 595px wide (PDF points at scale=1)
+  // Conversion: PNG pixels × (canvas width / PNG width) = canvas pixels
   const getCoordinateScale = () => {
     if (!pageDimensions) return 1;
-    // Actual canvas width = PDF width (in points) × zoom scale
+    // Canvas width = PDF width (595 points) × zoom scale
     const canvasWidth = pageDimensions.width * scale;
-    // Scale factor = canvas width / PNG width
+    // To convert PNG pixels to canvas pixels: multiply by (canvas / PNG)
     return canvasWidth / pageDimensions.pngWidth;
   };
 
   const coordinateScale = getCoordinateScale();
+  console.log('[EquationReview] coordinateScale:', coordinateScale, 'scale:', scale, 'pageDims:', pageDimensions);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -429,30 +430,24 @@ export default function EquationReview({
                 {/* Overlay bounding boxes for equations on current page */}
               {equations
                 .filter(eq => eq.pageNumber === currentPage && eq.status !== "rejected")
-                .map((equation) => (
+                .map((equation) => {
+                  const canvasX = equation.bbox.x * coordinateScale;
+                  const canvasY = equation.bbox.y * coordinateScale;
+                  const canvasW = equation.bbox.width * coordinateScale;
+                  const canvasH = equation.bbox.height * coordinateScale;
+                  console.log('[Yellow Box]', equation.id, 'PNG:', equation.bbox, '→ Canvas:', { x: canvasX, y: canvasY, w: canvasW, h: canvasH });
+                  return (
                   <div
                     key={equation.id}
                     className={`absolute border-2 ${getStatusColor(equation.status)} pointer-events-none`}
                     style={{
-                      left: equation.bbox.x * coordinateScale,
-                      top: equation.bbox.y * coordinateScale,
-                      width: equation.bbox.width * coordinateScale,
-                      height: equation.bbox.height * coordinateScale,
-                    }}
-                    onClick={() => {
-                      console.log('[EquationReview] Clicked equation:', {
-                        id: equation.id,
-                        bbox: equation.bbox,
-                        scaled: {
-                          left: equation.bbox.x * coordinateScale * scale,
-                          top: equation.bbox.y * coordinateScale * scale,
-                          width: equation.bbox.width * coordinateScale * scale,
-                          height: equation.bbox.height * coordinateScale * scale,
-                        }
-                      });
+                      left: canvasX,
+                      top: canvasY,
+                      width: canvasW,
+                      height: canvasH,
                     }}
                   />
-                ))}
+                )})
 
               {/* Drawing rectangle */}
               {isDrawing && drawStart && drawCurrent && (
