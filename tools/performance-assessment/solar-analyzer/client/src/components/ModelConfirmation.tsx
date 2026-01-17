@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,12 +7,70 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2, Edit2, Save } from "lucide-react";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 
 interface ModelConfirmationProps {
   model: any;
   onConfirm: (confirmedModel: any) => void;
   onBack: () => void;
   isLoading?: boolean;
+}
+
+// LaTeX rendering component
+function LaTeXFormula({ latex }: { latex: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (containerRef.current && latex) {
+      try {
+        // Clean up LaTeX string
+        let cleanLatex = latex.trim();
+        
+        // Remove \mathrm{} wrapper if present
+        if (cleanLatex.startsWith('\\mathrm{')) {
+          cleanLatex = cleanLatex.slice(8, -1);
+        }
+        
+        // Fix common OCR errors in LaTeX
+        cleanLatex = cleanLatex
+          // Remove spaces within subscripts and superscripts
+          .replace(/_{([^}]*)}/g, (match, content) => `_{${content.replace(/\s+/g, '')}}`)
+          .replace(/\^{([^}]*)}/g, (match, content) => `^{${content.replace(/\s+/g, '')}}`)
+          // Remove spaces before subscript/superscript operators
+          .replace(/\s+([_^])/g, '$1')
+          // Fix split variable names
+          .replace(/E\s+N/g, 'EN')
+          .replace(/S\s+T\s+C/g, 'STC')
+          .replace(/A\s+c\s+t/g, 'Act')
+          .replace(/P\s+r/g, 'P_r')
+          // Convert square brackets to parentheses (KaTeX doesn't like bare square brackets)
+          .replace(/\[/g, '(')
+          .replace(/\]/g, ')')
+          // Fix double braces (e.g., ^{t}{t} -> ^{t})
+          .replace(/([_^]{[^}]*})({[^}]*})/g, '$1')
+          // Remove extra spaces around operators
+          .replace(/\s*\*\s*/g, ' \\cdot ');
+        
+        console.log('[LaTeX] Original:', latex);
+        console.log('[LaTeX] Cleaned:', cleanLatex);
+        
+        katex.render(cleanLatex, containerRef.current, {
+          throwOnError: false,
+          displayMode: true,
+          output: 'html'
+        });
+      } catch (error) {
+        console.error('KaTeX rendering error:', error);
+        // Fallback to showing raw LaTeX
+        if (containerRef.current) {
+          containerRef.current.textContent = latex;
+        }
+      }
+    }
+  }, [latex]);
+  
+  return <div ref={containerRef} className="p-2 bg-muted rounded" />;
 }
 
 export default function ModelConfirmation({ model, onConfirm, onBack, isLoading }: ModelConfirmationProps) {
@@ -220,7 +278,9 @@ export default function ModelConfirmation({ model, onConfirm, onBack, isLoading 
                 <div className="flex-1">
                   <div className="font-medium">{eq.name}</div>
                   <div className="text-sm text-muted-foreground mt-1">{eq.description}</div>
-                  <div className="mt-2 p-2 bg-muted rounded font-mono text-sm">{eq.formula}</div>
+                  <div className="mt-2">
+                    <LaTeXFormula latex={eq.formula} />
+                  </div>
                   <div className="mt-2 text-xs text-muted-foreground">
                     Variables: {eq.variables.map((v: any) => v.name).join(", ")}
                   </div>
