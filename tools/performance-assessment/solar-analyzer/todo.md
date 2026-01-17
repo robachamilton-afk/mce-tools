@@ -667,3 +667,8 @@
 - [x] Replace Loader2 spinner in EquationReviewPage with new logo component
 - [x] Animation uses requestAnimationFrame for smooth 60fps loop
 - [x] Blue circle traces around logo with glowing drop-shadow effect
+
+## Round MCE Logo Corners (Jan 17, 2026)
+- [x] Add border-radius to logo image to match circular blue tracing line
+- [x] Added rounded-full class to create perfect circle
+- [x] Logo now matches the circular blue tracing animation

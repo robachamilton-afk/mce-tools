@@ -39,7 +39,7 @@ export default function MCELoader({ size = 80, className = "" }: MCELoaderProps)
       <img
         src="/mce-logo.png"
         alt="MCE Logo"
-        className="w-full h-full object-contain"
+        className="w-full h-full object-contain rounded-full"
       />
       
       {/* Animated tracing border */}
