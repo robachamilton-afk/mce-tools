@@ -7,23 +7,18 @@
 
 import { promises as fs } from 'fs';
 import path from 'path';
-import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { convert } from 'pdf-poppler';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const TEMP_DIR = path.join(PROJECT_ROOT, 'temp');
 
-// Use require for CommonJS modules
-const require = createRequire(import.meta.url);
-
 export interface PdfToImagesOptions {
   density?: number; // DPI (default: 150)
-  format?: 'png' | 'jpg';
-  width?: number;
-  height?: number;
+  format?: 'png' | 'jpg' | 'jpeg';
 }
 
 export interface ConvertedPage {
@@ -43,8 +38,6 @@ export async function convertPdfToImages(
   const {
     density = 150,
     format = 'png',
-    width = 2550, // A4 at 300 DPI width
-    height = 3300, // A4 at 300 DPI height
   } = options;
 
   // Create temp directory for PDF and images (use local repo directory for Windows compatibility)
@@ -60,52 +53,51 @@ export async function convertPdfToImages(
     
     console.log(`[PDF Converter] Converting PDF from: ${pdfPath}`);
     console.log(`[PDF Converter] Temp directory: ${tempDir}`);
-    console.log(`[PDF Converter] Settings: ${density} DPI, ${width}x${height}px, ${format}`);
+    console.log(`[PDF Converter] Settings: ${density} DPI, ${format}`);
     
-    // Use require() for CommonJS module
-    const pdf2pic = require('pdf2pic');
-    const fromPath = pdf2pic.fromPath || pdf2pic.default?.fromPath;
-    
-    if (!fromPath) {
-      throw new Error('pdf2pic module did not export fromPath function');
-    }
-    
-    // Configure pdf2pic
-    const converter = fromPath(pdfPath, {
-      density,
-      saveFilename: 'page',
-      savePath: tempDir,
+    // Configure pdf-poppler options
+    const opts = {
       format,
-      width,
-      height,
-    });
+      out_dir: tempDir,
+      out_prefix: 'page',
+      page: null, // Convert all pages
+      scale: density / 72, // pdf-poppler uses scale factor (72 DPI base)
+    };
     
-    // Convert all pages
-    const result = await converter.bulk(-1, { responseType: 'image' });
+    // Convert PDF to images using Poppler
+    await convert(pdfPath, opts);
     
-    if (!result || !Array.isArray(result)) {
-      throw new Error('PDF conversion failed: no pages returned');
+    // Read generated image files
+    const files = await fs.readdir(tempDir);
+    const imageFiles = files
+      .filter(f => f.startsWith('page-') && f.endsWith(`.${format}`))
+      .sort((a, b) => {
+        // Extract page numbers from filenames like "page-1.png", "page-2.png"
+        const aNum = parseInt(a.match(/page-(\d+)/)?.[1] || '0');
+        const bNum = parseInt(b.match(/page-(\d+)/)?.[1] || '0');
+        return aNum - bNum;
+      });
+    
+    if (imageFiles.length === 0) {
+      throw new Error('PDF conversion failed: no images generated');
     }
     
-    console.log(`[PDF Converter] Converted ${result.length} pages`);
+    console.log(`[PDF Converter] Converted ${imageFiles.length} pages`);
     
     // Read each image and convert to base64
     const pages: ConvertedPage[] = [];
     
-    for (let i = 0; i < result.length; i++) {
-      const page = result[i];
-      if (!page || !page.path) {
-        console.warn(`[PDF Converter] Warning: Page ${i + 1} has no path, skipping`);
-        continue;
-      }
+    for (let i = 0; i < imageFiles.length; i++) {
+      const filename = imageFiles[i];
+      const imagePath = path.join(tempDir, filename);
       
-      const imageBuffer = await fs.readFile(page.path);
+      const imageBuffer = await fs.readFile(imagePath);
       const base64 = imageBuffer.toString('base64');
       
       pages.push({
         pageNumber: i + 1,
         base64,
-        path: page.path,
+        path: imagePath,
       });
       
       console.log(`[PDF Converter] Page ${i + 1}: ${(imageBuffer.length / 1024).toFixed(2)} KB`);
