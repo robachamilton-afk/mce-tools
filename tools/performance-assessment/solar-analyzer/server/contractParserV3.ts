@@ -269,37 +269,93 @@ Return ONLY valid JSON. Use null for missing values. For equations, use the LaTe
  * Convert Qwen JSON response to ContractModel schema
  */
 function convertToContractModel(qwenResponse: any): ContractModel {
+  const performanceModel = qwenResponse.performanceModel || {};
+  const equations = performanceModel.equations || {};
+  const parameters = performanceModel.parameters || [];
+  
+  // Convert Qwen parameters to EquationVariable format
+  const variables = parameters.map((param: any) => ({
+    name: param.symbol || param.name,
+    meaning: param.description || param.name,
+    units: param.unit,
+    evidence: { page: 1, snippet: param.name }
+  }));
+  
+  // Build performance metrics from equations
+  const performanceMetrics = [];
+  
+  if (equations.performanceRatio) {
+    performanceMetrics.push({
+      metricName: 'Performance Ratio',
+      symbol: 'PR',
+      expressionString: equations.performanceRatio,
+      variables: variables,
+      evidence: { page: 1, snippet: 'Performance Ratio calculation' }
+    });
+  }
+  
+  if (equations.availability) {
+    performanceMetrics.push({
+      metricName: 'Availability',
+      symbol: 'A',
+      expressionString: equations.availability,
+      variables: variables,
+      evidence: { page: 1, snippet: 'Availability calculation' }
+    });
+  }
+  
+  if (equations.energyGeneration) {
+    performanceMetrics.push({
+      metricName: 'Energy Generation',
+      symbol: 'E',
+      expressionString: equations.energyGeneration,
+      variables: variables,
+      evidence: { page: 1, snippet: 'Energy generation calculation' }
+    });
+  }
+  
+  // Convert parameters to ContractParameter format
+  const contractParameters = parameters.map((param: any) => ({
+    name: param.name,
+    value: param.value,
+    units: param.unit,
+    evidence: { page: 1, snippet: param.name }
+  }));
+  
+  // Build tariff structure
+  const tariffs = [];
+  if (qwenResponse.tariffStructure?.baseRate) {
+    tariffs.push({
+      type: 'Fixed',
+      rate: qwenResponse.tariffStructure.baseRate.value,
+      currency: 'USD',
+      evidence: { page: 1, snippet: 'Base rate' }
+    });
+  }
+  
+  // Calculate confidence scores
+  const hasEquations = performanceMetrics.length > 0;
+  const hasParameters = parameters.length > 0;
+  const hasTariffs = tariffs.length > 0;
+  
   return {
     contractMetadata: {
       filename: 'contract.pdf',
       pageCount: 1,
       extractedAt: new Date().toISOString()
     },
-    performanceMetrics: qwenResponse.performanceModel?.equations ? [
-      {
-        metricName: 'Performance Ratio',
-        symbol: 'PR',
-        expressionString: qwenResponse.performanceModel.equations.performanceRatio || '',
-        variables: qwenResponse.performanceModel.parameters || [],
-        evidence: { page: 1, snippet: '' }
-      }
-    ] : [],
-    parameters: qwenResponse.performanceModel?.parameters || [],
-    tariffs: qwenResponse.tariffStructure ? [{
-      type: 'Fixed',
-      rate: qwenResponse.tariffStructure.baseRate?.value,
-      currency: 'USD',
-      evidence: { page: 1, snippet: '' }
-    }] : [],
+    performanceMetrics,
+    parameters: contractParameters,
+    tariffs,
     guarantees: [],
     tests: [],
     exclusions: [],
     exceptions: [],
     overallConfidence: {
-      equations: 0.5,
-      parameters: 0.5,
-      tariffs: 0.5,
-      overall: 0.5
+      equations: hasEquations ? 0.85 : 0,
+      parameters: hasParameters ? 0.85 : 0,
+      tariffs: hasTariffs ? 0.85 : 0,
+      overall: (hasEquations && hasParameters) ? 0.85 : 0.5
     }
   };
 }
