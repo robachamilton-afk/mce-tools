@@ -141,7 +141,9 @@ for line in sys.stdin:
         if not image_path:
             continue
         result = latex_ocr(image_path)
-        print(json.dumps({"success": True, "latex": result}), flush=True)
+        # Extract text from result (Pix2Text returns dict with 'text' and 'score')
+        latex_text = result['text'] if isinstance(result, dict) else str(result)
+        print(json.dumps({"success": True, "latex": latex_text}), flush=True)
     except Exception as e:
         print(json.dumps({"success": False, "error": str(e)}), flush=True)
 `;
@@ -183,14 +185,12 @@ for line in sys.stdin:
         isProcessing = false;
         processNextInQueue();
       } catch (error) {
-        console.error('[Pix2Text] Failed to parse response:', line);
-        // Reject the current task if JSON parsing fails
-        const task = processQueue.shift();
-        if (task) {
-          task.reject(new Error(`Failed to parse Pix2Text response: ${line}`));
+        // JSON parsing failed - this is expected for non-JSON lines
+        // Only log if it's not the READY message (already handled above)
+        if (line !== 'READY') {
+          console.error('[Pix2Text] Failed to parse response:', line);
         }
-        isProcessing = false;
-        processNextInQueue();
+        // Don't reject tasks for parse errors - the task might still be processing
       }
     }
   });
