@@ -188,8 +188,8 @@ function isMathLine(line: OCRLine): boolean {
     return false;
   }
   
-  // Require at least 2 indicators AND equals sign
-  const isEquation = indicators >= 2;
+  // Require at least 1 indicator AND equals sign (validation will filter false positives)
+  const isEquation = indicators >= 1;
   if (isEquation) {
     console.log(`[Equation Detection] ACCEPTED as equation (${indicators} indicators): "${text}"`);
   }
