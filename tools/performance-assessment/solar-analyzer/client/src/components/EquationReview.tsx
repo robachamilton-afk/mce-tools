@@ -430,6 +430,26 @@ export default function EquationReview({
                       png: { width: pngWidth, height: pngHeight },
                       scale: page.width / pngWidth
                     });
+                    
+                    // Find the actual canvas element rendered by react-pdf
+                    setTimeout(() => {
+                      if (pageRef.current) {
+                        const canvas = pageRef.current.querySelector('canvas');
+                        if (canvas) {
+                          const canvasRect = canvas.getBoundingClientRect();
+                          console.log('[EquationReview] Actual canvas element:', {
+                            canvasWidth: canvas.width,
+                            canvasHeight: canvas.height,
+                            displayWidth: canvasRect.width,
+                            displayHeight: canvasRect.height,
+                            left: canvasRect.left,
+                            top: canvasRect.top,
+                          });
+                        } else {
+                          console.log('[EquationReview] Canvas element not found in pageRef');
+                        }
+                      }
+                    }, 100);
                   }}
                 />
 
