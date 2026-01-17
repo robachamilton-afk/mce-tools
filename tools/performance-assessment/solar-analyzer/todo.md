@@ -599,3 +599,10 @@
 - [x] Convert PDF coordinates to PNG pixel coordinates for backend
 - [x] Add comprehensive logging for all coordinate transformations
 - [ ] Test manual drawing at different zoom levels
+
+## Fix Bounding Box Coordinate Scaling (Jan 17, 2026)
+- [x] Fix bounding box positioning - boxes are not aligned with equations on PDF
+- [x] Verify coordinate conversion from PNG pixels to PDF canvas coordinates
+- [x] Ensure boxes scale correctly at different zoom levels
+- [x] Fix coordinateScale to include zoom level in calculation
+- [x] Remove double multiplication by scale in bbox style

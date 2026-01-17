@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,19 +69,15 @@ export default function EquationReview({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
-  // Calculate scale factor from PNG coordinates to PDF canvas coordinates
-  // PNG was rendered at 200 DPI, PDF is 72 DPI
-  // Scale = (PDF rendered width) / (PNG width)
-  const getCoordinateScale = () => {
+  // Calculate scale factor from PNG coordinates to canvas coordinates
+  // coordinateScale accounts for both DPI conversion AND current zoom level
+  const coordinateScale = useMemo(() => {
     if (!pageDimensions) return 1;
-    // PNG dimensions at 200 DPI = PDF points * (200/72)
-    const pngWidth = pageDimensions.width * (200 / 72);
-    const pngHeight = pageDimensions.height * (200 / 72);
-    // Scale factor to convert PNG pixels to current PDF canvas pixels
-    return pageDimensions.width / pngWidth;
-  };
-
-  const coordinateScale = getCoordinateScale();
+    // Canvas width = PDF width * zoom scale
+    const canvasWidth = pageDimensions.width * scale;
+    // To convert PNG pixels to canvas pixels: multiply by (canvas / PNG)
+    return canvasWidth / pageDimensions.pngWidth;
+  }, [pageDimensions, scale]);
 
   // Helper to clean LaTeX for rendering
   const cleanLatexForDisplay = (latex: string): string => {
@@ -461,20 +457,20 @@ export default function EquationReview({
                     key={equation.id}
                     className={`absolute border-2 ${getStatusColor(equation.status)} pointer-events-none`}
                     style={{
-                      left: equation.bbox.x * coordinateScale * scale,
-                      top: equation.bbox.y * coordinateScale * scale,
-                      width: equation.bbox.width * coordinateScale * scale,
-                      height: equation.bbox.height * coordinateScale * scale,
+                      left: equation.bbox.x * coordinateScale,
+                      top: equation.bbox.y * coordinateScale,
+                      width: equation.bbox.width * coordinateScale,
+                      height: equation.bbox.height * coordinateScale,
                     }}
                     onClick={() => {
                       console.log('[EquationReview] Clicked equation:', {
                         id: equation.id,
                         bbox: equation.bbox,
                         scaled: {
-                          left: equation.bbox.x * coordinateScale * scale,
-                          top: equation.bbox.y * coordinateScale * scale,
-                          width: equation.bbox.width * coordinateScale * scale,
-                          height: equation.bbox.height * coordinateScale * scale,
+                          left: equation.bbox.x * coordinateScale,
+                          top: equation.bbox.y * coordinateScale,
+                          width: equation.bbox.width * coordinateScale,
+                          height: equation.bbox.height * coordinateScale,
                         }
                       });
                     }}
