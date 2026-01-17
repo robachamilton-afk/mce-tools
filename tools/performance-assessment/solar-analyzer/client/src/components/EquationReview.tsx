@@ -208,7 +208,7 @@ export default function EquationReview({
     });
 
     setIsExtracting(true);
-      try {
+    try {
         const latex = await onExtractRegion(currentPage, bboxPNG);
         const newEquation: DetectedEquation = {
           id: `manual-${Date.now()}`,
@@ -229,7 +229,6 @@ export default function EquationReview({
       } finally {
         setIsExtracting(false);
       }
-    }
 
     setIsDrawing(false);
     setDrawStart(null);
