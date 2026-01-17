@@ -24,6 +24,7 @@ import type { ContractModel } from './contractSchemaV2';
 import { join, resolve, dirname } from 'path';
 import { mkdir, rm } from 'fs/promises';
 import { fileURLToPath } from 'url';
+import sharp from 'sharp';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -117,10 +118,23 @@ export async function extractContractHybrid(
     });
     
     const allCroppedImages: CroppedImage[] = [];
+    
+    // Create debug directory for equation images
+    const debugDir = join(TEMP_DIR, 'debug-equations');
+    await mkdir(debugDir, { recursive: true });
+    
     for (const { page, path } of pageImages) {
       const pageRegions = mergedRegions.filter(r => r.page === page);
       if (pageRegions.length > 0) {
         const cropped = await cropMultipleRegions(path, pageRegions, true, 200);
+        
+        // Save cropped images for debugging
+        for (let i = 0; i < cropped.length; i++) {
+          const debugPath = join(debugDir, `equation-page${page}-${i + 1}.png`);
+          await sharp(cropped[i].buffer).toFile(debugPath);
+          console.log(`[Debug] Saved equation image: ${debugPath}`);
+        }
+        
         allCroppedImages.push(...cropped);
       }
     }
