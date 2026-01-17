@@ -37,6 +37,8 @@ export async function cropEquationRegion(
     throw new Error('Could not read image dimensions');
   }
   
+  console.log(`[cropEquationRegion] PNG dimensions: ${metadata.width}×${metadata.height}, bbox:`, region.bbox);
+  
   // Ensure bbox is within image bounds
   const bbox = {
     x: Math.max(0, Math.floor(region.bbox.x)),
