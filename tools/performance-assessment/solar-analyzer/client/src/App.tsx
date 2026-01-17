@@ -23,7 +23,6 @@ function Router() {
       <Route path={" /site/:id/equipment"} component={EquipmentTagging} />
       <Route path="/site/:id/custom-analysis" component={CustomAnalysis} />
       <Route path="/site/:id/custom-analysis/:analysisId/results" component={CustomAnalysisResults} />
-      <Route path="/custom-analysis/:id" component={CustomAnalysis} />
       <Route path="/custom-analysis/:id/results" component={CustomAnalysisResults} />
       <Route path="/custom-analysis/:id/review-equations" component={EquationReviewPage} />
       <Route path={"/dashboard"} component={Dashboard} />

@@ -10,23 +10,20 @@ import { Loader2, Upload, FileText, CheckCircle2, AlertCircle } from "lucide-rea
 import ModelConfirmation from "@/components/ModelConfirmation";
 // Toast notifications handled via browser alerts for now
 
-type AnalysisStep = "details" | "upload_contract" | "review_equations" | "upload_scada" | "upload_meteo" | "map_columns" | "processing" | "results";
+type AnalysisStep = "details" | "upload_contract" | "confirm_model" | "upload_scada" | "upload_meteo" | "map_columns" | "processing" | "results";
 
 export default function CustomAnalysis() {
-  const params = useParams<{ id: string; analysisId?: string }>();
+  const params = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const toast = (opts: { title: string; description?: string; variant?: string }) => {
     alert(`${opts.title}${opts.description ? '\n' + opts.description : ''}`);
   };
 
-  // If we have analysisId in URL, we're coming back from equation review
-  const urlAnalysisId = params.id && !params.analysisId ? parseInt(params.id) : null;
-  const siteId = params.analysisId ? 0 : parseInt(params.id || "0");
+  const siteId = parseInt(params.id || "0");
   const [step, setStep] = useState<AnalysisStep>("details");
-  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [analysisName, setAnalysisName] = useState("");
   const [analysisDescription, setAnalysisDescription] = useState("");
-  const [analysisId, setAnalysisId] = useState<number | null>(urlAnalysisId);
+  const [analysisId, setAnalysisId] = useState<number | null>(null);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [scadaFile, setScadaFile] = useState<File | null>(null);
   const [meteoFile, setMeteoFile] = useState<File | null>(null);
@@ -43,29 +40,7 @@ export default function CustomAnalysis() {
   const scadaInputRef = useRef<HTMLInputElement>(null);
   const meteoInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: site, isLoading: siteLoading } = trpc.sites.getById.useQuery(
-    { id: siteId },
-    { enabled: siteId > 0 }
-  );
-
-  // If we have an analysisId from URL, load the analysis to get site info and show model confirmation
-  const { data: existingAnalysis } = trpc.customAnalysis.getById.useQuery(
-    { id: urlAnalysisId! },
-    { enabled: !!urlAnalysisId }
-  );
-
-  // When coming back from equation review, show model confirmation step
-  useEffect(() => {
-    if (existingAnalysis && urlAnalysisId) {
-      setAnalysisId(urlAnalysisId);
-      setCompletedSteps(new Set(["details", "upload_contract"]));
-      setStep("confirm_model");
-      // Load the extracted model if available
-      if (existingAnalysis.extractedModel) {
-        setExtractedModel(existingAnalysis.extractedModel);
-      }
-    }
-  }, [existingAnalysis, urlAnalysisId]);
+  const { data: site, isLoading: siteLoading } = trpc.sites.getById.useQuery({ id: siteId });
 
   const uploadContractMutation = trpc.customAnalysis.uploadContract.useMutation({
     onSuccess: () => {
@@ -83,7 +58,6 @@ export default function CustomAnalysis() {
   const confirmModelMutation = trpc.customAnalysis.confirmModel.useMutation({
     onSuccess: () => {
       toast({ title: "Model confirmed", description: "Ready to upload data files" });
-      setCompletedSteps(prev => new Set(prev).add("upload_contract"));
       setStep("upload_scada");
     },
     onError: (error: any) => {
@@ -127,7 +101,6 @@ export default function CustomAnalysis() {
         title: "Analysis created",
         description: "Ready to upload contract",
       });
-      setCompletedSteps(prev => new Set(prev).add("details"));
       setStep("upload_contract");
     },
     onError: (error: any) => {
@@ -290,19 +263,14 @@ export default function CustomAnalysis() {
     );
   }
 
-  const displaySite = site || (existingAnalysis ? { name: "Loading...", id: existingAnalysis.siteId } : null);
-  const backSiteId = siteId || existingAnalysis?.siteId;
-
   return (
     <div className="container py-8 max-w-4xl">
       <div className="mb-6">
-        {backSiteId && (
-          <Button variant="ghost" onClick={() => setLocation(`/site/${backSiteId}`)}>
-            ← Back to Site
-          </Button>
-        )}
+        <Button variant="ghost" onClick={() => setLocation(`/site/${siteId}`)}>
+          ← Back to Site
+        </Button>
         <h1 className="text-3xl font-bold mt-4">Custom Performance Analysis</h1>
-        {displaySite && <p className="text-muted-foreground">{displaySite.name}</p>}
+        <p className="text-muted-foreground">{site.name}</p>
       </div>
 
       {/* Progress Steps */}
@@ -310,28 +278,22 @@ export default function CustomAnalysis() {
         <div className="flex items-center justify-between">
           {[
             { key: "details", label: "Details" },
-            { key: "upload_contract", label: "Contract" },
             { key: "upload_scada", label: "SCADA Data" },
             { key: "upload_meteo", label: "Meteo Data" },
             { key: "map_columns", label: "Map Columns" },
-            { key: "processing", label: "Process Data" },
+            { key: "contract", label: "Contract" },
+            { key: "processing", label: "Processing" },
             { key: "results", label: "Results" },
           ].map((s, idx) => (
             <div key={s.key} className="flex items-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  completedSteps.has(s.key)
-                    ? "bg-green-500 text-white"
-                    : step === s.key
+                  step === s.key
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground"
                 }`}
               >
-                {completedSteps.has(s.key) ? (
-                  <CheckCircle2 className="h-5 w-5" />
-                ) : (
-                  idx + 1
-                )}
+                {idx + 1}
               </div>
               <span className="ml-2 text-sm hidden sm:inline">{s.label}</span>
               {idx < 6 && <div className="w-8 h-0.5 bg-muted mx-2" />}

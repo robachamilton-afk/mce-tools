@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import { InlineMath } from 'react-katex';
+import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
 // Configure PDF.js worker
@@ -65,21 +65,20 @@ export default function EquationReview({
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number; pngWidth: number; pngHeight: number } | null>(null);
-  const [canvasDimensions, setCanvasDimensions] = useState<{ internalWidth: number; internalHeight: number; displayWidth: number; displayHeight: number } | null>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
-  // Calculate scale factor to convert PNG pixels to canvas pixels
-  // PNG: 1653px wide (rendered at 200 DPI)
-  // Canvas: 595px wide (PDF points at scale=1)
-  // Conversion: PNG pixels × (canvas width / PNG width) = canvas pixels
+  // Calculate scale factor from PNG coordinates to PDF canvas coordinates
+  // PNG was rendered at 200 DPI, PDF is 72 DPI
+  // Scale = (PDF rendered width) / (PNG width)
   const getCoordinateScale = () => {
     if (!pageDimensions) return 1;
-    // Canvas width = PDF width (595 points) × zoom scale
-    const canvasWidth = pageDimensions.width * scale;
-    // To convert PNG pixels to canvas pixels: multiply by (canvas / PNG)
-    return canvasWidth / pageDimensions.pngWidth;
+    // PNG dimensions at 200 DPI = PDF points * (200/72)
+    const pngWidth = pageDimensions.width * (200 / 72);
+    const pngHeight = pageDimensions.height * (200 / 72);
+    // Scale factor to convert PNG pixels to current PDF canvas pixels
+    return pageDimensions.width / pngWidth;
   };
 
   const coordinateScale = getCoordinateScale();
@@ -92,11 +91,15 @@ export default function EquationReview({
       .trim();
   };
 
-  // Helper to render LaTeX safely
+  // Helper to render LaTeX safely using KaTeX
   const renderLatex = (latex: string) => {
     try {
       const cleaned = cleanLatexForDisplay(latex);
-      return <InlineMath math={cleaned} />;
+      const html = katex.renderToString(cleaned, {
+        throwOnError: false,
+        displayMode: false,
+      });
+      return <span dangerouslySetInnerHTML={{ __html: html }} />;
     } catch (error) {
       console.error('KaTeX rendering error:', error);
       return <span className="text-destructive text-xs">Invalid LaTeX</span>;
@@ -154,82 +157,67 @@ export default function EquationReview({
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!pageDimensions || !canvasDimensions) return;
-    // Use currentTarget (the element with the event handler) instead of pageRef
-    const rect = e.currentTarget.getBoundingClientRect();
-    // Mouse position in display pixels (relative to PDF canvas display)
-    const displayX = e.clientX - rect.left;
-    const displayY = e.clientY - rect.top;
-    console.log('[Mouse Down] Mouse clientX/Y:', { clientX: e.clientX, clientY: e.clientY });
-    console.log('[Mouse Down] Rect (from currentTarget):', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
-    console.log('[Mouse Down] Display pixels:', { displayX, displayY });
-    console.log('[Mouse Down] Canvas dimensions:', canvasDimensions);
-    // Store in display pixels (we'll convert to PNG pixels on mouse up)
-    setDrawStart({ x: displayX, y: displayY });
-    setDrawCurrent({ x: displayX, y: displayY });
+    if (!pageRef.current || !pageDimensions) return;
+    const rect = pageRef.current.getBoundingClientRect();
+    // Mouse position in canvas pixels
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+    // Convert to PDF base coordinates (remove zoom scale)
+    const pdfX = canvasX / scale;
+    const pdfY = canvasY / scale;
+    console.log('[Mouse Down] Canvas:', { canvasX, canvasY }, 'PDF:', { pdfX, pdfY }, 'Scale:', scale);
+    setDrawStart({ x: pdfX, y: pdfY });
+    setDrawCurrent({ x: pdfX, y: pdfY });
     setIsDrawing(true);
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !pageDimensions) return;
-    const rect = e.currentTarget.getBoundingClientRect();
+    if (!isDrawing || !pageRef.current || !pageDimensions) return;
+    const rect = pageRef.current.getBoundingClientRect();
     // Mouse position in canvas pixels
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
-    setDrawCurrent({ x: canvasX, y: canvasY });
+    // Convert to PDF base coordinates (remove zoom scale)
+    const pdfX = canvasX / scale;
+    const pdfY = canvasY / scale;
+    setDrawCurrent({ x: pdfX, y: pdfY });
   };
+
   const handleMouseUp = async () => {
-    if (!isDrawing || !drawStart || !drawCurrent || !onExtractRegion || !canvasDimensions) {
+    if (!isDrawing || !drawStart || !drawCurrent || !onExtractRegion) {
       setIsDrawing(false);
       return;
     }
 
-    // Calculate bounding box in display pixels
-    const bboxDisplay = {
+    // Bbox in PDF coordinate space (after dividing by scale)
+    const bboxPDF = {
       x: Math.min(drawStart.x, drawCurrent.x),
       y: Math.min(drawStart.y, drawCurrent.y),
       width: Math.abs(drawCurrent.x - drawStart.x),
       height: Math.abs(drawCurrent.y - drawStart.y),
     };
 
-    // Minimum size check (10x10 pixels)
-    if (bboxDisplay.width < 10 || bboxDisplay.height < 10) {
-      setIsDrawing(false);
-      setDrawStart(null);
-      setDrawCurrent(null);
-      return;
-    }
-
-    // Convert: Display pixels → Internal canvas pixels → PNG pixels
-    // Step 1: Display pixels × (internal width / display width) = Internal canvas pixels
-    const displayToInternalRatio = canvasDimensions.internalWidth / canvasDimensions.displayWidth;
-    const bboxInternal = {
-      x: bboxDisplay.x * displayToInternalRatio,
-      y: bboxDisplay.y * displayToInternalRatio,
-      width: bboxDisplay.width * displayToInternalRatio,
-      height: bboxDisplay.height * displayToInternalRatio,
-    };
-    
-    // Step 2: Internal canvas pixels × (PNG width / internal canvas width) = PNG pixels
-    const internalToPngRatio = pageDimensions!.pngWidth / canvasDimensions.internalWidth;
+    // Convert from PDF points to PNG pixels
+    // PDF points × (200 DPI / 72 DPI) = PNG pixels
+    const DPI_RATIO = 200 / 72;
     const bboxPNG = {
-      x: Math.round(bboxInternal.x * internalToPngRatio),
-      y: Math.round(bboxInternal.y * internalToPngRatio),
-      width: Math.round(bboxInternal.width * internalToPngRatio),
-      height: Math.round(bboxInternal.height * internalToPngRatio),
+      x: Math.round(bboxPDF.x * DPI_RATIO),
+      y: Math.round(bboxPDF.y * DPI_RATIO),
+      width: Math.round(bboxPDF.width * DPI_RATIO),
+      height: Math.round(bboxPDF.height * DPI_RATIO),
     };
 
     console.log('[EquationReview] Manual extraction:', {
-      displayCoords: bboxDisplay,
-      internalCoords: bboxInternal,
+      pdfCoords: bboxPDF,
       pngCoords: bboxPNG,
-      displayToInternalRatio,
-      internalToPngRatio,
-      totalRatio: displayToInternalRatio * internalToPngRatio,
+      dpiRatio: DPI_RATIO,
+      pageDimensions
     });
 
-    setIsExtracting(true);
-    try {
+    // Only extract if bbox is large enough (minimum 20x20 pixels in PDF space)
+    if (bboxPDF.width > 20 && bboxPDF.height > 20) {
+      setIsExtracting(true);
+      try {
         const latex = await onExtractRegion(currentPage, bboxPNG);
         const newEquation: DetectedEquation = {
           id: `manual-${Date.now()}`,
@@ -250,6 +238,7 @@ export default function EquationReview({
       } finally {
         setIsExtracting(false);
       }
+    }
 
     setIsDrawing(false);
     setDrawStart(null);
@@ -427,7 +416,11 @@ export default function EquationReview({
         <ScrollArea className="flex-1">
           <div className="p-8 flex justify-center">
             <div 
+              ref={pageRef}
               className="relative"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
               style={{ cursor: isDrawing ? "crosshair" : "default" }}
             >
               <Document
@@ -435,13 +428,6 @@ export default function EquationReview({
                 onLoadSuccess={onDocumentLoadSuccess}
                 loading={<div className="text-center py-8">Loading PDF...</div>}
               >
-                <div
-                  ref={pageRef}
-                  className="relative"
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                >
                 <Page 
                   pageNumber={currentPage} 
                   scale={scale}
@@ -450,10 +436,8 @@ export default function EquationReview({
                   onLoadSuccess={(page) => {
                     // PDF page dimensions in points (72 DPI)
                     // PNG dimensions = PDF points * (200/72)
-    // FIXED: Use actual PNG dimensions from backend (not calculated from PDF)
-    // Backend generates PNG at ~140 DPI for this PDF, resulting in 1170×1655
-    const pngWidth = 1170;
-    const pngHeight = 1655;
+                    const pngWidth = page.width * (200 / 72);
+                    const pngHeight = page.height * (200 / 72);
                     setPageDimensions({ 
                       width: page.width, 
                       height: page.height,
@@ -465,62 +449,47 @@ export default function EquationReview({
                       png: { width: pngWidth, height: pngHeight },
                       scale: page.width / pngWidth
                     });
-                    
-                    // Find the actual canvas element rendered by react-pdf
-                    setTimeout(() => {
-                      if (pageRef.current) {
-                        const canvas = pageRef.current.querySelector('canvas');
-                        if (canvas) {
-                          const canvasRect = canvas.getBoundingClientRect();
-                          setCanvasDimensions({
-                            internalWidth: canvas.width,
-                            internalHeight: canvas.height,
-                            displayWidth: canvasRect.width,
-                            displayHeight: canvasRect.height,
-                          });
-                          console.log('[EquationReview] Canvas dimensions stored:', {
-                            internalWidth: canvas.width,
-                            internalHeight: canvas.height,
-                            displayWidth: canvasRect.width,
-                            displayHeight: canvasRect.height,
-                          });
-                        }
-                      }
-                    }, 100);
                   }}
                 />
+              </Document>
 
-                {/* Overlay bounding boxes for equations on current page */}
+              {/* Overlay bounding boxes for equations on current page */}
               {equations
                 .filter(eq => eq.pageNumber === currentPage && eq.status !== "rejected")
-                .map((equation) => {
-                  const canvasX = equation.bbox.x * coordinateScale;
-                  const canvasY = equation.bbox.y * coordinateScale;
-                  const canvasW = equation.bbox.width * coordinateScale;
-                  const canvasH = equation.bbox.height * coordinateScale;
-                  return (
+                .map((equation) => (
                   <div
                     key={equation.id}
                     className={`absolute border-2 ${getStatusColor(equation.status)} pointer-events-none`}
                     style={{
-                      left: canvasX,
-                      top: canvasY,
-                      width: canvasW,
-                      height: canvasH,
+                      left: equation.bbox.x * coordinateScale * scale,
+                      top: equation.bbox.y * coordinateScale * scale,
+                      width: equation.bbox.width * coordinateScale * scale,
+                      height: equation.bbox.height * coordinateScale * scale,
+                    }}
+                    onClick={() => {
+                      console.log('[EquationReview] Clicked equation:', {
+                        id: equation.id,
+                        bbox: equation.bbox,
+                        scaled: {
+                          left: equation.bbox.x * coordinateScale * scale,
+                          top: equation.bbox.y * coordinateScale * scale,
+                          width: equation.bbox.width * coordinateScale * scale,
+                          height: equation.bbox.height * coordinateScale * scale,
+                        }
+                      });
                     }}
                   />
-                );
-                })}
+                ))}
 
               {/* Drawing rectangle */}
               {isDrawing && drawStart && drawCurrent && (
                 <div
                   className="absolute border-2 border-blue-500 bg-blue-500/10 pointer-events-none"
                   style={{
-                    left: Math.min(drawStart.x, drawCurrent.x),
-                    top: Math.min(drawStart.y, drawCurrent.y),
-                    width: Math.abs(drawCurrent.x - drawStart.x),
-                    height: Math.abs(drawCurrent.y - drawStart.y),
+                    left: Math.min(drawStart.x, drawCurrent.x) * scale,
+                    top: Math.min(drawStart.y, drawCurrent.y) * scale,
+                    width: Math.abs(drawCurrent.x - drawStart.x) * scale,
+                    height: Math.abs(drawCurrent.y - drawStart.y) * scale,
                   }}
                 />
               )}
@@ -532,8 +501,6 @@ export default function EquationReview({
                   </div>
                 </div>
               )}
-                </div>
-              </Document>
             </div>
           </div>
         </ScrollArea>
