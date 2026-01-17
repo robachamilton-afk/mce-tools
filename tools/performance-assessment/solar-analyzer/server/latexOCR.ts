@@ -112,58 +112,101 @@ export async function extractMultipleLaTeX(
   return results;
 }
 
+// Persistent Pix2Text process pool
+let pix2textProcess: any = null;
+let processQueue: Array<{imagePath: string, resolve: Function, reject: Function}> = [];
+let isProcessing = false;
+
 /**
- * Call Pix2Text Python API via subprocess
+ * Initialize persistent Pix2Text process (loads model once)
  */
-async function callPix2Text(imagePath: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    // Python script that uses Pix2Text API
-    const pythonScript = `
+function initPix2TextProcess() {
+  if (pix2textProcess) return;
+  
+  console.log('[Pix2Text] Initializing persistent process with model preloading...');
+  
+  const pythonScript = `
 import sys
+import json
 from pix2text import LatexOCR
 
-try:
-    latex_ocr = LatexOCR()
-    result = latex_ocr("${imagePath.replace(/\\/g, '\\\\')}")
-    print(result, end='')
-except Exception as e:
-    print(f"ERROR: {str(e)}", file=sys.stderr)
-    sys.exit(1)
+# Load model once at startup
+print("READY", flush=True)
+latex_ocr = LatexOCR()
+
+# Process images from stdin
+for line in sys.stdin:
+    try:
+        image_path = line.strip()
+        if not image_path:
+            continue
+        result = latex_ocr(image_path)
+        print(json.dumps({"success": True, "latex": result}), flush=True)
+    except Exception as e:
+        print(json.dumps({"success": False, "error": str(e)}), flush=True)
 `;
+  
+  const env = { ...process.env, PYTHONIOENCODING: 'utf-8' };
+  pix2textProcess = spawn('python3', ['-c', pythonScript], { env });
+  
+  let buffer = '';
+  
+  pix2textProcess.stdout.on('data', (data: Buffer) => {
+    buffer += data.toString();
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
     
-    // Set UTF-8 encoding for Windows to prevent Unicode errors
-    const env = { ...process.env, PYTHONIOENCODING: 'utf-8' };
-    const childProcess = spawn('python3', ['-c', pythonScript], { env });
-    
-    let stdout = '';
-    let stderr = '';
-    
-    childProcess.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-    
-    childProcess.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-    
-    childProcess.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(`Pix2Text failed with code ${code}: ${stderr}`));
-        return;
+    for (const line of lines) {
+      if (line === 'READY') {
+        console.log('[Pix2Text] Process ready, model loaded');
+        processNextInQueue();
+        continue;
       }
       
-      if (!stdout || stdout.length === 0) {
-        reject(new Error('Pix2Text returned empty output'));
-        return;
+      try {
+        const response = JSON.parse(line);
+        const task = processQueue.shift();
+        if (task) {
+          if (response.success) {
+            task.resolve(response.latex);
+          } else {
+            task.reject(new Error(response.error));
+          }
+        }
+        isProcessing = false;
+        processNextInQueue();
+      } catch (error) {
+        console.error('[Pix2Text] Failed to parse response:', line);
       }
-      
-      // Return the LaTeX string
-      resolve(stdout.trim());
-    });
-    
-    childProcess.on('error', (error) => {
-      reject(new Error(`Failed to spawn python3: ${error.message}`));
-    });
+    }
+  });
+  
+  pix2textProcess.on('close', () => {
+    console.log('[Pix2Text] Process closed');
+    pix2textProcess = null;
+  });
+}
+
+/**
+ * Process next task in queue
+ */
+function processNextInQueue() {
+  if (isProcessing || processQueue.length === 0 || !pix2textProcess) return;
+  
+  isProcessing = true;
+  const task = processQueue[0];
+  pix2textProcess.stdin.write(task.imagePath + '\n');
+}
+
+/**
+ * Call Pix2Text using persistent process
+ */
+async function callPix2Text(imagePath: string): Promise<string> {
+  initPix2TextProcess();
+  
+  return new Promise((resolve, reject) => {
+    processQueue.push({ imagePath, resolve, reject });
+    processNextInQueue();
   });
 }
 

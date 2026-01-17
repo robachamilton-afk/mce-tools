@@ -200,6 +200,11 @@ async function interpretContractWithQwen(
   proseText: string,
   equationsText: string
 ): Promise<ContractModel> {
+  // Debug: Log extracted LaTeX before Qwen interpretation
+  console.log('[Hybrid Parser] === EXTRACTED LATEX EQUATIONS ===');
+  console.log(equationsText);
+  console.log('[Hybrid Parser] === END EXTRACTED LATEX ===');
+  
   const prompt = `You are analyzing a solar power purchase agreement (PPA) contract. Your task is to structure the extracted LaTeX equations and identify their variables.
 
 ## Contract Text (OCR):
