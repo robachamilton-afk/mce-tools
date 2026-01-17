@@ -23,16 +23,16 @@ mce-tools/
 
 - **3000**: OE Toolkit
 - **3001**: ACC Asset Extractor
-- **3002**: Solar Assessments (private, owner-only)
-- **3003**: Solar Dashboard (public, AEMO data)
+- **3002**: Solar Analyzer (private contract analysis)
+- **3003**: Solar Dashboard (public AEMO monitoring)
 
 ## Performance Assessment Tools
 
 The performance assessment suite is split into **two separate applications** with different purposes:
 
-### 1. Solar Assessments Tool (Port 3002)
+### 1. Solar Analyzer Tool (Port 3002)
 
-**Purpose**: Private, bespoke contract analysis and performance modeling
+**Purpose**: Private contract analysis with equation extraction and AI-powered performance modeling
 
 **Access Level**: Owner-only (requires authentication)
 
@@ -81,7 +81,7 @@ The performance assessment suite is split into **two separate applications** wit
 
 **Database**: Separate database for AEMO public data (read-only monitoring)
 
-**Tech Stack**: Same as Solar Assessments (React + TypeScript + tRPC + PostgreSQL)
+**Tech Stack**: Same as Solar Analyzer (React + TypeScript + tRPC + PostgreSQL)
 
 **Current Status**: 🚧 Not yet initialized
 - Needs to be created as new Manus webdev project
@@ -100,9 +100,9 @@ The two tools maintain **separate databases** to ensure:
 
 ### Site Metadata Sync
 
-Site metadata (name, location, capacity) can be synced **one-way** from Solar Assessments → Solar Dashboard:
-- Assessments tool creates/manages site records
-- Dashboard imports site metadata for display
+Site metadata (name, location, capacity) can be synced **one-way** from Solar Analyzer → Solar Dashboard:
+- Solar Analyzer creates/manages site records during contract analysis
+- Dashboard imports site metadata for public display
 - No reverse sync (dashboard is read-only)
 
 ## Branding Guidelines
@@ -203,7 +203,7 @@ const messages = [
 
 ## Development Workflow
 
-### Solar Assessments (Existing)
+### Solar Analyzer (Existing)
 
 1. Navigate to `/home/ubuntu/solar-analyzer`
 2. Run `pnpm install` (if needed)
@@ -220,7 +220,7 @@ const messages = [
    Template: web-db-user
    Path: /home/ubuntu/mce-tools/tools/performance-assessment/solar-dashboard
    ```
-3. Follow Solar Assessments patterns for consistency
+3. Follow Solar Analyzer patterns for consistency
 4. Implement public access (no auth required)
 5. Integrate AEMO SCADA data APIs
 
@@ -294,7 +294,7 @@ Each tool is deployed independently:
 
 ### Planned Features
 
-1. **Variable Mapping Interface** (Solar Assessments)
+1. **Variable Mapping Interface** (Solar Analyzer)
    - UI for mapping model variables to data columns
    - Validation of mapped data types
    - Preview of mapped data before processing
@@ -314,13 +314,7 @@ Each tool is deployed independently:
    - CSV data export
    - API access for third-party integration
 
-### Rename Solar Analyzer → Solar Assessments
 
-Once Solar Dashboard is operational, rename the private tool:
-- Update folder name: `solar-analyzer` → `solar-assessments`
-- Update package.json name
-- Update documentation references
-- Update route paths if needed
 
 ## Common Pitfalls
 
@@ -346,7 +340,7 @@ Once Solar Dashboard is operational, rename the private tool:
 
 ## References
 
-- [Solar Assessments Session Summary](/home/ubuntu/mce-tools/SESSION_SUMMARY_2026-01-17.md)
+- [Solar Analyzer Session Summary](/home/ubuntu/mce-tools/SESSION_SUMMARY_2026-01-17.md)
 - [Manus Webdev Documentation](https://docs.manus.im)
 - [tRPC Documentation](https://trpc.io)
 - [KaTeX Documentation](https://katex.org)
@@ -362,4 +356,4 @@ For questions about MCE Tools architecture, refer to:
 
 **Last Updated**: 2026-01-17
 **Version**: 1.0
-**Status**: Solar Assessments ✅ Complete | Solar Dashboard 🚧 Pending
+**Status**: Solar Analyzer ✅ Complete | Solar Dashboard 🚧 Pending
