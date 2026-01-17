@@ -56,13 +56,19 @@ export async function convertPdfToImages(
     console.log(`[PDF Converter] Settings: ${density} DPI, ${format}`);
     
     // Configure pdf-poppler options
+    // Note: pdf-poppler uses pdftocairo with -scale-to which expects pixel width, not DPI
+    // For A4 page (8.27 inches wide): 300 DPI = 2481px, 400 DPI = 3308px
+    const pixelWidth = Math.round((8.27 * density)); // A4 width in pixels
+    
     const opts = {
       format,
       out_dir: tempDir,
       out_prefix: 'page',
       page: null, // Convert all pages
-      scale: density / 72, // pdf-poppler uses scale factor (72 DPI base)
+      scale: pixelWidth, // Pixel width for desired DPI
     };
+    
+    console.log(`[PDF Converter] Using scale: ${pixelWidth}px (${density} DPI for A4)`);
     
     // Convert PDF to images using Poppler
     await convert(pdfPath, opts);
@@ -79,10 +85,19 @@ export async function convertPdfToImages(
       });
     
     if (imageFiles.length === 0) {
+      // List all files in temp directory for debugging
+      console.error(`[PDF Converter] No images found. Files in ${tempDir}:`, files);
       throw new Error('PDF conversion failed: no images generated');
     }
     
     console.log(`[PDF Converter] Converted ${imageFiles.length} pages`);
+    
+    // Log first image size for verification
+    if (imageFiles.length > 0) {
+      const firstImagePath = path.join(tempDir, imageFiles[0]);
+      const stats = await fs.stat(firstImagePath);
+      console.log(`[PDF Converter] First image size: ${(stats.size / 1024).toFixed(2)} KB`);
+    }
     
     // Read each image and convert to base64
     const pages: ConvertedPage[] = [];
