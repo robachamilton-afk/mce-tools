@@ -31,10 +31,8 @@ export default function EquationReviewPage() {
 
   const buildModelMutation = trpc.customAnalysis.buildModelFromEquations.useMutation({
     onSuccess: () => {
-      // Navigate back to custom analysis page (will show model confirmation step)
-      if (analysis) {
-        setLocation(`/site/${analysis.siteId}/custom-analysis`);
-      }
+      // Navigate to custom analysis page with analysis ID (will show model confirmation step)
+      setLocation(`/custom-analysis/${analysisId}`);
     },
     onError: (error) => {
       alert(`Model building failed: ${error.message}`);

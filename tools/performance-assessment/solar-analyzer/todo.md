@@ -606,3 +606,14 @@
 - [x] Ensure boxes scale correctly at different zoom levels
 - [x] Fix coordinateScale to include zoom level in calculation
 - [x] Remove double multiplication by scale in bbox style
+
+## Fix Navigation After Equation Validation (Jan 17, 2026)
+- [x] After validating equations, should navigate to next workflow step
+- [x] Fixed navigation to use /custom-analysis/:id route instead of /site/:siteId/custom-analysis
+- [x] Now correctly navigates to model confirmation step
+
+## Update Workflow Stepper (Jan 17, 2026)
+- [x] Update workflow steps to correct order: Details → Contract → SCADA → Meteo Data → Map Columns → Process Data → Results
+- [x] Add completion tracking with green checkmarks for completed steps
+- [x] Mark Details step complete when analysis is created
+- [x] Mark Contract step complete when model is confirmed

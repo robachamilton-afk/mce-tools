@@ -10,7 +10,13 @@ import { Loader2, Upload, FileText, CheckCircle2, AlertCircle } from "lucide-rea
 import ModelConfirmation from "@/components/ModelConfirmation";
 // Toast notifications handled via browser alerts for now
 
-type AnalysisStep = "details" | "upload_contract" | "confirm_model" | "upload_scada" | "upload_meteo" | "map_columns" | "processing" | "results";
+type AnalysisStep = "details" | "contract" | "upload_scada" | "upload_meteo" | "map_columns" | "processing" | "results";
+
+type WorkflowStep = {
+  key: AnalysisStep;
+  label: string;
+  completed: boolean;
+};
 
 export default function CustomAnalysis() {
   const params = useParams<{ id: string }>();
@@ -35,6 +41,7 @@ export default function CustomAnalysis() {
     message: string;
     progress: number;
   } | null>(null);
+  const [completedSteps, setCompletedSteps] = useState<Set<AnalysisStep>>(new Set());
   
   const contractInputRef = useRef<HTMLInputElement>(null);
   const scadaInputRef = useRef<HTMLInputElement>(null);
@@ -57,6 +64,7 @@ export default function CustomAnalysis() {
 
   const confirmModelMutation = trpc.customAnalysis.confirmModel.useMutation({
     onSuccess: () => {
+      setCompletedSteps(prev => new Set(prev).add("contract"));
       toast({ title: "Model confirmed", description: "Ready to upload data files" });
       setStep("upload_scada");
     },
@@ -84,7 +92,7 @@ export default function CustomAnalysis() {
           ? `${data.model._validation.clarificationCount} items need clarification`
           : "Ready for review"}`
       });
-      setStep("confirm_model");
+      setStep("contract");
     },
     onError: (error: any) => {
       // Stop timer on error
@@ -97,11 +105,12 @@ export default function CustomAnalysis() {
   const createAnalysisMutation = trpc.customAnalysis.create.useMutation({
     onSuccess: (data: any) => {
       setAnalysisId(data.id);
+      setCompletedSteps(prev => new Set(prev).add("details"));
       toast({
         title: "Analysis created",
         description: "Ready to upload contract",
       });
-      setStep("upload_contract");
+      setStep("contract");
     },
     onError: (error: any) => {
       toast({
@@ -277,28 +286,40 @@ export default function CustomAnalysis() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           {[
-            { key: "details", label: "Details" },
-            { key: "upload_scada", label: "SCADA Data" },
-            { key: "upload_meteo", label: "Meteo Data" },
-            { key: "map_columns", label: "Map Columns" },
-            { key: "contract", label: "Contract" },
-            { key: "processing", label: "Processing" },
-            { key: "results", label: "Results" },
-          ].map((s, idx) => (
+            { key: "details" as AnalysisStep, label: "Details" },
+            { key: "contract" as AnalysisStep, label: "Contract" },
+            { key: "upload_scada" as AnalysisStep, label: "SCADA Data" },
+            { key: "upload_meteo" as AnalysisStep, label: "Meteo Data" },
+            { key: "map_columns" as AnalysisStep, label: "Map Columns" },
+            { key: "processing" as AnalysisStep, label: "Process Data" },
+            { key: "results" as AnalysisStep, label: "Results" },
+          ].map((s, idx) => {
+            const isCompleted = completedSteps.has(s.key);
+            const isCurrent = step === s.key;
+            const isPast = Array.from(completedSteps).length > 0 && !isCurrent && !isCompleted;
+            
+            return (
             <div key={s.key} className="flex items-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  step === s.key
+                  isCompleted
+                    ? "bg-green-600 text-white"
+                    : isCurrent
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground"
                 }`}
               >
-                {idx + 1}
+                {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : idx + 1}
               </div>
-              <span className="ml-2 text-sm hidden sm:inline">{s.label}</span>
+              <span className={`ml-2 text-sm hidden sm:inline ${
+                isCompleted ? "text-green-600 font-medium" : 
+                isCurrent ? "text-foreground font-medium" : 
+                "text-muted-foreground"
+              }`}>{s.label}</span>
               {idx < 6 && <div className="w-8 h-0.5 bg-muted mx-2" />}
             </div>
-          ))}
+          );
+          })}
         </div>
       </div>
 
@@ -345,8 +366,8 @@ export default function CustomAnalysis() {
         </Card>
       )}
 
-      {/* Step: Upload Contract */}
-      {step === "upload_contract" && (
+      {/* Step: Contract */}
+      {step === "contract" && analysisId && !extractedModel && (
         <Card>
           <CardHeader>
             <CardTitle>Upload Contract</CardTitle>
@@ -443,15 +464,15 @@ export default function CustomAnalysis() {
         </Card>
       )}
 
-      {/* Step: Confirm Model */}
-      {step === "confirm_model" && extractedModel && (
+      {/* Step: Contract - Model Confirmation */}
+      {step === "contract" && extractedModel && (
         <ModelConfirmation
           model={extractedModel}
           onConfirm={(confirmedModel) => {
             if (!analysisId) return;
             confirmModelMutation.mutate({ analysisId, model: confirmedModel });
           }}
-          onBack={() => setStep("upload_contract")}
+          onBack={() => setStep("details")}
           isLoading={confirmModelMutation.isPending}
         />
       )}
