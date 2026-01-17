@@ -167,25 +167,18 @@ export default function EquationReview({
       height: Math.abs(drawCurrent.y - drawStart.y),
     };
 
-    // Convert from canvas pixels to PNG pixels
-    // Canvas width = PDF width (595) × zoom scale
-    // PNG width = PDF width (595) × (200/72) = 1654
-    // Conversion factor = PNG width / Canvas width
-    const canvasWidth = pageDimensions.width * scale;
-    const pngToCanvasRatio = pageDimensions.pngWidth / canvasWidth;
+    // TEST: Try passing canvas coordinates directly as PNG coordinates (no conversion)
     const bboxPNG = {
-      x: Math.round(bboxCanvas.x * pngToCanvasRatio),
-      y: Math.round(bboxCanvas.y * pngToCanvasRatio),
-      width: Math.round(bboxCanvas.width * pngToCanvasRatio),
-      height: Math.round(bboxCanvas.height * pngToCanvasRatio),
+      x: Math.round(bboxCanvas.x),
+      y: Math.round(bboxCanvas.y),
+      width: Math.round(bboxCanvas.width),
+      height: Math.round(bboxCanvas.height),
     };
 
-    console.log('[EquationReview] Manual extraction:', {
+    console.log('[EquationReview] Manual extraction (NO CONVERSION):', {
       canvasCoords: bboxCanvas,
       pngCoords: bboxPNG,
-      pngToCanvasRatio,
-      pageDimensions,
-      canvasWidth
+      pageDimensions
     });
 
     // Only extract if bbox is large enough (minimum 20x20 pixels in canvas space)
