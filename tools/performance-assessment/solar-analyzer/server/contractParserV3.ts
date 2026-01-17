@@ -249,11 +249,18 @@ Return ONLY valid JSON. Use null for missing values. For equations, use the LaTe
     format: 'json'
   });
 
+  // Debug: Log raw response
+  console.log('[Hybrid Parser] Raw Qwen response length:', response.message.content.length);
+  console.log('[Hybrid Parser] Raw Qwen response (first 500 chars):', response.message.content.slice(0, 500));
+  
   try {
     const parsed = JSON.parse(response.message.content);
+    console.log('[Hybrid Parser] Parsed JSON keys:', Object.keys(parsed));
+    console.log('[Hybrid Parser] Performance model:', JSON.stringify(parsed.performanceModel, null, 2));
     return convertToContractModel(parsed);
   } catch (error) {
     console.error('[Hybrid Parser] Failed to parse Qwen response:', error);
+    console.error('[Hybrid Parser] Full response:', response.message.content);
     throw new Error('Failed to interpret contract with AI model');
   }
 }
