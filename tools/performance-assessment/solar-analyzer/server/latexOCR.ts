@@ -68,35 +68,35 @@ export async function extractLaTeX(
 }
 
 /**
- * Extract LaTeX from multiple equation images
+ * Extract LaTeX from multiple equation images (parallel batch processing)
  */
 export async function extractMultipleLaTeX(
   croppedImages: CroppedImage[]
 ): Promise<LaTeXResult[]> {
-  const results: LaTeXResult[] = [];
-  
-  for (const cropped of croppedImages) {
-    try {
-      const result = await extractLaTeX(cropped.buffer, cropped.region);
-      results.push(result);
-    } catch (error) {
-      console.error(
-        `Failed to extract LaTeX from page ${cropped.region.page}:`,
-        error
-      );
-      // Add failed result with empty LaTeX
-      results.push({
-        latex: '',
-        elapsedMs: 0,
-        confidence: 0,
-        region: {
-          page: cropped.region.page,
-          bbox: cropped.region.bbox,
-          text: cropped.region.text
-        }
-      });
-    }
-  }
+  // Process all equations in parallel for maximum speed
+  const results = await Promise.all(
+    croppedImages.map(async (cropped) => {
+      try {
+        return await extractLaTeX(cropped.buffer, cropped.region);
+      } catch (error) {
+        console.error(
+          `Failed to extract LaTeX from page ${cropped.region.page}:`,
+          error
+        );
+        // Return failed result with empty LaTeX
+        return {
+          latex: '',
+          elapsedMs: 0,
+          confidence: 0,
+          region: {
+            page: cropped.region.page,
+            bbox: cropped.region.bbox,
+            text: cropped.region.text
+          }
+        };
+      }
+    })
+  );
   
   return results;
 }

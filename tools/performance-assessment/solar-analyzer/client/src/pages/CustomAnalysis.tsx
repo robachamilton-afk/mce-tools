@@ -30,6 +30,11 @@ export default function CustomAnalysis() {
   const [extractedModel, setExtractedModel] = useState<any>(null);
   const [extractionStartTime, setExtractionStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [extractionProgress, setExtractionProgress] = useState<{
+    stage: string;
+    message: string;
+    progress: number;
+  } | null>(null);
   
   const contractInputRef = useRef<HTMLInputElement>(null);
   const scadaInputRef = useRef<HTMLInputElement>(null);
@@ -64,11 +69,13 @@ export default function CustomAnalysis() {
       // Start timer when extraction begins
       setExtractionStartTime(Date.now());
       setElapsedTime(0);
+      setExtractionProgress({ stage: 'pdf_conversion', message: 'Converting PDF to images...', progress: 10 });
     },
     onSuccess: (data: any) => {
       // Stop timer
       const duration = extractionStartTime ? Math.round((Date.now() - extractionStartTime) / 1000) : 0;
       setExtractionStartTime(null);
+      setExtractionProgress(null);
       setExtractedModel(data.model);
       toast({ 
         title: "Model extracted", 
@@ -81,6 +88,7 @@ export default function CustomAnalysis() {
     onError: (error: any) => {
       // Stop timer on error
       setExtractionStartTime(null);
+      setExtractionProgress(null);
       toast({ title: "Extraction failed", description: error.message, variant: "destructive" });
     },
   });
@@ -103,11 +111,30 @@ export default function CustomAnalysis() {
     },
   });
 
-  // Update elapsed time every second while extracting
+  // Update elapsed time and simulate progress every second while extracting
   useEffect(() => {
     if (extractionStartTime) {
       const interval = setInterval(() => {
-        setElapsedTime(Math.round((Date.now() - extractionStartTime) / 1000));
+        const elapsed = Math.round((Date.now() - extractionStartTime) / 1000);
+        setElapsedTime(elapsed);
+        
+        // Simulate progress based on typical stage durations
+        // Total expected time: ~300-600s for 12 pages
+        if (elapsed < 5) {
+          setExtractionProgress({ stage: 'pdf_conversion', message: 'Converting PDF to images...', progress: 10 });
+        } else if (elapsed < 60) {
+          // OCR + equation detection (parallel, fast)
+          const progress = 10 + Math.min(30, (elapsed - 5) / 55 * 30);
+          setExtractionProgress({ stage: 'ocr', message: 'Extracting text with OCR (parallel processing)...', progress: Math.round(progress) });
+        } else if (elapsed < 180) {
+          // LaTeX extraction (batch, moderate)
+          const progress = 40 + Math.min(30, (elapsed - 60) / 120 * 30);
+          setExtractionProgress({ stage: 'latex_extraction', message: 'Extracting LaTeX equations...', progress: Math.round(progress) });
+        } else {
+          // AI interpretation (slow, final stage)
+          const progress = 70 + Math.min(25, (elapsed - 180) / 420 * 25);
+          setExtractionProgress({ stage: 'ai_interpretation', message: 'Interpreting contract with AI...', progress: Math.round(progress) });
+        }
       }, 1000);
       return () => clearInterval(interval);
     }
@@ -391,6 +418,25 @@ export default function CustomAnalysis() {
                   "Upload & Extract Model"
                 )}
               </Button>
+              
+              {/* Progress Tracker */}
+              {extractModelMutation.isPending && extractionProgress && (
+                <div className="mt-6 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium">{extractionProgress.message}</span>
+                    <span className="text-muted-foreground">{extractionProgress.progress}%</span>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-2.5">
+                    <div 
+                      className="bg-primary h-2.5 rounded-full transition-all duration-300"
+                      style={{ width: `${extractionProgress.progress}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Stage: {extractionProgress.stage} • Elapsed: {elapsedTime}s
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

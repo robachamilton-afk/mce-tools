@@ -68,44 +68,50 @@ export async function extractContractHybrid(
     });
     
     const pdfBuffer = await readFile(pdfPath);
-    const convertedPages = await convertPdfToImages(pdfBuffer, { density: 300 });
+    const convertedPages = await convertPdfToImages(pdfBuffer, { density: 200 });
     const imagePaths = convertedPages.map(p => p.path);
     console.log(`[Hybrid Parser] Rendered ${imagePaths.length} pages`);
     
-    // Stage 2: OCR extraction with Tesseract
+    // Stage 2 & 3: Parallel OCR extraction and equation detection
     onProgress?.({
       stage: 'ocr',
-      message: 'Extracting text with OCR...',
+      message: 'Extracting text with OCR (parallel processing)...',
       progress: 25
     });
     
-    const allOcrLines: OCRLine[] = [];
-    const pageImages: { page: number; path: string }[] = [];
+    // Process all pages in parallel
+    const pageResults = await Promise.all(
+      imagePaths.map(async (imagePath, i) => {
+        const pageNum = i + 1;
+        
+        // OCR extraction
+        const ocrResult = await extractTextFromImage(imagePath, pageNum);
+        const ocrLines = ocrResult.lines.map(line => ({ ...line, page: pageNum }));
+        
+        // Equation detection
+        const regions = detectEquationRegions(ocrLines, pageNum);
+        
+        console.log(`[Hybrid Parser] Page ${pageNum}: ${ocrLines.length} lines, ${regions.length} equation regions`);
+        
+        return {
+          page: pageNum,
+          path: imagePath,
+          ocrLines,
+          regions
+        };
+      })
+    );
     
-    for (let i = 0; i < imagePaths.length; i++) {
-      const imagePath = imagePaths[i];
-      const pageNum = i + 1;
-      
-      const ocrResult = await extractTextFromImage(imagePath, pageNum);
-      allOcrLines.push(...ocrResult.lines.map(line => ({ ...line, page: pageNum })));
-      pageImages.push({ page: pageNum, path: imagePath });
-      
-      console.log(`[Hybrid Parser] OCR page ${pageNum}: ${ocrResult.lines.length} lines`);
-    }
+    // Collect results
+    const allOcrLines: OCRLine[] = pageResults.flatMap(r => r.ocrLines);
+    const pageImages: { page: number; path: string }[] = pageResults.map(r => ({ page: r.page, path: r.path }));
+    const allRegions: EquationRegion[] = pageResults.flatMap(r => r.regions);
     
-    // Stage 3: Detect equation regions
     onProgress?.({
       stage: 'equation_detection',
-      message: 'Detecting mathematical equations...',
+      message: 'Merging detected equations...',
       progress: 40
-    });
-    
-    const allRegions: EquationRegion[] = [];
-    for (const { page, path } of pageImages) {
-      const pageLines = allOcrLines.filter((line: any) => line.page === page);
-      const regions = detectEquationRegions(pageLines, page);
-      allRegions.push(...regions);
-    }
+    })
     
     const mergedRegions = mergeNearbyRegions(allRegions);
     console.log(`[Hybrid Parser] Detected ${mergedRegions.length} equation regions`);
@@ -197,7 +203,7 @@ async function interpretContractWithQwen(
   const prompt = `You are analyzing a solar power purchase agreement (PPA) contract. Extract the following information:
 
 ## Contract Text (OCR):
-${proseText.slice(0, 10000)} ${proseText.length > 10000 ? '...(truncated)' : ''}
+${proseText.slice(0, 30000)} ${proseText.length > 30000 ? '...(truncated)' : ''}
 
 ## Extracted Equations (LaTeX):
 ${equationsText}
