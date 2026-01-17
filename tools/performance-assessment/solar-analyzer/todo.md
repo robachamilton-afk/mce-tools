@@ -631,3 +631,10 @@
 - [x] Modified prompt to emphasize extracting variable definitions from context
 - [x] Definitions are now extracted and stored in model.performanceMetrics[].variables
 - [ ] Display definitions in model confirmation UI (future enhancement)
+
+## Fix "Define 'undefined'" Display Bug (Jan 17, 2026)
+- [x] Model confirmation shows "Define 'undefined'..." instead of actual term name
+- [x] Found that Exception type uses `issue` property, not `description`
+- [x] Fixed convertToLegacyFormat to properly map Exception.issue to UI-expected format
+- [x] Added regex extraction to parse term names from issue text
+- [x] Now displays actual term names instead of 'undefined'

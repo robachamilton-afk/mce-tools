@@ -458,10 +458,28 @@ export function convertToLegacyFormat(model: ContractModel): any {
     equations,
     parameters,
     tariffs,
-    // Pass through other fields
-    undefinedTerms: model.exceptions.filter(e => e.category === 'undefined_term'),
-    missingParameters: model.exceptions.filter(e => e.category === 'missing_parameter'),
-    ambiguities: model.exceptions.filter(e => e.category === 'ambiguous_clause'),
+    // Transform exceptions into UI-expected format
+    undefinedTerms: model.exceptions
+      .filter(e => e.category === 'undefined_term')
+      .map(e => ({
+        term: e.issue?.match(/Variable (\S+)/)?.[1] || e.issue?.match(/term "([^"]+)"/)?.[1] || 'Unknown',
+        context: e.issue || '',
+        requiredFor: e.location || 'Model calculation'
+      })),
+    missingParameters: model.exceptions
+      .filter(e => e.category === 'missing_parameter')
+      .map(e => ({
+        parameter: e.issue?.split(':')[0] || 'Unknown parameter',
+        description: e.issue || '',
+        suggestedValue: ''
+      })),
+    ambiguities: model.exceptions
+      .filter(e => e.category === 'ambiguous_clause')
+      .map(e => ({
+        issue: e.issue || '',
+        location: e.location || 'Contract',
+        options: e.possibleInterpretations || []
+      })),
     _validation: {
       needsClarification: model.exceptions.length > 0,
       clarificationCount: model.exceptions.length
