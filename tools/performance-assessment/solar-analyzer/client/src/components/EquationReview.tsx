@@ -80,7 +80,6 @@ export default function EquationReview({
   };
 
   const coordinateScale = getCoordinateScale();
-  console.log('[EquationReview] coordinateScale:', coordinateScale, 'scale:', scale, 'pageDims:', pageDimensions);
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -440,7 +439,6 @@ export default function EquationReview({
                   const canvasY = equation.bbox.y * coordinateScale;
                   const canvasW = equation.bbox.width * coordinateScale;
                   const canvasH = equation.bbox.height * coordinateScale;
-                  console.log('[Yellow Box]', equation.id, 'PNG:', equation.bbox, '→ Canvas:', { x: canvasX, y: canvasY, w: canvasW, h: canvasH });
                   return (
                   <div
                     key={equation.id}
