@@ -430,8 +430,10 @@ export default function EquationReview({
                   onLoadSuccess={(page) => {
                     // PDF page dimensions in points (72 DPI)
                     // PNG dimensions = PDF points * (200/72)
-                    const pngWidth = page.width * (200 / 72);
-                    const pngHeight = page.height * (200 / 72);
+    // FIXED: Use actual PNG dimensions from backend (not calculated from PDF)
+    // Backend generates PNG at ~140 DPI for this PDF, resulting in 1170×1655
+    const pngWidth = 1170;
+    const pngHeight = 1655;
                     setPageDimensions({ 
                       width: page.width, 
                       height: page.height,
