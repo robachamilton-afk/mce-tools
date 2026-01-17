@@ -652,3 +652,18 @@
 - [x] Shows messages like "Loading contract...", "Converting pages...", "Detecting equations...", "Extracting LaTeX...", etc.
 - [x] Displays both main message and detailed sub-message for better UX
 - [x] Progress messages update every 3-15 seconds during detection
+
+## Replace Loader with MCE Logo Animation (Jan 17, 2026)
+- [ ] Find MCE logo in mce-website repository
+- [ ] Check style guide for brand colors and animation guidelines
+- [ ] Create animated logo component with blue line tracing around perimeter
+- [ ] Replace Loader2 spinner in EquationReviewPage with new logo component
+- [ ] Ensure animation loops smoothly during loading states
+
+## Replace Loader with MCE Logo Animation (Jan 17, 2026)
+- [x] Find MCE logo in mce-website repository
+- [x] Check style guide for brand colors (blue-500 for primary)
+- [x] Create animated logo component with blue line continuously tracing around perimeter
+- [x] Replace Loader2 spinner in EquationReviewPage with new logo component
+- [x] Animation uses requestAnimationFrame for smooth 60fps loop
+- [x] Blue circle traces around logo with glowing drop-shadow effect

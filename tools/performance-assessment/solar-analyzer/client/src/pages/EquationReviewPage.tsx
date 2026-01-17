@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import EquationReview, { type DetectedEquation } from "@/components/EquationReview";
-import { Loader2 } from "lucide-react";
+import MCELoader from "@/components/MCELoader";
 
 export default function EquationReviewPage() {
   const params = useParams<{ id: string }>();
@@ -105,7 +105,7 @@ export default function EquationReviewPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center max-w-md">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <MCELoader size={80} className="mx-auto mb-6" />
           <p className="text-lg font-medium mb-2">
             {isDetecting ? progressMessage : "Building model from verified equations..."}
           </p>
