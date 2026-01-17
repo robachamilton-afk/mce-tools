@@ -73,11 +73,18 @@ export async function extractLaTeX(
 export async function extractMultipleLaTeX(
   croppedImages: CroppedImage[]
 ): Promise<LaTeXResult[]> {
+  const batchStartTime = Date.now();
+  console.log(`[LaTeX Batch] Starting extraction for ${croppedImages.length} equations...`);
+  
   // Process all equations in parallel for maximum speed
   const results = await Promise.all(
-    croppedImages.map(async (cropped) => {
+    croppedImages.map(async (cropped, idx) => {
+      const itemStartTime = Date.now();
       try {
-        return await extractLaTeX(cropped.buffer, cropped.region);
+        const result = await extractLaTeX(cropped.buffer, cropped.region);
+        const itemElapsed = Date.now() - itemStartTime;
+        console.log(`[LaTeX Batch] Equation ${idx + 1}/${croppedImages.length} completed in ${itemElapsed}ms`);
+        return result;
       } catch (error) {
         console.error(
           `Failed to extract LaTeX from page ${cropped.region.page}:`,
@@ -97,6 +104,10 @@ export async function extractMultipleLaTeX(
       }
     })
   );
+  
+  const batchElapsed = Date.now() - batchStartTime;
+  const avgTimePerEquation = batchElapsed / croppedImages.length;
+  console.log(`[LaTeX Batch] All ${croppedImages.length} equations completed in ${batchElapsed}ms (avg ${avgTimePerEquation.toFixed(0)}ms/equation)`);
   
   return results;
 }
