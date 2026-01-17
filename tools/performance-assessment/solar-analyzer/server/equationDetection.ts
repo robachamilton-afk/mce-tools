@@ -70,6 +70,16 @@ export function detectEquationRegions(
 function isMathLine(line: OCRLine): boolean {
   const text = line.text;
   
+  // Reject "Where:" sections and variable definition prose
+  if (/^\s*where\s*:?\s*$/i.test(text)) {
+    return false;
+  }
+  
+  // Reject lines that are mostly prose (long sentences)
+  if (text.length > 100 && !/[=+\-×÷∑∫]/.test(text)) {
+    return false;
+  }
+  
   // Math symbol patterns
   const mathSymbols = /[=+\-×÷∑∫√π∞≈≠≤≥±∂∇]/;
   const fractionPattern = /\d+\/\d+/;
@@ -86,8 +96,8 @@ function isMathLine(line: OCRLine): boolean {
   const hasGreek = greekLetters.test(text);
   const hasVariables = variables.test(text);
   
-  // Check for equation keywords
-  const equationKeywords = /\b(equation|formula|where|PR|performance ratio)\b/i;
+  // Check for equation keywords (removed "where" to avoid false positives)
+  const equationKeywords = /\b(equation|formula)\b/i;
   const hasKeywords = equationKeywords.test(text);
   
   // Line is likely math if it has multiple indicators
@@ -101,7 +111,8 @@ function isMathLine(line: OCRLine): boolean {
     hasKeywords
   ].filter(Boolean).length;
   
-  return indicators >= 2 || (indicators >= 1 && line.confidence < 70);
+  // Require at least 2 indicators to reduce false positives
+  return indicators >= 2;
 }
 
 /**
@@ -198,11 +209,28 @@ export function mergeNearbyRegions(
 
 /**
  * Calculate distance between two bounding boxes
+ * Prioritizes vertical proximity for multi-line equations
  */
 function calculateDistance(
   bbox1: { x: number; y: number; width: number; height: number },
   bbox2: { x: number; y: number; width: number; height: number }
 ): number {
+  // Check if boxes are vertically aligned (for multi-line equations)
+  const horizontalOverlap = Math.min(
+    bbox1.x + bbox1.width,
+    bbox2.x + bbox2.width
+  ) - Math.max(bbox1.x, bbox2.x);
+  
+  // If boxes have significant horizontal overlap, use vertical distance only
+  if (horizontalOverlap > Math.min(bbox1.width, bbox2.width) * 0.5) {
+    // Vertically stacked - use gap between boxes
+    const verticalGap = Math.abs(
+      Math.max(bbox1.y, bbox2.y) - Math.min(bbox1.y + bbox1.height, bbox2.y + bbox2.height)
+    );
+    return verticalGap;
+  }
+  
+  // Otherwise use Euclidean distance between centers
   const center1X = bbox1.x + bbox1.width / 2;
   const center1Y = bbox1.y + bbox1.height / 2;
   const center2X = bbox2.x + bbox2.width / 2;
