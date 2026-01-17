@@ -132,13 +132,14 @@ export default function EquationReview({
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!pageRef.current || !pageDimensions) return;
-    const rect = pageRef.current.getBoundingClientRect();
+    if (!pageDimensions) return;
+    // Use currentTarget (the element with the event handler) instead of pageRef
+    const rect = e.currentTarget.getBoundingClientRect();
     // Mouse position in canvas pixels (relative to PDF canvas)
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
     console.log('[Mouse Down] Mouse clientX/Y:', { clientX: e.clientX, clientY: e.clientY });
-    console.log('[Mouse Down] Rect:', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+    console.log('[Mouse Down] Rect (from currentTarget):', { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
     console.log('[Mouse Down] Calculated canvas pixels:', { canvasX, canvasY });
     console.log('[Mouse Down] PDF dimensions:', pageDimensions);
     console.log('[Mouse Down] Scale:', scale);
@@ -149,8 +150,8 @@ export default function EquationReview({
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !pageRef.current || !pageDimensions) return;
-    const rect = pageRef.current.getBoundingClientRect();
+    if (!isDrawing || !pageDimensions) return;
+    const rect = e.currentTarget.getBoundingClientRect();
     // Mouse position in canvas pixels
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
