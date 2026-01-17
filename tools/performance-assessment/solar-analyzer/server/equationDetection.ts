@@ -22,35 +22,77 @@ export interface EquationRegion {
 
 /**
  * Detect equation regions from OCR output
+ * Uses two-pass approach:
+ * 1. Find obvious math lines
+ * 2. Expand to include nearby continuation lines
  */
 export function detectEquationRegions(
   ocrLines: OCRLine[],
   page: number
 ): EquationRegion[] {
-  const regions: EquationRegion[] = [];
-  
-  // Group consecutive lines that contain math symbols
-  let currentRegion: OCRLine[] = [];
-  let regionStartIdx = 0;
-  
+  // Pass 1: Detect obvious math lines
+  const mathLineIndices = new Set<number>();
   for (let i = 0; i < ocrLines.length; i++) {
-    const line = ocrLines[i];
+    if (isMathLine(ocrLines[i])) {
+      mathLineIndices.add(i);
+    }
+  }
+  
+  // Pass 2: Expand to include nearby continuation lines
+  const expandedIndices = new Set(mathLineIndices);
+  const maxVerticalGap = 30; // pixels
+  
+  for (const idx of Array.from(mathLineIndices)) {
+    const mathLine = ocrLines[idx];
     
-    if (isMathLine(line)) {
-      if (currentRegion.length === 0) {
-        regionStartIdx = i;
-      }
-      currentRegion.push(line);
-    } else {
-      // End of math region
-      if (currentRegion.length > 0) {
-        const region = createRegion(currentRegion, page);
-        if (region) {
-          regions.push(region);
-        }
-        currentRegion = [];
+    // Check lines above
+    for (let i = idx - 1; i >= 0; i--) {
+      const prevLine = ocrLines[i];
+      const verticalGap = mathLine.bbox.y - (prevLine.bbox.y + prevLine.bbox.height);
+      
+      if (verticalGap > maxVerticalGap) break;
+      if (expandedIndices.has(i)) break;
+      
+      // Include if it's close and not obviously prose
+      if (prevLine.text.length < 100) {
+        expandedIndices.add(i);
       }
     }
+    
+    // Check lines below
+    for (let i = idx + 1; i < ocrLines.length; i++) {
+      const nextLine = ocrLines[i];
+      const verticalGap = nextLine.bbox.y - (mathLine.bbox.y + mathLine.bbox.height);
+      
+      if (verticalGap > maxVerticalGap) break;
+      if (expandedIndices.has(i)) break;
+      
+      // Include if it's close and not obviously prose
+      if (nextLine.text.length < 100) {
+        expandedIndices.add(i);
+      }
+    }
+  }
+  
+  // Group consecutive indices into regions
+  const regions: EquationRegion[] = [];
+  const sortedIndices = Array.from(expandedIndices).sort((a, b) => a - b);
+  
+  let currentRegion: OCRLine[] = [];
+  let lastIdx = -1;
+  
+  for (const idx of sortedIndices) {
+    if (lastIdx >= 0 && idx !== lastIdx + 1) {
+      // Gap in indices - end current region
+      const region = createRegion(currentRegion, page);
+      if (region) {
+        regions.push(region);
+      }
+      currentRegion = [];
+    }
+    
+    currentRegion.push(ocrLines[idx]);
+    lastIdx = idx;
   }
   
   // Handle last region
