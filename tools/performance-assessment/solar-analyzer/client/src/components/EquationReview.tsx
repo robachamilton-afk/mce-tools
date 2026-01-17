@@ -171,17 +171,22 @@ export default function EquationReview({
       height: Math.abs(drawCurrent.y - drawStart.y),
     };
 
-    // TEST: Try passing canvas coordinates directly as PNG coordinates (no conversion)
+    // Convert canvas pixels to PNG pixels
+    // Canvas: 595px wide, PNG: 1653px wide
+    // Conversion: canvas pixels × (PNG width / canvas width)
+    const canvasWidth = pageDimensions.width * scale;
+    const canvasToPngRatio = pageDimensions.pngWidth / canvasWidth;
     const bboxPNG = {
-      x: Math.round(bboxCanvas.x),
-      y: Math.round(bboxCanvas.y),
-      width: Math.round(bboxCanvas.width),
-      height: Math.round(bboxCanvas.height),
+      x: Math.round(bboxCanvas.x * canvasToPngRatio),
+      y: Math.round(bboxCanvas.y * canvasToPngRatio),
+      width: Math.round(bboxCanvas.width * canvasToPngRatio),
+      height: Math.round(bboxCanvas.height * canvasToPngRatio),
     };
 
-    console.log('[EquationReview] Manual extraction (NO CONVERSION):', {
+    console.log('[EquationReview] Manual extraction:', {
       canvasCoords: bboxCanvas,
       pngCoords: bboxPNG,
+      canvasToPngRatio,
       pageDimensions
     });
 
