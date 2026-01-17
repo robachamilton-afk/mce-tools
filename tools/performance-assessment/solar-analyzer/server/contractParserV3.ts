@@ -21,9 +21,14 @@ import { cropMultipleRegions, type CroppedImage } from './imageCropping';
 import { extractMultipleLaTeX, cleanLaTeX, type LaTeXResult } from './latexOCR';
 import { ollamaChat } from './_core/ollama';
 import type { ContractModel } from './contractSchemaV2';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { join, resolve, dirname } from 'path';
 import { mkdir, rm } from 'fs/promises';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PROJECT_ROOT = resolve(__dirname, '..');
+const TEMP_DIR = join(PROJECT_ROOT, 'temp');
 
 export interface ExtractionProgress {
   stage: 'pdf_render' | 'ocr' | 'equation_detection' | 'latex_extraction' | 'interpretation';
@@ -45,7 +50,9 @@ export async function extractContractHybrid(
   onProgress?: (progress: ExtractionProgress) => void
 ): Promise<ExtractionResult> {
   const startTime = Date.now();
-  const tempDir = join(tmpdir(), `contract-hybrid-${Date.now()}`);
+  // Use local repo temp directory for Windows compatibility
+  await mkdir(TEMP_DIR, { recursive: true });
+  const tempDir = join(TEMP_DIR, `contract-hybrid-${Date.now()}`);
   
   try {
     await mkdir(tempDir, { recursive: true });

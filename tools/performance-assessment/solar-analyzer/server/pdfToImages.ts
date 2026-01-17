@@ -7,8 +7,14 @@
 
 import { promises as fs } from 'fs';
 import path from 'path';
-import os from 'os';
 import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, '..');
+const TEMP_DIR = path.join(PROJECT_ROOT, 'temp');
 
 // Use require for CommonJS modules
 const require = createRequire(import.meta.url);
@@ -41,8 +47,11 @@ export async function convertPdfToImages(
     height = 3300, // A4 at 300 DPI height
   } = options;
 
-  // Create temp directory for PDF and images
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'pdf-convert-'));
+  // Create temp directory for PDF and images (use local repo directory for Windows compatibility)
+  await fs.mkdir(TEMP_DIR, { recursive: true });
+  const timestamp = Date.now();
+  const tempDir = path.join(TEMP_DIR, `pdf-convert-${timestamp}`);
+  await fs.mkdir(tempDir, { recursive: true });
   const pdfPath = path.join(tempDir, 'input.pdf');
   
   try {
