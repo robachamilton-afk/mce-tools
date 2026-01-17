@@ -134,16 +134,13 @@ export default function EquationReview({
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!pageRef.current || !pageDimensions) return;
     const rect = pageRef.current.getBoundingClientRect();
-    // Mouse position in canvas pixels
+    // Mouse position in canvas pixels (relative to PDF canvas)
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
-    // Convert canvas pixels to PDF points (72 DPI)
-    // Canvas pixels = PDF points × scale, so PDF points = canvas pixels / scale
-    const pdfX = canvasX / scale;
-    const pdfY = canvasY / scale;
-    console.log('[Mouse Down] Canvas:', { canvasX, canvasY }, 'PDF points:', { pdfX, pdfY }, 'Scale:', scale);
-    setDrawStart({ x: pdfX, y: pdfY });
-    setDrawCurrent({ x: pdfX, y: pdfY });
+    console.log('[Mouse Down] Canvas pixels:', { canvasX, canvasY }, 'Scale:', scale, 'PageDims:', pageDimensions);
+    // Store in canvas pixels (we'll convert to PNG pixels on mouse up)
+    setDrawStart({ x: canvasX, y: canvasY });
+    setDrawCurrent({ x: canvasX, y: canvasY });
     setIsDrawing(true);
   };
 
@@ -153,10 +150,7 @@ export default function EquationReview({
     // Mouse position in canvas pixels
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
-    // Convert canvas pixels to PDF points (72 DPI)
-    const pdfX = canvasX / scale;
-    const pdfY = canvasY / scale;
-    setDrawCurrent({ x: pdfX, y: pdfY });
+    setDrawCurrent({ x: canvasX, y: canvasY });
   };
 
   const handleMouseUp = async () => {
@@ -165,34 +159,37 @@ export default function EquationReview({
       return;
     }
 
-    // drawStart and drawCurrent are in PDF points (72 DPI)
-    // because we divided canvas pixels by scale
-    const bboxPDF = {
+    // drawStart and drawCurrent are in canvas pixels
+    const bboxCanvas = {
       x: Math.min(drawStart.x, drawCurrent.x),
       y: Math.min(drawStart.y, drawCurrent.y),
       width: Math.abs(drawCurrent.x - drawStart.x),
       height: Math.abs(drawCurrent.y - drawStart.y),
     };
 
-    // Convert from PDF points (72 DPI) to PNG pixels (200 DPI)
-    // PNG pixels = PDF points × (200 / 72)
-    const DPI_RATIO = 200 / 72;
+    // Convert from canvas pixels to PNG pixels
+    // Canvas width = PDF width (595) × zoom scale
+    // PNG width = PDF width (595) × (200/72) = 1654
+    // Conversion factor = PNG width / Canvas width
+    const canvasWidth = pageDimensions.width * scale;
+    const pngToCanvasRatio = pageDimensions.pngWidth / canvasWidth;
     const bboxPNG = {
-      x: Math.round(bboxPDF.x * DPI_RATIO),
-      y: Math.round(bboxPDF.y * DPI_RATIO),
-      width: Math.round(bboxPDF.width * DPI_RATIO),
-      height: Math.round(bboxPDF.height * DPI_RATIO),
+      x: Math.round(bboxCanvas.x * pngToCanvasRatio),
+      y: Math.round(bboxCanvas.y * pngToCanvasRatio),
+      width: Math.round(bboxCanvas.width * pngToCanvasRatio),
+      height: Math.round(bboxCanvas.height * pngToCanvasRatio),
     };
 
     console.log('[EquationReview] Manual extraction:', {
-      pdfCoords: bboxPDF,
+      canvasCoords: bboxCanvas,
       pngCoords: bboxPNG,
-      dpiRatio: DPI_RATIO,
-      pageDimensions
+      pngToCanvasRatio,
+      pageDimensions,
+      canvasWidth
     });
 
-    // Only extract if bbox is large enough (minimum 20x20 pixels in PDF space)
-    if (bboxPDF.width > 20 && bboxPDF.height > 20) {
+    // Only extract if bbox is large enough (minimum 20x20 pixels in canvas space)
+    if (bboxCanvas.width > 20 && bboxCanvas.height > 20) {
       setIsExtracting(true);
       try {
         const latex = await onExtractRegion(currentPage, bboxPNG);
@@ -466,10 +463,10 @@ export default function EquationReview({
                 <div
                   className="absolute border-2 border-blue-500 bg-blue-500/10 pointer-events-none"
                   style={{
-                    left: Math.min(drawStart.x, drawCurrent.x) * scale,
-                    top: Math.min(drawStart.y, drawCurrent.y) * scale,
-                    width: Math.abs(drawCurrent.x - drawStart.x) * scale,
-                    height: Math.abs(drawCurrent.y - drawStart.y) * scale,
+                    left: Math.min(drawStart.x, drawCurrent.x),
+                    top: Math.min(drawStart.y, drawCurrent.y),
+                    width: Math.abs(drawCurrent.x - drawStart.x),
+                    height: Math.abs(drawCurrent.y - drawStart.y),
                   }}
                 />
               )}
