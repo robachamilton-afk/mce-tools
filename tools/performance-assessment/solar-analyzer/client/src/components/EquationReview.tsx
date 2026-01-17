@@ -62,9 +62,14 @@ export default function EquationReview({
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number } | null>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
+
+  // PNG was rendered at 200 DPI, PDF points are 72 DPI
+  // So PNG pixels = PDF points * (200/72) = PDF points * 2.778
+  const PNG_TO_PDF_RATIO = 200 / 72;
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -140,22 +145,31 @@ export default function EquationReview({
       return;
     }
 
-    const bbox = {
+    // Bbox in PDF coordinate space (after dividing by scale)
+    const bboxPDF = {
       x: Math.min(drawStart.x, drawCurrent.x),
       y: Math.min(drawStart.y, drawCurrent.y),
       width: Math.abs(drawCurrent.x - drawStart.x),
       height: Math.abs(drawCurrent.y - drawStart.y),
     };
 
-    // Only extract if bbox is large enough (minimum 20x20 pixels)
-    if (bbox.width > 20 && bbox.height > 20) {
+    // Convert to PNG coordinate space for backend extraction
+    const bboxPNG = {
+      x: bboxPDF.x * PNG_TO_PDF_RATIO,
+      y: bboxPDF.y * PNG_TO_PDF_RATIO,
+      width: bboxPDF.width * PNG_TO_PDF_RATIO,
+      height: bboxPDF.height * PNG_TO_PDF_RATIO,
+    };
+
+    // Only extract if bbox is large enough (minimum 20x20 pixels in PDF space)
+    if (bboxPDF.width > 20 && bboxPDF.height > 20) {
       setIsExtracting(true);
       try {
-        const latex = await onExtractRegion(currentPage, bbox);
+        const latex = await onExtractRegion(currentPage, bboxPNG);
         const newEquation: DetectedEquation = {
           id: `manual-${Date.now()}`,
           pageNumber: currentPage,
-          bbox,
+          bbox: bboxPNG, // Store in PNG coordinates to match auto-detected equations
           latex,
           context: "Manually tagged",
           confidence: 1.0,
@@ -367,6 +381,9 @@ export default function EquationReview({
                   scale={scale}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
+                  onLoadSuccess={(page) => {
+                    setPageDimensions({ width: page.width, height: page.height });
+                  }}
                 />
               </Document>
 
@@ -378,10 +395,10 @@ export default function EquationReview({
                     key={equation.id}
                     className={`absolute border-2 ${getStatusColor(equation.status)} pointer-events-none`}
                     style={{
-                      left: equation.bbox.x * scale,
-                      top: equation.bbox.y * scale,
-                      width: equation.bbox.width * scale,
-                      height: equation.bbox.height * scale,
+                      left: (equation.bbox.x / PNG_TO_PDF_RATIO) * scale,
+                      top: (equation.bbox.y / PNG_TO_PDF_RATIO) * scale,
+                      width: (equation.bbox.width / PNG_TO_PDF_RATIO) * scale,
+                      height: (equation.bbox.height / PNG_TO_PDF_RATIO) * scale,
                     }}
                   />
                 ))}
