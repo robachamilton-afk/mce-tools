@@ -370,9 +370,65 @@ export async function extractContractFromPdf(pdfPath: string): Promise<ContractM
 }
 
 /**
- * Wrapper function for backwards compatibility with V2 interface
- * V3 already returns the correct format, so this is a pass-through
+ * Convert V3 ContractModel schema to legacy UI format
+ * UI expects: confidence (%), equations[], parameters {}, tariffs.baseRate
+ * V3 returns: overallConfidence (0-1), performanceMetrics[], parameters[], tariffs[]
  */
 export function convertToLegacyFormat(model: ContractModel): any {
-  return model;
+  // Convert confidence scores from 0-1 to 0-100 percentages
+  const confidence = {
+    equations: Math.round((model.overallConfidence.equations || 0) * 100),
+    parameters: Math.round((model.overallConfidence.parameters || 0) * 100),
+    tariffs: Math.round((model.overallConfidence.tariffs || 0) * 100),
+    overall: Math.round((model.overallConfidence.overall || 0) * 100)
+  };
+  
+  // Convert performanceMetrics to equations format
+  const equations = model.performanceMetrics.map(metric => ({
+    name: metric.metricName,
+    symbol: metric.symbol,
+    formula: metric.expressionString,
+    description: `${metric.metricName} calculation`,
+    variables: metric.variables.map(v => ({
+      name: v.name,
+      description: v.meaning,
+      unit: v.units || ''
+    }))
+  }));
+  
+  // Convert parameters array to object format
+  const parameters: Record<string, any> = {};
+  model.parameters.forEach(param => {
+    // Create a camelCase key from the parameter name
+    const key = param.name
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .split(/\s+/)
+      .map((word, idx) => idx === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join('');
+    parameters[key] = param.value !== null ? param.value : 'Not specified';
+  });
+  
+  // Convert tariffs array to single baseRate object
+  const tariffs: any = {};
+  if (model.tariffs.length > 0) {
+    const firstTariff = model.tariffs[0];
+    tariffs.baseRate = firstTariff.rate;
+    tariffs.currency = firstTariff.currency || 'USD';
+    tariffs.type = firstTariff.type;
+  }
+  
+  return {
+    confidence,
+    equations,
+    parameters,
+    tariffs,
+    // Pass through other fields
+    undefinedTerms: model.exceptions.filter(e => e.category === 'undefined_term'),
+    missingParameters: model.exceptions.filter(e => e.category === 'missing_parameter'),
+    ambiguities: model.exceptions.filter(e => e.category === 'ambiguous_clause'),
+    _validation: {
+      needsClarification: model.exceptions.length > 0,
+      clarificationCount: model.exceptions.length
+    }
+  };
 }
