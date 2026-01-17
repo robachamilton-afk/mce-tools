@@ -106,16 +106,16 @@ export async function convertPdfToImages(
     return pages;
   } catch (error) {
     console.error('[PDF Converter] Conversion failed:', error);
-    throw new Error(`PDF to image conversion failed: ${error instanceof Error ? error.message : String(error)}`);
-  } finally {
-    // Clean up temp files
+    // Clean up on error
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
-      console.log(`[PDF Converter] Cleaned up temp directory: ${tempDir}`);
     } catch (cleanupError) {
       console.warn(`[PDF Converter] Failed to clean up temp directory: ${cleanupError}`);
     }
+    throw new Error(`PDF to image conversion failed: ${error instanceof Error ? error.message : String(error)}`);
   }
+  // Note: Temp directory cleanup is handled by the caller (contractParserV3.ts)
+  // to ensure files remain available for OCR processing
 }
 
 /**
