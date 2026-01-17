@@ -122,20 +122,20 @@ except Exception as e:
     
     // Set UTF-8 encoding for Windows to prevent Unicode errors
     const env = { ...process.env, PYTHONIOENCODING: 'utf-8' };
-    const process = spawn('python3', ['-c', pythonScript], { env });
+    const childProcess = spawn('python3', ['-c', pythonScript], { env });
     
     let stdout = '';
     let stderr = '';
     
-    process.stdout.on('data', (data) => {
+    childProcess.stdout.on('data', (data) => {
       stdout += data.toString();
     });
     
-    process.stderr.on('data', (data) => {
+    childProcess.stderr.on('data', (data) => {
       stderr += data.toString();
     });
     
-    process.on('close', (code) => {
+    childProcess.on('close', (code) => {
       if (code !== 0) {
         reject(new Error(`Pix2Text failed with code ${code}: ${stderr}`));
         return;
@@ -150,8 +150,8 @@ except Exception as e:
       resolve(stdout.trim());
     });
     
-    process.on('error', (error) => {
-      reject(new Error(`Failed to spawn Python: ${error.message}`));
+    childProcess.on('error', (error) => {
+      reject(new Error(`Failed to spawn python3: ${error.message}`));
     });
   });
 }
