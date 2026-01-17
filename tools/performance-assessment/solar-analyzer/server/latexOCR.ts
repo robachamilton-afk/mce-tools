@@ -120,7 +120,9 @@ except Exception as e:
     sys.exit(1)
 `;
     
-    const process = spawn('python3', ['-c', pythonScript]);
+    // Set UTF-8 encoding for Windows to prevent Unicode errors
+    const env = { ...process.env, PYTHONIOENCODING: 'utf-8' };
+    const process = spawn('python3', ['-c', pythonScript], { env });
     
     let stdout = '';
     let stderr = '';
