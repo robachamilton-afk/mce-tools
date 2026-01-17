@@ -132,21 +132,30 @@ export default function EquationReview({
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!pageRef.current) return;
+    if (!pageRef.current || !pageDimensions) return;
     const rect = pageRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / scale;
-    const y = (e.clientY - rect.top) / scale;
-    setDrawStart({ x, y });
-    setDrawCurrent({ x, y });
+    // Mouse position in canvas pixels
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+    // Convert to PDF base coordinates (remove zoom scale)
+    const pdfX = canvasX / scale;
+    const pdfY = canvasY / scale;
+    console.log('[Mouse Down] Canvas:', { canvasX, canvasY }, 'PDF:', { pdfX, pdfY }, 'Scale:', scale);
+    setDrawStart({ x: pdfX, y: pdfY });
+    setDrawCurrent({ x: pdfX, y: pdfY });
     setIsDrawing(true);
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !pageRef.current) return;
+    if (!isDrawing || !pageRef.current || !pageDimensions) return;
     const rect = pageRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / scale;
-    const y = (e.clientY - rect.top) / scale;
-    setDrawCurrent({ x, y });
+    // Mouse position in canvas pixels
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+    // Convert to PDF base coordinates (remove zoom scale)
+    const pdfX = canvasX / scale;
+    const pdfY = canvasY / scale;
+    setDrawCurrent({ x: pdfX, y: pdfY });
   };
 
   const handleMouseUp = async () => {
@@ -163,19 +172,20 @@ export default function EquationReview({
       height: Math.abs(drawCurrent.y - drawStart.y),
     };
 
-    // Convert from PDF canvas coordinates to PNG pixel coordinates
-    // bboxPDF is in PDF points, need to convert to PNG pixels (at 200 DPI)
+    // Convert from PDF points to PNG pixels
+    // PDF points × (200 DPI / 72 DPI) = PNG pixels
+    const DPI_RATIO = 200 / 72;
     const bboxPNG = {
-      x: bboxPDF.x / coordinateScale,
-      y: bboxPDF.y / coordinateScale,
-      width: bboxPDF.width / coordinateScale,
-      height: bboxPDF.height / coordinateScale,
+      x: Math.round(bboxPDF.x * DPI_RATIO),
+      y: Math.round(bboxPDF.y * DPI_RATIO),
+      width: Math.round(bboxPDF.width * DPI_RATIO),
+      height: Math.round(bboxPDF.height * DPI_RATIO),
     };
 
     console.log('[EquationReview] Manual extraction:', {
       pdfCoords: bboxPDF,
       pngCoords: bboxPNG,
-      coordinateScale,
+      dpiRatio: DPI_RATIO,
       pageDimensions
     });
 
