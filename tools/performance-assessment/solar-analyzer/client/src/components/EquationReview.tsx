@@ -67,17 +67,16 @@ export default function EquationReview({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
-  // Calculate scale factor from PNG coordinates to PDF canvas coordinates
+  // Calculate scale factor from PNG coordinates to rendered canvas coordinates
   // PNG was rendered at 200 DPI (1654px wide for A4)
-  // PDF page is 72 DPI (595 points wide for A4)
-  // Canvas rendering = PDF points × scale (zoom level)
-  // Conversion: PNG pixels → PDF points → Canvas pixels
+  // Canvas is rendered by react-pdf at: PDF points (595) × zoom scale
+  // Conversion: PNG pixels → Canvas pixels
   const getCoordinateScale = () => {
     if (!pageDimensions) return 1;
-    // Convert PNG pixels to PDF points: divide by DPI ratio
-    // Then convert PDF points to canvas pixels: multiply by zoom scale
-    // Combined: PNG pixels × (72/200) × scale = PNG pixels × (scale × 72/200)
-    return (scale * 72) / 200;
+    // Actual canvas width = PDF width (in points) × zoom scale
+    const canvasWidth = pageDimensions.width * scale;
+    // Scale factor = canvas width / PNG width
+    return canvasWidth / pageDimensions.pngWidth;
   };
 
   const coordinateScale = getCoordinateScale();
