@@ -260,3 +260,17 @@
 - [x] Fix pdf-parse import error in contract parser
 - [x] Replace pdf-parse with working PDF text extraction (pdfjs-dist)
 - [x] Revert to original simple approach - just send PDF with large context window
+
+## Equation Review UI & LaTeX Rendering (Jan 17, 2026)
+- [x] Add KaTeX library for LaTeX rendering
+- [x] Replace raw LaTeX text display with rendered equations
+- [x] Add live LaTeX preview in equation edit dialog
+- [x] Update workflow stepper to show correct steps (Details → Contract → SCADA → Meteo → Map Columns → Process Data → Results)
+- [x] Add step completion tracking with green checkmarks
+- [x] Fix "Proceed to Model Building" navigation to return to CustomAnalysis page
+- [x] Add route for /custom-analysis/:id to handle returning from equation review
+- [x] Load analysis data when returning from equation review
+- [x] Show model confirmation step after equation review completion
+- [ ] Create variable mapping page/workflow
+- [ ] Implement variable-to-column mapping UI
+- [ ] Connect mapped variables to model execution engine

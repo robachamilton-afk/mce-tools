@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { InlineMath } from 'react-katex';
+import 'katex/dist/katex.min.css';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -81,6 +83,25 @@ export default function EquationReview({
   };
 
   const coordinateScale = getCoordinateScale();
+
+  // Helper to clean LaTeX for rendering
+  const cleanLatexForDisplay = (latex: string): string => {
+    return latex
+      .replace(/\\\\+/g, ' ') // Remove line breaks
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+  };
+
+  // Helper to render LaTeX safely
+  const renderLatex = (latex: string) => {
+    try {
+      const cleaned = cleanLatexForDisplay(latex);
+      return <InlineMath math={cleaned} />;
+    } catch (error) {
+      console.error('KaTeX rendering error:', error);
+      return <span className="text-destructive text-xs">Invalid LaTeX</span>;
+    }
+  };
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -297,9 +318,8 @@ export default function EquationReview({
                         <span className="text-xs text-muted-foreground">Page {equation.pageNumber}</span>
                         {getStatusBadge(equation.status)}
                       </div>
-                      <div className="text-xs font-mono bg-muted p-2 rounded mt-2 overflow-x-auto">
-                        {equation.latex.substring(0, 100)}
-                        {equation.latex.length > 100 && "..."}
+                      <div className="text-sm bg-muted p-2 rounded mt-2 overflow-x-auto">
+                        {renderLatex(equation.latex)}
                       </div>
                     </div>
                   </div>
@@ -534,6 +554,12 @@ export default function EquationReview({
                 rows={10}
                 className="font-mono text-sm"
               />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Preview</label>
+              <div className="border rounded p-4 bg-muted min-h-[60px] flex items-center justify-center">
+                {editedLatex ? renderLatex(editedLatex) : <span className="text-muted-foreground text-sm">No equation to preview</span>}
+              </div>
             </div>
           </div>
           <DialogFooter>
