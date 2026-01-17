@@ -127,6 +127,12 @@ function isMathLine(line: OCRLine): boolean {
     return false;
   }
   
+  // Reject variable definition prose (e.g., "t is the elapsed time = 1/12 hour")
+  // These have equals signs but are explanatory text, not equations
+  if (/\b(is the|means the|represents the|denotes the)\b/i.test(text)) {
+    return false;
+  }
+  
   // Reject table-like content (month names, percentages without equations)
   if (/\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(text) && !/=/.test(text)) {
     return false;

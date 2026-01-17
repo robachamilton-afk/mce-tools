@@ -162,7 +162,9 @@ export async function extractContractHybrid(
     const equationsText = latexResults
       .map((result, idx) => {
         const cleaned = cleanLaTeX(result.latex);
-        return `Equation ${idx + 1} (Page ${result.region.page}, confidence ${result.confidence}%):\nLaTeX: ${cleaned}\nContext: ${result.region.text}`;
+        // Use cleaned LaTeX as context instead of garbage OCR text
+        const preview = cleaned.length > 100 ? cleaned.slice(0, 100) + '...' : cleaned;
+        return `Equation ${idx + 1} (Page ${result.region.page}, confidence ${result.confidence}%):\nLaTeX: ${cleaned}\nContext: ${preview}`;
       })
       .join('\n\n');
     
