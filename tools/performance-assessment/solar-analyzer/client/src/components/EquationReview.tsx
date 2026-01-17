@@ -62,14 +62,24 @@ export default function EquationReview({
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
-  const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [pageDimensions, setPageDimensions] = useState<{ width: number; height: number; pngWidth: number; pngHeight: number } | null>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
-  // PNG was rendered at 200 DPI, PDF points are 72 DPI
-  // So PNG pixels = PDF points * (200/72) = PDF points * 2.778
-  const PNG_TO_PDF_RATIO = 200 / 72;
+  // Calculate scale factor from PNG coordinates to PDF canvas coordinates
+  // PNG was rendered at 200 DPI, PDF is 72 DPI
+  // Scale = (PDF rendered width) / (PNG width)
+  const getCoordinateScale = () => {
+    if (!pageDimensions) return 1;
+    // PNG dimensions at 200 DPI = PDF points * (200/72)
+    const pngWidth = pageDimensions.width * (200 / 72);
+    const pngHeight = pageDimensions.height * (200 / 72);
+    // Scale factor to convert PNG pixels to current PDF canvas pixels
+    return pageDimensions.width / pngWidth;
+  };
+
+  const coordinateScale = getCoordinateScale();
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -153,13 +163,21 @@ export default function EquationReview({
       height: Math.abs(drawCurrent.y - drawStart.y),
     };
 
-    // Convert to PNG coordinate space for backend extraction
+    // Convert from PDF canvas coordinates to PNG pixel coordinates
+    // bboxPDF is in PDF points, need to convert to PNG pixels (at 200 DPI)
     const bboxPNG = {
-      x: bboxPDF.x * PNG_TO_PDF_RATIO,
-      y: bboxPDF.y * PNG_TO_PDF_RATIO,
-      width: bboxPDF.width * PNG_TO_PDF_RATIO,
-      height: bboxPDF.height * PNG_TO_PDF_RATIO,
+      x: bboxPDF.x / coordinateScale,
+      y: bboxPDF.y / coordinateScale,
+      width: bboxPDF.width / coordinateScale,
+      height: bboxPDF.height / coordinateScale,
     };
+
+    console.log('[EquationReview] Manual extraction:', {
+      pdfCoords: bboxPDF,
+      pngCoords: bboxPNG,
+      coordinateScale,
+      pageDimensions
+    });
 
     // Only extract if bbox is large enough (minimum 20x20 pixels in PDF space)
     if (bboxPDF.width > 20 && bboxPDF.height > 20) {
@@ -382,7 +400,21 @@ export default function EquationReview({
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                   onLoadSuccess={(page) => {
-                    setPageDimensions({ width: page.width, height: page.height });
+                    // PDF page dimensions in points (72 DPI)
+                    // PNG dimensions = PDF points * (200/72)
+                    const pngWidth = page.width * (200 / 72);
+                    const pngHeight = page.height * (200 / 72);
+                    setPageDimensions({ 
+                      width: page.width, 
+                      height: page.height,
+                      pngWidth,
+                      pngHeight
+                    });
+                    console.log('[EquationReview] Page dimensions:', {
+                      pdf: { width: page.width, height: page.height },
+                      png: { width: pngWidth, height: pngHeight },
+                      scale: page.width / pngWidth
+                    });
                   }}
                 />
               </Document>
@@ -395,10 +427,22 @@ export default function EquationReview({
                     key={equation.id}
                     className={`absolute border-2 ${getStatusColor(equation.status)} pointer-events-none`}
                     style={{
-                      left: (equation.bbox.x / PNG_TO_PDF_RATIO) * scale,
-                      top: (equation.bbox.y / PNG_TO_PDF_RATIO) * scale,
-                      width: (equation.bbox.width / PNG_TO_PDF_RATIO) * scale,
-                      height: (equation.bbox.height / PNG_TO_PDF_RATIO) * scale,
+                      left: equation.bbox.x * coordinateScale * scale,
+                      top: equation.bbox.y * coordinateScale * scale,
+                      width: equation.bbox.width * coordinateScale * scale,
+                      height: equation.bbox.height * coordinateScale * scale,
+                    }}
+                    onClick={() => {
+                      console.log('[EquationReview] Clicked equation:', {
+                        id: equation.id,
+                        bbox: equation.bbox,
+                        scaled: {
+                          left: equation.bbox.x * coordinateScale * scale,
+                          top: equation.bbox.y * coordinateScale * scale,
+                          width: equation.bbox.width * coordinateScale * scale,
+                          height: equation.bbox.height * coordinateScale * scale,
+                        }
+                      });
                     }}
                   />
                 ))}
