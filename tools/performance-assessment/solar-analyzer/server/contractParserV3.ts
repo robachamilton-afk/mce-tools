@@ -202,6 +202,17 @@ ${proseText.slice(0, 10000)} ${proseText.length > 10000 ? '...(truncated)' : ''}
 ## Extracted Equations (LaTeX):
 ${equationsText}
 
+**IMPORTANT**: The LaTeX equations above may contain OCR errors. Common issues:
+- Subscripts misread: "Act" may appear as "ace", "gce", or "A c t"
+- Superscripts misread: asterisk (*) may appear in wrong positions
+- Spacing errors: "STC" may appear as "S T C"
+- Variable names split: "EN" may appear as "E N"
+
+When extracting equations, correct these OCR errors based on context from the prose text. For example:
+- If prose mentions "PR_Act" or "actual performance ratio", the LaTeX "PR_{ace}" should be corrected to "PR_{Act}"
+- If prose mentions "EN_Act" or "actual energy", the LaTeX "EN_{gce}" should be corrected to "EN_{Act}"
+- If prose mentions "P_STC" or "standard test conditions", correct spacing and symbols accordingly
+
 Extract the following contract terms and return as JSON:
 
 {
