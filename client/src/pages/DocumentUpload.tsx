@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Upload, File, AlertCircle, CheckCircle, Loader2, X } from "lucide-react";
+import { Upload, File, AlertCircle, CheckCircle, Loader2, X, ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 
@@ -47,7 +47,7 @@ export default function DocumentUpload() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-800">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Authentication Required</CardTitle>
@@ -60,7 +60,7 @@ export default function DocumentUpload() {
 
   if (!projectId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-800">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Project Not Found</CardTitle>
@@ -141,23 +141,27 @@ export default function DocumentUpload() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white">Upload Documents</h1>
-              <p className="text-slate-400 mt-1">
+              <div className="flex items-center gap-3 mb-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocation(`/project/${projectId}`)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <h1 className="text-3xl font-bold text-foreground">Upload Documents</h1>
+              </div>
+              <p className="text-muted-foreground ml-11">
                 {project ? `Project: ${project.name}` : "Loading project..."}
               </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setLocation(`/project/${projectId}`)}
-            >
-              Back to Project
-            </Button>
           </div>
         </div>
       </header>
@@ -167,7 +171,7 @@ export default function DocumentUpload() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Upload Area */}
           <div className="lg:col-span-2">
-            <Card className="bg-slate-900/50 border-slate-700/50">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle>Select Documents</CardTitle>
                 <CardDescription>
@@ -181,17 +185,17 @@ export default function DocumentUpload() {
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+                  className={`border-2 border-dashed rounded-lg p-12 text-center transition-all duration-300 ${
                     isDragActive
-                      ? "border-orange-500 bg-orange-500/10"
-                      : "border-slate-600 bg-slate-800/50 hover:border-slate-500"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card hover:border-primary/50"
                   }`}
                 >
-                  <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-white mb-2">
+                  <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
                     Drag and drop files here
                   </h3>
-                  <p className="text-slate-400 mb-4">or click to browse</p>
+                  <p className="text-muted-foreground mb-4">or click to browse</p>
                   <input
                     type="file"
                     multiple
@@ -201,27 +205,27 @@ export default function DocumentUpload() {
                     accept={ALLOWED_EXTENSIONS.join(",")}
                   />
                   <label htmlFor="file-input">
-                    <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white cursor-pointer">
+                    <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer">
                       <span>Select Files</span>
                     </Button>
                   </label>
-                  <p className="text-xs text-slate-500 mt-4">
+                  <p className="text-xs text-muted-foreground mt-4">
                     Supported: {ALLOWED_EXTENSIONS.join(", ")}
                   </p>
                 </div>
 
                 {/* Document Type Selector */}
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-white mb-2">
+                <div className="mt-8">
+                  <label className="block text-sm font-medium text-foreground mb-3">
                     Document Type (applies to all uploads)
                   </label>
                   <Select value={selectedType} onValueChange={setSelectedType}>
-                    <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                    <SelectTrigger className="bg-background border-border text-foreground">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-600">
+                    <SelectContent className="bg-card border-border">
                       {DOCUMENT_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value} className="text-white">
+                        <SelectItem key={type.value} value={type.value} className="text-foreground">
                           {type.label}
                         </SelectItem>
                       ))}
@@ -234,7 +238,7 @@ export default function DocumentUpload() {
 
           {/* Upload Queue */}
           <div className="lg:col-span-1">
-            <Card className="bg-slate-900/50 border-slate-700/50 sticky top-24">
+            <Card className="bg-card border-border sticky top-24">
               <CardHeader>
                 <CardTitle>Upload Queue</CardTitle>
                 <CardDescription>
@@ -243,22 +247,22 @@ export default function DocumentUpload() {
               </CardHeader>
               <CardContent>
                 {uploadedFiles.length === 0 ? (
-                  <p className="text-slate-400 text-sm">No files selected yet</p>
+                  <p className="text-muted-foreground text-sm">No files selected yet</p>
                 ) : (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {uploadedFiles.map((file) => (
                       <div
                         key={file.id}
-                        className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50"
+                        className="p-3 bg-background rounded-lg border border-border"
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex items-start gap-2 flex-1 min-w-0">
-                            <File className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                            <File className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-white truncate">
+                              <p className="text-sm font-medium text-foreground truncate">
                                 {file.name}
                               </p>
-                              <p className="text-xs text-slate-400">
+                              <p className="text-xs text-muted-foreground">
                                 {formatFileSize(file.size)}
                               </p>
                             </div>
@@ -266,7 +270,7 @@ export default function DocumentUpload() {
                           {file.status !== "uploading" && (
                             <button
                               onClick={() => removeFile(file.id)}
-                              className="text-slate-400 hover:text-red-400 transition-colors flex-shrink-0"
+                              className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
                             >
                               <X className="h-4 w-4" />
                             </button>
@@ -276,16 +280,16 @@ export default function DocumentUpload() {
                         {/* Status Indicator */}
                         <div className="flex items-center gap-2">
                           {file.status === "pending" && (
-                            <div className="w-full h-1 bg-slate-700 rounded-full overflow-hidden">
-                              <div className="h-full bg-orange-500 w-0"></div>
+                            <div className="w-full h-1 bg-border rounded-full overflow-hidden">
+                              <div className="h-full bg-primary w-0"></div>
                             </div>
                           )}
                           {file.status === "uploading" && (
                             <div className="flex items-center gap-2 w-full">
-                              <Loader2 className="h-3 w-3 text-orange-500 animate-spin flex-shrink-0" />
-                              <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
+                              <Loader2 className="h-3 w-3 text-primary animate-spin flex-shrink-0" />
+                              <div className="flex-1 h-1 bg-border rounded-full overflow-hidden">
                                 <div
-                                  className="h-full bg-orange-500 transition-all"
+                                  className="h-full bg-primary transition-all"
                                   style={{ width: `${file.progress}%` }}
                                 ></div>
                               </div>
@@ -295,12 +299,12 @@ export default function DocumentUpload() {
                             <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                           )}
                           {file.status === "error" && (
-                            <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
                           )}
                         </div>
 
                         {file.error && (
-                          <p className="text-xs text-red-400 mt-2">{file.error}</p>
+                          <p className="text-xs text-destructive mt-2">{file.error}</p>
                         )}
                       </div>
                     ))}
@@ -309,7 +313,7 @@ export default function DocumentUpload() {
 
                 {uploadedFiles.length > 0 && (
                   <Button
-                    className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white"
+                    className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground"
                     disabled={uploadedFiles.some((f) => f.status === "error")}
                   >
                     <Upload className="mr-2 h-4 w-4" />

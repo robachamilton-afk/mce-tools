@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Plus, Loader2, AlertCircle, FolderOpen } from "lucide-react";
+import { Plus, Loader2, AlertCircle, FolderOpen, Upload, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 
@@ -42,7 +42,7 @@ export default function ProjectDashboard() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-800">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Authentication Required</CardTitle>
@@ -54,18 +54,20 @@ export default function ProjectDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white">Project Intake & Ingestion Engine</h1>
-              <p className="text-slate-400 mt-1">Document Intelligence Platform for Renewable Energy</p>
+              <h1 className="text-4xl font-bold text-foreground">Project Intake & Ingestion Engine</h1>
+              <p className="text-muted-foreground mt-2">
+                Document Intelligence Platform for Renewable Energy
+              </p>
             </div>
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white">
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                   <Plus className="mr-2 h-4 w-4" />
                   New Project
                 </Button>
@@ -78,27 +80,32 @@ export default function ProjectDashboard() {
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCreateProject} className="space-y-4">
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="name">Project Name</Label>
                     <Input
                       id="name"
                       placeholder="e.g., Clare Solar Farm Phase 2"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      className="bg-background border-border"
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="description">Description (Optional)</Label>
                     <Textarea
                       id="description"
                       placeholder="Brief description of the project..."
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, description: e.target.value })
+                      }
+                      className="bg-background border-border resize-none"
                       rows={3}
                     />
                   </div>
-                  <div className="flex gap-2 justify-end">
+                  <div className="flex gap-3 justify-end">
                     <Button
                       type="button"
                       variant="outline"
@@ -108,7 +115,7 @@ export default function ProjectDashboard() {
                     </Button>
                     <Button
                       type="submit"
-                      className="bg-orange-500 hover:bg-orange-600"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       disabled={createMutation.isPending || !formData.name.trim()}
                     >
                       {createMutation.isPending ? (
@@ -129,31 +136,31 @@ export default function ProjectDashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-16">
         {/* Error State */}
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+          <div className="mb-8 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-red-500">Error Loading Projects</h3>
-              <p className="text-red-400 text-sm mt-1">{error.message}</p>
+              <h3 className="font-semibold text-destructive">Error Loading Projects</h3>
+              <p className="text-destructive/80 text-sm mt-1">{error.message}</p>
             </div>
           </div>
         )}
 
         {/* Loading State */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex items-center justify-center py-24">
             <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto mb-3" />
-              <p className="text-slate-400">Loading your projects...</p>
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+              <p className="text-muted-foreground">Loading your projects...</p>
             </div>
           </div>
         ) : projects && projects.length > 0 ? (
           <div>
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-white mb-2">Your Projects</h2>
-              <p className="text-slate-400">
+            <div className="mb-12">
+              <h2 className="text-3xl font-bold text-foreground mb-2">Your Projects</h2>
+              <p className="text-muted-foreground">
                 {projects.length} project{projects.length !== 1 ? "s" : ""} total
               </p>
             </div>
@@ -163,30 +170,32 @@ export default function ProjectDashboard() {
               {projects.map((project) => (
                 <Card
                   key={project.id}
-                  className="bg-slate-900/50 border-slate-700/50 hover:border-orange-500/50 transition-all cursor-pointer group"
-                  onClick={() => setLocation(`/project/${project.id}`)}
+                  className="bg-card border-border hover:border-primary/50 transition-all duration-300 group flex flex-col h-full"
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <CardTitle className="text-white group-hover:text-orange-400 transition-colors">
+                        <CardTitle className="text-foreground group-hover:text-primary transition-colors">
                           {project.name}
                         </CardTitle>
-                        <CardDescription className="text-slate-400 text-xs mt-1">
+                        <CardDescription className="text-muted-foreground text-xs mt-1">
                           Created {new Date(project.createdAt).toLocaleDateString()}
                         </CardDescription>
                       </div>
-                      <FolderOpen className="h-5 w-5 text-slate-500 group-hover:text-orange-400 transition-colors" />
+                      <FolderOpen className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-1 flex flex-col justify-between">
                     {project.description && (
-                      <p className="text-slate-300 text-sm line-clamp-2">{project.description}</p>
-                    )}
-                    <div className="mt-4 pt-4 border-t border-slate-700/50 space-y-3">
-                      <p className="text-xs text-slate-500">
-                        Status: <span className="text-green-400">{project.status}</span>
+                      <p className="text-foreground/80 text-sm line-clamp-2 mb-4">
+                        {project.description}
                       </p>
+                    )}
+                    <div className="space-y-4 pt-4 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Status</span>
+                        <span className="text-xs font-medium text-primary">{project.status}</span>
+                      </div>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -194,13 +203,14 @@ export default function ProjectDashboard() {
                           className="flex-1 text-xs"
                           onClick={() => setLocation(`/project/${project.id}`)}
                         >
-                          View
+                          View Details
                         </Button>
                         <Button
                           size="sm"
-                          className="flex-1 text-xs bg-orange-500 hover:bg-orange-600"
+                          className="flex-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground"
                           onClick={() => setLocation(`/project/${project.id}/upload`)}
                         >
+                          <Upload className="mr-1 h-3 w-3" />
                           Upload
                         </Button>
                       </div>
@@ -211,15 +221,19 @@ export default function ProjectDashboard() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-12">
-            <FolderOpen className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No Projects Yet</h3>
-            <p className="text-slate-400 mb-6">
-              Create your first project to start ingesting and analyzing documents.
+          <div className="text-center py-24">
+            <div className="flex justify-center mb-6">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <FolderOpen className="h-12 w-12 text-primary" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-bold text-foreground mb-2">No Projects Yet</h3>
+            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+              Create your first project to start ingesting and analyzing renewable energy project documents.
             </p>
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white">
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Your First Project
                 </Button>
@@ -232,27 +246,32 @@ export default function ProjectDashboard() {
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCreateProject} className="space-y-4">
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="name">Project Name</Label>
                     <Input
                       id="name"
                       placeholder="e.g., Clare Solar Farm Phase 2"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      className="bg-background border-border"
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="description">Description (Optional)</Label>
                     <Textarea
                       id="description"
                       placeholder="Brief description of the project..."
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, description: e.target.value })
+                      }
+                      className="bg-background border-border resize-none"
                       rows={3}
                     />
                   </div>
-                  <div className="flex gap-2 justify-end">
+                  <div className="flex gap-3 justify-end">
                     <Button
                       type="button"
                       variant="outline"
@@ -262,7 +281,7 @@ export default function ProjectDashboard() {
                     </Button>
                     <Button
                       type="submit"
-                      className="bg-orange-500 hover:bg-orange-600"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       disabled={createMutation.isPending || !formData.name.trim()}
                     >
                       {createMutation.isPending ? (

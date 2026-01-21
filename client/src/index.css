@@ -43,19 +43,19 @@
 }
 
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
+  --primary: rgb(249 115 22 / 1);
+  --primary-foreground: rgb(255 255 255 / 1);
+  --sidebar-primary: rgb(234 88 12 / 1);
+  --sidebar-primary-foreground: rgb(255 255 255 / 1);
+  --chart-1: rgb(251 146 60 / 1);
+  --chart-2: rgb(249 115 22 / 1);
+  --chart-3: rgb(234 88 12 / 1);
+  --chart-4: rgb(194 65 12 / 1);
+  --chart-5: rgb(161 98 7 / 1);
   --radius: 0.65rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.235 0.015 65);
-  --card: oklch(1 0 0);
+  --card: oklch(0.98 0.001 286.375);
   --card-foreground: oklch(0.235 0.015 65);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.235 0.015 65);
@@ -79,13 +79,13 @@
 }
 
 .dark {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-500);
-  --sidebar-primary-foreground: var(--color-blue-50);
+  --primary: rgb(249 115 22 / 1);
+  --primary-foreground: rgb(255 255 255 / 1);
+  --sidebar-primary: rgb(249 115 22 / 1);
+  --sidebar-primary-foreground: rgb(255 255 255 / 1);
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.85 0.005 65);
-  --card: oklch(0.21 0.006 285.885);
+  --card: oklch(0.15 0.005 285.823);
   --card-foreground: oklch(0.85 0.005 65);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.85 0.005 65);
