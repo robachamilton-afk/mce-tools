@@ -2,9 +2,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { trpc } from "@/lib/trpc";
-import { Upload, File, AlertCircle, CheckCircle, Loader2, X, ArrowLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Upload, File, AlertCircle, CheckCircle, Loader2, X, ArrowLeft, Linkedin, Menu } from "lucide-react";
+import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
 
 interface UploadedFile {
@@ -33,6 +34,7 @@ export default function DocumentUpload() {
   const { user, isAuthenticated } = useAuth();
   const [, params] = useRoute("/project/:id/upload");
   const [, setLocation] = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const projectId = params?.id ? parseInt(params.id) : null;
   const [selectedType, setSelectedType] = useState("Other");
@@ -47,11 +49,11 @@ export default function DocumentUpload() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+        <Card className="w-full max-w-md bg-slate-900/50 border-slate-700/50">
           <CardHeader>
-            <CardTitle>Authentication Required</CardTitle>
-            <CardDescription>Please log in to upload documents.</CardDescription>
+            <CardTitle className="text-white">Authentication Required</CardTitle>
+            <CardDescription className="text-slate-400">Please log in to upload documents.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -60,11 +62,11 @@ export default function DocumentUpload() {
 
   if (!projectId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+        <Card className="w-full max-w-md bg-slate-900/50 border-slate-700/50">
           <CardHeader>
-            <CardTitle>Project Not Found</CardTitle>
-            <CardDescription>Please select a project first.</CardDescription>
+            <CardTitle className="text-white">Project Not Found</CardTitle>
+            <CardDescription className="text-slate-400">Please select a project first.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -141,40 +143,109 @@ export default function DocumentUpload() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+      {/* Header - Matching OE Toolkit Style */}
+      <header className="border-b border-slate-700/50 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 md:py-6 flex items-center justify-between">
+          {/* Logo Section */}
+          <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <img 
+              src="/mce-logo.png" 
+              alt="Main Character Energy" 
+              className="h-10 w-10 md:h-12 md:w-12" 
+            />
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setLocation(`/project/${projectId}`)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <h1 className="text-3xl font-bold text-foreground">Upload Documents</h1>
+              <div className="text-lg md:text-2xl font-bold text-white tracking-tight">
+                MAIN CHARACTER ENERGY
               </div>
-              <p className="text-muted-foreground ml-11">
-                {project ? `Project: ${project.name}` : "Loading project..."}
-              </p>
+              <div className="text-xs md:text-sm text-slate-400 font-medium">
+                Project Intake & Ingestion Engine
+              </div>
             </div>
+          </a>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-6">
+            <button
+              onClick={() => setLocation("/projects")}
+              className="text-slate-300 hover:text-orange-400 transition-colors font-medium"
+            >
+              My Projects
+            </button>
+            <a 
+              href="https://www.linkedin.com/company/main-character-energy-consulting/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-[#0077b5] transition-colors"
+              aria-label="Follow us on LinkedIn"
+            >
+              <Linkedin className="h-5 w-5" />
+            </a>
           </div>
+
+          {/* Mobile Menu */}
+          <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <SheetTrigger asChild>
+              <button className="md:hidden text-slate-300 hover:text-white transition-colors p-2">
+                <Menu className="h-6 w-6" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[300px] bg-slate-900 border-slate-700">
+              <div className="flex flex-col gap-8 mt-8">
+                <button
+                  onClick={() => {
+                    setLocation("/projects");
+                    setIsMenuOpen(false);
+                  }}
+                  className="text-xl font-semibold text-slate-300 hover:text-white transition-colors py-2 text-left"
+                >
+                  My Projects
+                </button>
+                <a 
+                  href="https://www.linkedin.com/company/main-character-energy-consulting/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xl font-semibold text-slate-300 hover:text-orange-400 transition-colors py-2 flex items-center gap-2"
+                >
+                  <Linkedin className="h-5 w-5" />
+                  LinkedIn
+                </a>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-12 md:py-20">
+        {/* Page Header */}
+        <div className="mb-12">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/projects")}
+              className="text-slate-400 hover:text-white hover:bg-slate-800"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Projects
+            </Button>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            Upload Documents
+          </h1>
+          <p className="text-lg text-slate-300">
+            {project ? `Project: ${project.name}` : "Loading project..."}
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Upload Area */}
           <div className="lg:col-span-2">
-            <Card className="bg-card border-border">
+            <Card className="bg-slate-900/50 border-slate-700/50">
               <CardHeader>
-                <CardTitle>Select Documents</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-white">Select Documents</CardTitle>
+                <CardDescription className="text-slate-400">
                   Upload project documents (IMs, DD packs, contracts, grid studies, etc.)
                 </CardDescription>
               </CardHeader>
@@ -187,15 +258,15 @@ export default function DocumentUpload() {
                   onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-lg p-12 text-center transition-all duration-300 ${
                     isDragActive
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-card hover:border-primary/50"
+                      ? "border-orange-500 bg-orange-500/5"
+                      : "border-slate-700 bg-slate-800/30 hover:border-orange-500/50"
                   }`}
                 >
-                  <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                  <Upload className="h-12 w-12 text-slate-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-white mb-2">
                     Drag and drop files here
                   </h3>
-                  <p className="text-muted-foreground mb-4">or click to browse</p>
+                  <p className="text-slate-400 mb-4">or click to browse</p>
                   <input
                     type="file"
                     multiple
@@ -205,27 +276,27 @@ export default function DocumentUpload() {
                     accept={ALLOWED_EXTENSIONS.join(",")}
                   />
                   <label htmlFor="file-input">
-                    <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer">
+                    <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white cursor-pointer">
                       <span>Select Files</span>
                     </Button>
                   </label>
-                  <p className="text-xs text-muted-foreground mt-4">
+                  <p className="text-xs text-slate-500 mt-4">
                     Supported: {ALLOWED_EXTENSIONS.join(", ")}
                   </p>
                 </div>
 
                 {/* Document Type Selector */}
                 <div className="mt-8">
-                  <label className="block text-sm font-medium text-foreground mb-3">
+                  <label className="block text-sm font-medium text-slate-300 mb-3">
                     Document Type (applies to all uploads)
                   </label>
                   <Select value={selectedType} onValueChange={setSelectedType}>
-                    <SelectTrigger className="bg-background border-border text-foreground">
+                    <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
+                    <SelectContent className="bg-slate-900 border-slate-700">
                       {DOCUMENT_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value} className="text-foreground">
+                        <SelectItem key={type.value} value={type.value} className="text-white focus:bg-slate-800">
                           {type.label}
                         </SelectItem>
                       ))}
@@ -238,31 +309,31 @@ export default function DocumentUpload() {
 
           {/* Upload Queue */}
           <div className="lg:col-span-1">
-            <Card className="bg-card border-border sticky top-24">
+            <Card className="bg-slate-900/50 border-slate-700/50 sticky top-24">
               <CardHeader>
-                <CardTitle>Upload Queue</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-white">Upload Queue</CardTitle>
+                <CardDescription className="text-slate-400">
                   {uploadedFiles.length} file{uploadedFiles.length !== 1 ? "s" : ""} selected
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {uploadedFiles.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No files selected yet</p>
+                  <p className="text-slate-500 text-sm">No files selected yet</p>
                 ) : (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {uploadedFiles.map((file) => (
                       <div
                         key={file.id}
-                        className="p-3 bg-background rounded-lg border border-border"
+                        className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50"
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex items-start gap-2 flex-1 min-w-0">
-                            <File className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                            <File className="h-4 w-4 text-slate-500 mt-0.5 flex-shrink-0" />
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-foreground truncate">
+                              <p className="text-sm font-medium text-white truncate">
                                 {file.name}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-slate-400">
                                 {formatFileSize(file.size)}
                               </p>
                             </div>
@@ -270,7 +341,7 @@ export default function DocumentUpload() {
                           {file.status !== "uploading" && (
                             <button
                               onClick={() => removeFile(file.id)}
-                              className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                              className="text-slate-500 hover:text-red-400 transition-colors flex-shrink-0"
                             >
                               <X className="h-4 w-4" />
                             </button>
@@ -280,31 +351,31 @@ export default function DocumentUpload() {
                         {/* Status Indicator */}
                         <div className="flex items-center gap-2">
                           {file.status === "pending" && (
-                            <div className="w-full h-1 bg-border rounded-full overflow-hidden">
-                              <div className="h-full bg-primary w-0"></div>
+                            <div className="w-full h-1 bg-slate-700 rounded-full overflow-hidden">
+                              <div className="h-full bg-orange-500 w-0"></div>
                             </div>
                           )}
                           {file.status === "uploading" && (
                             <div className="flex items-center gap-2 w-full">
-                              <Loader2 className="h-3 w-3 text-primary animate-spin flex-shrink-0" />
-                              <div className="flex-1 h-1 bg-border rounded-full overflow-hidden">
+                              <Loader2 className="h-3 w-3 text-orange-400 animate-spin flex-shrink-0" />
+                              <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
                                 <div
-                                  className="h-full bg-primary transition-all"
+                                  className="h-full bg-orange-500 transition-all"
                                   style={{ width: `${file.progress}%` }}
                                 ></div>
                               </div>
                             </div>
                           )}
                           {file.status === "completed" && (
-                            <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                            <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
                           )}
                           {file.status === "error" && (
-                            <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                            <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
                           )}
                         </div>
 
                         {file.error && (
-                          <p className="text-xs text-destructive mt-2">{file.error}</p>
+                          <p className="text-xs text-red-400 mt-2">{file.error}</p>
                         )}
                       </div>
                     ))}
@@ -313,7 +384,7 @@ export default function DocumentUpload() {
 
                 {uploadedFiles.length > 0 && (
                   <Button
-                    className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground"
+                    className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white"
                     disabled={uploadedFiles.some((f) => f.status === "error")}
                   >
                     <Upload className="mr-2 h-4 w-4" />
