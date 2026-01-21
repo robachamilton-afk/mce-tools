@@ -129,3 +129,11 @@
 - [ ] Add confidence score visualization
 - [ ] Create fact editing interface
 - [ ] Implement fact history tracking
+
+## OE Toolkit Restructuring
+- [x] Analyze current 19 tool structure and identify workflow groupings
+- [x] Design integrated workflow presentation (TA/TDD, OE Delivery, Performance)
+- [x] Create better names and descriptions for workflow stages
+- [x] Update OE Toolkit Home.tsx with workflow-based layout
+- [x] Update Project Ingestion Engine branding to reflect its role
+- [x] Ensure consistency between OE Toolkit and individual tool branding
