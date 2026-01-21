@@ -95,3 +95,37 @@
 - [x] Implement card hover effects and animations from OE Toolkit
 - [x] Update typography and spacing to match OE Toolkit
 - [x] Ensure consistent iconography with OE Toolkit
+
+## Document Text Extraction Implementation
+- [x] Analyze Solar Analyzer document extraction patterns
+- [x] Install PDF parsing libraries (pdf-parse, pdf2json)
+- [x] Install DOCX parsing libraries (mammoth)
+- [x] Install XLSX parsing libraries (xlsx)
+- [x] Implement PDF text extraction service
+- [x] Implement DOCX text extraction service
+- [x] Implement XLSX text extraction service
+- [x] Add OCR support for scanned PDFs (tesseract.js)
+- [ ] Create document processing queue system
+- [ ] Implement extraction progress tracking
+- [ ] Add extracted text storage to project database
+
+## Ollama Integration
+- [ ] Review Solar Analyzer Ollama implementation
+- [ ] Create Ollama configuration table in central DB
+- [ ] Implement Ollama connection service
+- [ ] Create admin interface for Ollama settings
+- [ ] Implement LLM model selection
+- [ ] Create extraction prompt templates
+- [ ] Implement fact extraction via Ollama
+- [ ] Add confidence scoring logic
+- [ ] Implement source tracking for extracted facts
+
+## Fact Verification Dashboard
+- [ ] Design fact verification UI (similar to Solar Analyzer)
+- [ ] Create fact listing page with filters
+- [ ] Implement fact detail view with source references
+- [ ] Add approve/reject actions
+- [ ] Implement bulk approval workflow
+- [ ] Add confidence score visualization
+- [ ] Create fact editing interface
+- [ ] Implement fact history tracking
