@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, projects, ollamaConfig, InsertOllamaConfig } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -87,6 +87,83 @@ export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserById(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * Project Management Queries
+ */
+export async function createProject(
+  name: string,
+  description: string | null,
+  dbName: string,
+  createdByUserId: number
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(projects).values({
+    name,
+    description,
+    dbName,
+    createdByUserId,
+  });
+
+  return result;
+}
+
+export async function getProjectById(projectId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getProjectsByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(projects)
+    .where(eq(projects.createdByUserId, userId))
+    .orderBy(projects.createdAt);
+}
+
+export async function getOllamaConfig() {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(ollamaConfig).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateOllamaConfig(config: Partial<InsertOllamaConfig>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await getOllamaConfig();
+  if (existing) {
+    return await db
+      .update(ollamaConfig)
+      .set(config)
+      .where(eq(ollamaConfig.id, existing.id));
+  } else {
+    return await db.insert(ollamaConfig).values(config as InsertOllamaConfig);
+  }
 }
 
 // TODO: add feature queries here as your schema grows.
