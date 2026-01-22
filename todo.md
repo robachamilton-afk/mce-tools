@@ -155,3 +155,49 @@
 - [ ] Implement bulk actions (approve all, reject all)
 - [ ] Add fact history and audit trail
 - [ ] Create export functionality for verified facts
+
+## Ollama Configuration UI
+- [x] Create Ollama configuration page route
+- [x] Build Ollama server connection settings form (URL, API key)
+- [x] Implement model selection dropdown (fetch available models from Ollama)
+- [ ] Add extraction prompt templates for different document types
+- [x] Create test connection functionality
+- [x] Implement configuration save/update endpoints
+- [x] Add configuration validation and error handling
+
+## Document Processing Status Tracking
+- [ ] Create processing_jobs table in per-project database
+- [ ] Implement job status tracking (queued, processing, completed, failed)
+- [ ] Add real-time progress updates using polling or websockets
+- [ ] Build processing status UI component with progress bars
+- [ ] Implement estimated completion time calculation
+- [ ] Add retry functionality for failed jobs
+- [ ] Create processing history view
+
+## Red-Flag Detection Engine
+- [ ] Design red-flag rules schema (category, condition, severity)
+- [ ] Implement planning gap detection rules
+- [ ] Implement grid integration risk detection rules
+- [ ] Implement geotech issue detection rules
+- [ ] Create red-flag evaluation engine
+- [ ] Add red-flag storage to per-project database
+- [ ] Implement red-flag severity scoring (critical, high, medium, low)
+- [ ] Create red-flag alert notifications
+
+## Red-Flag Dashboard
+- [ ] Create red-flag dashboard page route
+- [ ] Build red-flag list view with filtering by severity and category
+- [ ] Implement red-flag detail view with source facts
+- [ ] Add red-flag resolution workflow (acknowledge, resolve, dismiss)
+- [ ] Create red-flag summary cards and statistics
+- [ ] Implement red-flag export functionality
+- [ ] Add red-flag trend analysis over time
+
+## Export Functionality
+- [ ] Install PDF generation libraries (pdfkit, jspdf)
+- [ ] Install Word generation libraries (docxtemplater, officegen)
+- [ ] Implement PDR PDF export with template
+- [ ] Implement PDR Word export with template
+- [ ] Implement fact base Excel export
+- [ ] Add export buttons to fact verification and red-flag dashboards
+- [ ] Implement export history tracking

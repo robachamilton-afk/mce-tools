@@ -2,7 +2,9 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
-import { createProject, getProjectsByUser, getProjectById } from "./db";
+import { createProject, getProjectsByUser, getProjectById, getDb } from "./db";
+import { ollamaConfig } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { uploadDocument } from "./document-service";
 import { processDocument } from "./document-processor-v2";
@@ -18,6 +20,64 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+  }),
+
+  ollama: router({
+    getConfig: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      
+      const [rows] = await db.execute("SELECT * FROM ollama_config LIMIT 1") as any;
+      return rows[0] || null;
+    }),
+    updateConfig: protectedProcedure
+      .input(z.object({
+        baseUrl: z.string(),
+        model: z.string(),
+        temperature: z.string(),
+        topP: z.string(),
+        timeoutSeconds: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [existing] = await db.execute("SELECT id FROM ollamaConfig LIMIT 1") as any;
+        
+        if (existing.length > 0) {
+          await db.update(ollamaConfig)
+            .set({
+              baseUrl: input.baseUrl,
+              model: input.model,
+              temperature: input.temperature,
+              topP: input.topP,
+              timeoutSeconds: input.timeoutSeconds,
+              updatedAt: new Date(),
+            })
+            .where(eq(ollamaConfig.id, existing[0].id));
+        } else {
+          await db.insert(ollamaConfig).values({
+            baseUrl: input.baseUrl,
+            model: input.model,
+            temperature: input.temperature,
+            topP: input.topP,
+            timeoutSeconds: input.timeoutSeconds,
+          });
+        }
+        
+        return { success: true };
+      }),
+    testConnection: publicProcedure
+      .input(z.object({ serverUrl: z.string() }))
+      .mutation(async ({ input }) => {
+        try {
+          const response = await fetch(`${input.serverUrl}/api/tags`);
+          if (!response.ok) throw new Error("Connection failed");
+          return { success: true };
+        } catch (error) {
+          throw new Error("Unable to connect to Ollama server");
+        }
+      }),
   }),
 
   documents: router({    upload: protectedProcedure
