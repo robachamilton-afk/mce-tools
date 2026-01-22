@@ -259,3 +259,9 @@
 - [x] Find all SQL queries that reference confidence_score and update to confidence
 - [x] Verify Facts page loads correctly after fix
 - [x] Updated routers.ts line 231 to use confidence instead of confidence_score
+
+## SSL Connection Error in Reset DB (Completed - Feature Removed)
+- [x] Fix resetDatabase endpoint - TiDB requires SSL but connection config missing ssl option
+- [x] Add SSL configuration to database connection in resetDatabase mutation
+- [x] Discovered TiDB Serverless doesn't allow DROP DATABASE - removed Reset DB feature
+- [x] Users can create new projects instead of resetting existing ones

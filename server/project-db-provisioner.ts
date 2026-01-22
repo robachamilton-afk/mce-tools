@@ -80,6 +80,9 @@ export async function deleteProjectDatabase(config: ProjectDbConfig): Promise<bo
       port: config.dbPort,
       user: config.dbUser,
       password: config.dbPassword,
+      ssl: {
+        rejectUnauthorized: true,
+      },
     });
 
     await connection.execute(`DROP DATABASE IF EXISTS \`${config.dbName}\``);
@@ -105,6 +108,9 @@ export async function getProjectDbConnection(config: ProjectDbConfig): Promise<m
     user: config.dbUser,
     password: config.dbPassword,
     database: config.dbName,
+    ssl: {
+      rejectUnauthorized: true,
+    },
   });
 }
 
@@ -121,6 +127,9 @@ export async function verifyProjectDatabase(config: ProjectDbConfig): Promise<bo
       user: config.dbUser,
       password: config.dbPassword,
       database: config.dbName,
+      ssl: {
+        rejectUnauthorized: true,
+      },
     });
 
     const [result] = await connection.execute("SELECT 1");

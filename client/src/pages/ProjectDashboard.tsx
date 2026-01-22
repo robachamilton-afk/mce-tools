@@ -50,20 +50,7 @@ export default function ProjectDashboard() {
     },
   });
 
-  const resetDatabaseMutation = trpc.projects.resetDatabase.useMutation({
-    onSuccess: () => {
-      toast.success("Project database reset successfully! You can now load demo data.");
-    },
-    onError: (error) => {
-      toast.error(`Failed to reset database: ${error.message}`);
-    },
-  });
 
-  const handleResetDatabase = async (projectId: number) => {
-    if (confirm("Are you sure you want to reset this project's database? All data will be deleted.")) {
-      await resetDatabaseMutation.mutateAsync({ projectId });
-    }
-  };
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -370,28 +357,7 @@ export default function ProjectDashboard() {
                               "🎯 Load Demo Data"
                             )}
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleResetDatabase(project.id);
-                            }}
-                            disabled={resetDatabaseMutation.isPending}
-                          >
-                            {resetDatabaseMutation.isPending ? (
-                              <>
-                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                Resetting...
-                              </>
-                            ) : (
-                              <>
-                                <Settings className="mr-1 h-3 w-3" />
-                                Reset DB
-                              </>
-                            )}
-                          </Button>
+
                         </div>
                       </div>
                     </div>
