@@ -206,3 +206,34 @@ export async function deleteProjectStorage(projectId: number): Promise<boolean> 
     return false;
   }
 }
+
+/**
+ * Uploads a document and saves metadata to the project database
+ */
+export async function uploadDocument(
+  projectId: string,
+  fileName: string,
+  fileBuffer: Buffer,
+  fileType: string,
+  fileSize: number,
+  documentType: string,
+  uploadedBy: number
+): Promise<{ id: number; fileName: string; filePath: string }> {
+  const { getProjectDb } = await import("./project-db-provisioner");
+  
+  // Save file to disk
+  const metadata = await saveDocument(parseInt(projectId.replace(/^proj_/, "")), fileBuffer, fileName, documentType);
+  
+  // Save metadata to database
+  const db = await getProjectDb(projectId);
+  const [result] = await db.execute(
+    `INSERT INTO documents (file_name, file_path, file_size_bytes, file_hash, document_type, uploaded_by, processing_status)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  );
+  
+  return {
+    id: (result as any).insertId,
+    fileName,
+    filePath: metadata.filePath,
+  };
+}

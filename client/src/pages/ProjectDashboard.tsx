@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Plus, Loader2, AlertCircle, FolderOpen, Upload, ArrowLeft, Linkedin, Menu } from "lucide-react";
+import { Plus, Loader2, AlertCircle, FolderOpen, Upload, ArrowLeft, Linkedin, Menu, FileText } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -270,29 +270,32 @@ export default function ProjectDashboard() {
                         <span className="text-slate-400">Created</span>
                         <span className="text-slate-300">{new Date(project.createdAt).toLocaleDateString()}</span>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1 text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLocation(`/project/${project.id}`);
-                          }}
-                        >
-                          View Details
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="flex-1 text-xs bg-orange-500 hover:bg-orange-600 text-white"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLocation(`/project/${project.id}/upload`);
-                          }}
-                        >
-                          <Upload className="mr-1 h-3 w-3" />
-                          Upload
-                        </Button>
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="flex-1 text-xs bg-orange-500 hover:bg-orange-600 text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/project/${project.id}/upload`);
+                            }}
+                          >
+                            <Upload className="mr-1 h-3 w-3" />
+                            Upload
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/facts?projectId=${project.dbName}`);
+                            }}
+                          >
+                            <FileText className="mr-1 h-3 w-3" />
+                            Facts
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>

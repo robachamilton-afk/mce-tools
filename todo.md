@@ -137,3 +137,21 @@
 - [x] Update OE Toolkit Home.tsx with workflow-based layout
 - [x] Update Project Ingestion Engine branding to reflect its role
 - [x] Ensure consistency between OE Toolkit and individual tool branding
+
+## Document Processing Integration
+- [x] Create tRPC endpoint for document upload
+- [x] Integrate document-extractor into upload flow
+- [x] Integrate document-processor-v2 for fact extraction
+- [ ] Add processing queue and status tracking
+- [ ] Implement error handling and retry logic
+- [ ] Add processing progress indicators in UI
+
+## Fact Verification Dashboard
+- [x] Create fact verification page route
+- [x] Build fact list view with filtering and sorting
+- [ ] Implement fact detail view with source context
+- [x] Add approve/reject/edit actions for facts
+- [x] Create confidence score visualization
+- [ ] Implement bulk actions (approve all, reject all)
+- [ ] Add fact history and audit trail
+- [ ] Create export functionality for verified facts
