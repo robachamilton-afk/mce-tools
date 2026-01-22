@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Plus, Loader2, AlertCircle, FolderOpen, Upload, ArrowLeft, Linkedin, Menu, FileText } from "lucide-react";
+import { Plus, Loader2, AlertCircle, FolderOpen, Upload, ArrowLeft, Linkedin, Menu, FileText, Settings } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -84,6 +84,13 @@ export default function ProjectDashboard() {
               className="text-slate-300 hover:text-orange-400 transition-colors font-medium"
             >
               Home
+            </button>
+            <button
+              onClick={() => setLocation("/ollama-config")}
+              className="text-slate-300 hover:text-orange-400 transition-colors font-medium flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Ollama Settings
             </button>
             <a 
               href="https://www.linkedin.com/company/main-character-energy-consulting/"
@@ -296,6 +303,18 @@ export default function ProjectDashboard() {
                             Facts
                           </Button>
                         </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLocation(`/processing-status?projectId=${project.dbName}`);
+                          }}
+                        >
+                          <Loader2 className="mr-1 h-3 w-3" />
+                          Processing Status
+                        </Button>
                       </div>
                     </div>
                   </div>

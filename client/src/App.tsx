@@ -9,6 +9,7 @@ import ProjectDashboard from "./pages/ProjectDashboard";
 import DocumentUpload from "./pages/DocumentUpload";
 import FactVerification from "./pages/FactVerification";
 import OllamaConfig from "./pages/OllamaConfig";
+import ProcessingStatus from "./pages/ProcessingStatus";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/project/:id/upload" component={DocumentUpload} />
       <Route path="/facts" component={FactVerification} />
       <Route path="/ollama-config" component={OllamaConfig} />
+      <Route path="/processing-status" component={ProcessingStatus} />
       <Route path="/404" component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

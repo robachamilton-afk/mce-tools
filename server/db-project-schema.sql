@@ -1,6 +1,23 @@
 -- Per-Project Database Schema
 -- This schema is deployed to each project's dedicated database
 
+-- Processing jobs table: tracks document processing status
+CREATE TABLE processing_jobs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  document_id CHAR(36) NOT NULL,
+  status ENUM('queued', 'processing', 'completed', 'failed') DEFAULT 'queued',
+  stage VARCHAR(100) NOT NULL,
+  progress_percent INT DEFAULT 0,
+  error_message TEXT,
+  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMP NULL,
+  estimated_completion TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_status (status),
+  INDEX idx_document_id (document_id)
+);
+
 -- Documents table: stores uploaded project documents
 CREATE TABLE documents (
   id CHAR(36) PRIMARY KEY,

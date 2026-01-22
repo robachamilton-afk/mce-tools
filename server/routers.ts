@@ -163,6 +163,35 @@ export const appRouter = router({
       }),
   }),
 
+  processing: router({
+    listJobs: protectedProcedure
+      .input(z.object({ projectId: z.string() }))
+      .query(async ({ input }) => {
+        const { getProjectDb } = await import("./project-db-provisioner");
+        const db = await getProjectDb(input.projectId);
+        
+        const [rows] = await db.execute(
+          `SELECT pj.*, d.file_name as document_name 
+           FROM processing_jobs pj 
+           LEFT JOIN documents d ON pj.document_id = d.id 
+           ORDER BY pj.started_at DESC`
+        );
+        return rows as unknown as any[];
+      }),
+    retryJob: protectedProcedure
+      .input(z.object({ projectId: z.string(), jobId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { getProjectDb } = await import("./project-db-provisioner");
+        const db = await getProjectDb(input.projectId);
+        
+        await db.execute(
+          "UPDATE processing_jobs SET status = 'queued', error_message = NULL WHERE id = ?"
+        );
+        
+        return { success: true };
+      }),
+  }),
+
   facts: router({
     list: protectedProcedure
       .input(z.object({ projectId: z.string() }))
