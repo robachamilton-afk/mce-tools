@@ -109,6 +109,9 @@ export async function createProject(
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // Note: We use table prefixes instead of separate databases for TiDB Serverless compatibility
+  // Tables will be prefixed with the dbName (e.g., proj_1_1234567890_documents)
+  
   const result = await db.insert(projects).values({
     name,
     description,

@@ -150,22 +150,20 @@ export const appRouter = router({
         
         const db = await getProjectDb(input.projectId);
         
-        // Simple SQL escape function
-        const escape = (str: string) => {
-          return "'" + str.replace(/'/g, "''") + "'";
-        };
-        
         // Generate dummy data
         const documents = generateDummyDocuments();
         const facts = generateDummyFacts(documents);
         const redFlags = generateDummyRedFlags(facts);
         const jobs = generateDummyProcessingJobs(documents);
         
+        // Helper to escape strings for SQL
+        const escapeString = (str: string) => str.replace(/'/g, "''");
+        
         // Insert documents
         for (const doc of documents) {
           await db.execute(
             `INSERT INTO documents (id, fileName, filePath, fileSizeBytes, fileHash, documentType, uploadDate, status, extractedText, pageCount) 
-             VALUES ('${doc.id}', '${doc.fileName}', '${doc.filePath}', ${doc.fileSizeBytes}, '${doc.fileHash}', '${doc.documentType}', '${doc.uploadDate.toISOString().slice(0, 19).replace('T', ' ')}', '${doc.status}', ${escape(doc.extractedText)}, ${doc.pageCount})`
+             VALUES ('${doc.id}', '${escapeString(doc.fileName)}', '${escapeString(doc.filePath)}', ${doc.fileSizeBytes}, '${doc.fileHash}', '${doc.documentType}', '${doc.uploadDate.toISOString().slice(0, 19).replace('T', ' ')}', '${doc.status}', '${escapeString(doc.extractedText)}', ${doc.pageCount})`
           );
         }
         
@@ -173,7 +171,7 @@ export const appRouter = router({
         for (const fact of facts) {
           await db.execute(
             `INSERT INTO facts (id, category, \`key\`, value, dataType, confidence, sourceDocumentId, sourceLocation, extractionMethod, extractionModel, verified) 
-             VALUES ('${fact.id}', '${fact.category}', '${fact.key}', ${escape(fact.value)}, '${fact.dataType}', ${fact.confidence}, '${fact.sourceDocumentId}', '${fact.sourceLocation}', '${fact.extractionMethod}', ${fact.extractionModel ? `'${fact.extractionModel}'` : 'NULL'}, ${fact.verified})`
+             VALUES ('${fact.id}', '${fact.category}', '${escapeString(fact.key)}', '${escapeString(fact.value)}', '${fact.dataType}', ${fact.confidence}, '${fact.sourceDocumentId}', '${escapeString(fact.sourceLocation)}', '${fact.extractionMethod}', ${fact.extractionModel ? `'${fact.extractionModel}'` : 'NULL'}, ${fact.verified})`
           );
         }
         
@@ -188,7 +186,7 @@ export const appRouter = router({
           
           await db.execute(
             `INSERT INTO redFlags (id, category, title, description, severity, triggerFactId, downstreamConsequences, mitigated) 
-             VALUES ('${flag.id}', '${mappedCategory}', ${escape(flag.title)}, ${escape(flag.description)}, '${flag.severity}', NULL, ${escape(flag.impact)}, FALSE)`
+             VALUES ('${flag.id}', '${mappedCategory}', '${escapeString(flag.title)}', '${escapeString(flag.description)}', '${flag.severity}', NULL, '${escapeString(flag.impact)}', FALSE)`
           );
         }
         
@@ -196,7 +194,7 @@ export const appRouter = router({
         for (const job of jobs) {
           await db.execute(
             `INSERT INTO processing_jobs (id, document_id, status, stage, progress_percent, error_message, started_at, completed_at, estimated_completion) 
-             VALUES (${job.id}, '${job.document_id}', '${job.status}', '${job.stage}', ${job.progress_percent}, ${job.error_message ? escape(job.error_message) : 'NULL'}, '${job.started_at.toISOString().slice(0, 19).replace('T', ' ')}', ${job.completed_at ? `'${job.completed_at.toISOString().slice(0, 19).replace('T', ' ')}'` : 'NULL'}, ${job.estimated_completion ? `'${job.estimated_completion.toISOString().slice(0, 19).replace('T', ' ')}'` : 'NULL'})`
+             VALUES ('${job.id}', '${job.document_id}', '${job.status}', '${job.stage}', ${job.progress_percent}, ${job.error_message ? `'${escapeString(job.error_message)}'` : 'NULL'}, '${job.started_at.toISOString().slice(0, 19).replace('T', ' ')}', ${job.completed_at ? `'${job.completed_at.toISOString().slice(0, 19).replace('T', ' ')}'` : 'NULL'}, ${job.estimated_completion ? `'${job.estimated_completion.toISOString().slice(0, 19).replace('T', ' ')}'` : 'NULL'})`
           );
         }
         

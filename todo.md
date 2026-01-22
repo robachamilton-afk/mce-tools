@@ -212,3 +212,8 @@
 - [x] Implement workflow orchestration (create project → upload docs → process → extract facts → detect red flags)
 - [ ] Add progress indicators during simulation
 - [ ] Test complete workflow end-to-end
+
+## Demo Button Bug Fix
+- [ ] Fix SQL INSERT statements in demo router to use proper parameter binding instead of string interpolation
+- [ ] Test demo button with actual project
+- [ ] Verify all dummy data is inserted correctly (documents, facts, red flags, processing jobs)

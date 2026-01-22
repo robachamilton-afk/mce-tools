@@ -24,6 +24,9 @@ export async function provisionProjectDatabase(config: ProjectDbConfig): Promise
       user: config.dbUser,
       password: config.dbPassword,
       multipleStatements: true,
+      ssl: {
+        rejectUnauthorized: true,
+      },
     });
 
     // Create the database
@@ -148,4 +151,25 @@ export async function getProjectDb(dbName: string) {
   url.pathname = `/${dbName}`;
   
   return drizzle(url.toString());
+}
+
+/**
+ * Creates a project database by extracting credentials from DATABASE_URL
+ */
+export async function createProjectDatabase(dbName: string): Promise<boolean> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is not set");
+  }
+  
+  // Parse DATABASE_URL to extract connection details
+  const url = new URL(process.env.DATABASE_URL);
+  const config: ProjectDbConfig = {
+    dbName,
+    dbHost: url.hostname,
+    dbPort: parseInt(url.port) || 3306,
+    dbUser: url.username,
+    dbPassword: url.password,
+  };
+  
+  return await provisionProjectDatabase(config);
 }

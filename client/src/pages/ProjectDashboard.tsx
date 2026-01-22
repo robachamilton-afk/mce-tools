@@ -24,19 +24,25 @@ export default function ProjectDashboard() {
     enabled: isAuthenticated,
   });
 
+  const utils = trpc.useUtils();
+
   // Create project mutation
   const createMutation = trpc.projects.create.useMutation({
     onSuccess: () => {
       setFormData({ name: "", description: "" });
       setIsCreateOpen(false);
       // Invalidate projects list to refetch
-      trpc.useUtils().projects.list.invalidate();
+      utils.projects.list.invalidate();
+      toast.success("Project created successfully!");
+    },
+    onError: (error) => {
+      toast.error(`Failed to create project: ${error.message}`);
     },
   });
 
   const demoMutation = trpc.demo.simulateWorkflow.useMutation({
     onSuccess: (data) => {
-      trpc.useUtils().projects.list.invalidate();
+      utils.projects.list.invalidate();
       toast.success(`Demo data loaded! ${data.counts.documents} documents, ${data.counts.facts} facts, ${data.counts.redFlags} red flags`);
     },
     onError: (error) => {
