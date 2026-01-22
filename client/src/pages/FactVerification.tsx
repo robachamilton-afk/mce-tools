@@ -45,9 +45,10 @@ interface Fact {
 }
 
 export default function FactVerification() {
-  const [location, navigate] = useLocation();
-  const searchParams = new URLSearchParams(location.split("?")[1]);
-  const projectId = searchParams.get("projectId");
+  const [, navigate] = useLocation();
+  const searchParams = new URLSearchParams(window.location.search);
+  const projectIdStr = searchParams.get("projectId");
+  const projectId = projectIdStr ? parseInt(projectIdStr, 10) : null;
 
   const [selectedFact, setSelectedFact] = useState<Fact | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -55,10 +56,19 @@ export default function FactVerification() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const { data: facts, isLoading, refetch } = trpc.facts.list.useQuery(
-    { projectId: projectId || "" },
+  // Fetch project details to get dbName
+  const { data: project, isLoading: isLoadingProject } = trpc.projects.get.useQuery(
+    { projectId: projectId! },
     { enabled: !!projectId }
   );
+
+  // Fetch facts using dbName from project
+  const { data: facts, isLoading: isLoadingFacts, refetch } = trpc.facts.list.useQuery(
+    { projectId: project?.dbName || "" },
+    { enabled: !!project?.dbName }
+  );
+
+  const isLoading = isLoadingProject || isLoadingFacts;
 
   const updateFactMutation = trpc.facts.update.useMutation({
     onSuccess: () => {
@@ -88,16 +98,18 @@ export default function FactVerification() {
   }
 
   const handleApprove = (factId: number) => {
+    if (!project?.dbName) return;
     updateFactMutation.mutate({
-      projectId: projectId,
+      projectId: project.dbName,
       factId,
       status: "approved",
     });
   };
 
   const handleReject = (factId: number) => {
+    if (!project?.dbName) return;
     updateFactMutation.mutate({
-      projectId: projectId,
+      projectId: project.dbName,
       factId,
       status: "rejected",
     });
@@ -110,10 +122,10 @@ export default function FactVerification() {
   };
 
   const handleSaveEdit = () => {
-    if (!selectedFact) return;
+    if (!selectedFact || !project?.dbName) return;
     
     updateFactMutation.mutate({
-      projectId: projectId,
+      projectId: project.dbName,
       factId: selectedFact.id,
       status: "approved",
       value: editedValue,

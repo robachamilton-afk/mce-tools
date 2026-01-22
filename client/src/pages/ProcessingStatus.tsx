@@ -39,17 +39,27 @@ interface ProcessingJob {
 }
 
 export default function ProcessingStatus() {
-  const [location, navigate] = useLocation();
-  const searchParams = new URLSearchParams(location.split("?")[1]);
-  const projectId = searchParams.get("projectId");
+  const [, navigate] = useLocation();
+  const searchParams = new URLSearchParams(window.location.search);
+  const projectIdStr = searchParams.get("projectId");
+  const projectId = projectIdStr ? parseInt(projectIdStr, 10) : null;
 
-  const { data: jobs, isLoading, refetch } = trpc.processing.listJobs.useQuery(
-    { projectId: projectId || "" },
+  // Fetch project details to get dbName
+  const { data: project, isLoading: isLoadingProject } = trpc.projects.get.useQuery(
+    { projectId: projectId! },
+    { enabled: !!projectId }
+  );
+
+  // Fetch jobs using dbName from project
+  const { data: jobs, isLoading: isLoadingJobs, refetch } = trpc.processing.listJobs.useQuery(
+    { projectId: project?.dbName || "" },
     { 
-      enabled: !!projectId,
+      enabled: !!project?.dbName,
       refetchInterval: 3000, // Poll every 3 seconds for real-time updates
     }
   );
+
+  const isLoading = isLoadingProject || isLoadingJobs;
 
   const retryJobMutation = trpc.processing.retryJob.useMutation({
     onSuccess: () => {
@@ -256,11 +266,11 @@ export default function ProcessingStatus() {
                           : "-"}
                       </TableCell>
                       <TableCell>
-                        {job.status === "failed" && (
+                        {job.status === "failed" && project?.dbName && (
                           <Button
                             size="sm"
                             onClick={() => retryJobMutation.mutate({ 
-                              projectId: projectId, 
+                              projectId: project.dbName, 
                               jobId: job.id 
                             })}
                             className="bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border border-orange-500/30"

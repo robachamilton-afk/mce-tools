@@ -237,3 +237,10 @@
 - [x] Test demo button after fix and verify all data inserts correctly
 - [x] Root cause: TiDB Serverless HTTP driver parameter binding bug - used sql.raw() to bypass
 - [x] Added DELETE statements before INSERT to handle duplicate keys
+
+## Project Context Routing Bug (Completed)
+- [x] Fix project card button navigation - clicking Upload/Facts/Processing Status shows "no project loaded"
+- [x] Investigate how project ID should be passed from ProjectList to detail pages
+- [x] Ensure project context is properly loaded on Upload, Facts, and Processing Status pages
+- [x] Root cause: wouter's useLocation() returns only pathname, not query params - fixed by using window.location.search
+- [x] Updated Facts and Processing Status pages to fetch project details first, then use dbName for queries

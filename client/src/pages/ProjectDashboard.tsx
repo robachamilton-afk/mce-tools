@@ -317,7 +317,7 @@ export default function ProjectDashboard() {
                             className="flex-1 text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setLocation(`/facts?projectId=${project.dbName}`);
+                              setLocation(`/facts?projectId=${project.id}`);
                             }}
                           >
                             <FileText className="mr-1 h-3 w-3" />
@@ -330,7 +330,7 @@ export default function ProjectDashboard() {
                           className="w-full text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setLocation(`/processing-status?projectId=${project.dbName}`);
+                            setLocation(`/processing-status?projectId=${project.id}`);
                           }}
                         >
                           <Loader2 className="mr-1 h-3 w-3" />
