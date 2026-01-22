@@ -231,3 +231,9 @@
 - [ ] Build risk register framework with cause-event-impact structure
 - [ ] Implement FC readiness signals (not scores)
 - [ ] Add contract parsing and risk coverage mapping (if in scope)
+
+## Demo Button Bug Fix (Completed)
+- [x] Fix Drizzle ORM insert syntax in demo router - parameters being flattened instead of passed as array of objects
+- [x] Test demo button after fix and verify all data inserts correctly
+- [x] Root cause: TiDB Serverless HTTP driver parameter binding bug - used sql.raw() to bypass
+- [x] Added DELETE statements before INSERT to handle duplicate keys
