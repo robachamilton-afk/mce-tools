@@ -43,7 +43,7 @@ export default function ProjectDashboard() {
   const demoMutation = trpc.demo.simulateWorkflow.useMutation({
     onSuccess: (data) => {
       utils.projects.list.invalidate();
-      toast.success(`Demo data loaded! ${data.counts.documents} documents, ${data.counts.facts} facts, ${data.counts.redFlags} red flags`);
+      toast.success(`Demo data loaded! ${data.stats.documents} documents, ${data.stats.facts} facts, ${data.stats.redFlags} red flags`);
     },
     onError: (error) => {
       toast.error(`Failed to load demo data: ${error.message}`);
@@ -59,8 +59,8 @@ export default function ProjectDashboard() {
     });
   };
 
-  const handleLoadDemoData = async (projectId: string, dbName: string) => {
-    await demoMutation.mutateAsync({ projectId: dbName });
+  const handleLoadDemoData = async (projectId: number) => {
+    await demoMutation.mutateAsync({ projectId });
   };
 
   if (!isAuthenticated) {
@@ -341,7 +341,7 @@ export default function ProjectDashboard() {
                           className="w-full text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleLoadDemoData(project.id.toString(), project.dbName);
+                            handleLoadDemoData(project.id);
                           }}
                           disabled={demoMutation.isPending}
                         >

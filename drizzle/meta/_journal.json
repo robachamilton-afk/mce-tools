@@ -15,6 +15,13 @@
       "when": 1768994067562,
       "tag": "0001_condemned_callisto",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1769048298058,
+      "tag": "0002_low_drax",
+      "breakpoints": true
     }
   ]
 }

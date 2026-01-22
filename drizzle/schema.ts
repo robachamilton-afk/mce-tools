@@ -26,6 +26,75 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
+ * Multi-tenant tables for project documents, facts, and red flags
+ */
+export const documents = mysqlTable("documents", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  projectId: int("project_id").notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  filePath: varchar("file_path", { length: 500 }).notNull(),
+  fileSizeBytes: int("file_size_bytes").notNull(),
+  fileHash: varchar("file_hash", { length: 64 }),
+  documentType: varchar("document_type", { length: 50 }),
+  uploadDate: timestamp("upload_date").notNull(),
+  status: varchar("status", { length: 20 }).default("uploaded"),
+  extractedText: text("extracted_text"),
+  pageCount: int("page_count"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const extractedFacts = mysqlTable("extracted_facts", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  projectId: int("project_id").notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  key: varchar("key", { length: 255 }).notNull(),
+  value: text("value").notNull(),
+  dataType: varchar("data_type", { length: 50 }),
+  confidence: varchar("confidence", { length: 10 }),
+  sourceDocumentId: varchar("source_document_id", { length: 36 }),
+  sourceLocation: text("source_location"),
+  extractionMethod: varchar("extraction_method", { length: 50 }),
+  extractionModel: varchar("extraction_model", { length: 100 }),
+  verified: int("verified").default(0),
+  verificationStatus: varchar("verification_status", { length: 20 }).default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const redFlags = mysqlTable("red_flags", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  projectId: int("project_id").notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  severity: varchar("severity", { length: 20 }),
+  triggerFactId: varchar("trigger_fact_id", { length: 36 }),
+  downstreamConsequences: text("downstream_consequences"),
+  mitigated: int("mitigated").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const processingJobs = mysqlTable("processing_jobs", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  projectId: int("project_id").notNull(),
+  documentId: varchar("document_id", { length: 36 }),
+  jobType: varchar("job_type", { length: 50 }),
+  status: varchar("status", { length: 20 }),
+  progress: int("progress").default(0),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
+});
+
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = typeof documents.$inferInsert;
+export type ExtractedFact = typeof extractedFacts.$inferSelect;
+export type InsertExtractedFact = typeof extractedFacts.$inferInsert;
+export type RedFlag = typeof redFlags.$inferSelect;
+export type InsertRedFlag = typeof redFlags.$inferInsert;
+export type ProcessingJob = typeof processingJobs.$inferSelect;
+export type InsertProcessingJob = typeof processingJobs.$inferInsert;
+
+/**
  * Projects table - stores project metadata and per-project database configuration
  */
 export const projects = mysqlTable("projects", {

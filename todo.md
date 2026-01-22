@@ -217,3 +217,17 @@
 - [ ] Fix SQL INSERT statements in demo router to use proper parameter binding instead of string interpolation
 - [ ] Test demo button with actual project
 - [ ] Verify all dummy data is inserted correctly (documents, facts, red flags, processing jobs)
+
+## TA/TDD/Pre-FC Brief Alignment
+- [ ] Fix demo button to use multi-tenant Drizzle ORM inserts
+- [ ] Analyze current implementation against 7-stage TA workflow
+- [ ] Create capability map showing what exists vs what's needed
+- [ ] Identify which tools can be reused vs need modification
+- [ ] List new tools that must be built
+- [ ] Create phased implementation plan (Day-1, Short-term, Later)
+- [ ] Document human gates and judgement-assisting vs automated features
+- [ ] Ensure PDR generator supports required sections
+- [ ] Implement red-flag trigger logic with evidence links
+- [ ] Build risk register framework with cause-event-impact structure
+- [ ] Implement FC readiness signals (not scores)
+- [ ] Add contract parsing and risk coverage mapping (if in scope)

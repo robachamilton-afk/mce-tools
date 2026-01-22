@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { uploadDocument } from "./document-service";
 import { processDocument } from "./document-processor-v2";
+import { demoRouter } from "./demo-router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -136,79 +137,7 @@ export const appRouter = router({
       }),
   }),
 
-  demo: router({
-    simulateWorkflow: protectedProcedure
-      .input(z.object({ projectId: z.string() }))
-      .mutation(async ({ input, ctx }) => {
-        const { getProjectDb } = await import("./project-db-provisioner");
-        const {
-          generateDummyDocuments,
-          generateDummyFacts,
-          generateDummyRedFlags,
-          generateDummyProcessingJobs,
-        } = await import("./dummy-data-generator");
-        
-        const db = await getProjectDb(input.projectId);
-        
-        // Generate dummy data
-        const documents = generateDummyDocuments();
-        const facts = generateDummyFacts(documents);
-        const redFlags = generateDummyRedFlags(facts);
-        const jobs = generateDummyProcessingJobs(documents);
-        
-        // Helper to escape strings for SQL
-        const escapeString = (str: string) => str.replace(/'/g, "''");
-        
-        // Insert documents
-        for (const doc of documents) {
-          await db.execute(
-            `INSERT INTO documents (id, fileName, filePath, fileSizeBytes, fileHash, documentType, uploadDate, status, extractedText, pageCount) 
-             VALUES ('${doc.id}', '${escapeString(doc.fileName)}', '${escapeString(doc.filePath)}', ${doc.fileSizeBytes}, '${doc.fileHash}', '${doc.documentType}', '${doc.uploadDate.toISOString().slice(0, 19).replace('T', ' ')}', '${doc.status}', '${escapeString(doc.extractedText)}', ${doc.pageCount})`
-          );
-        }
-        
-        // Insert facts
-        for (const fact of facts) {
-          await db.execute(
-            `INSERT INTO facts (id, category, \`key\`, value, dataType, confidence, sourceDocumentId, sourceLocation, extractionMethod, extractionModel, verified) 
-             VALUES ('${fact.id}', '${fact.category}', '${escapeString(fact.key)}', '${escapeString(fact.value)}', '${fact.dataType}', ${fact.confidence}, '${fact.sourceDocumentId}', '${escapeString(fact.sourceLocation)}', '${fact.extractionMethod}', ${fact.extractionModel ? `'${fact.extractionModel}'` : 'NULL'}, ${fact.verified})`
-          );
-        }
-        
-        // Insert red flags
-        for (const flag of redFlags) {
-          const categoryMap: Record<string, string> = {
-            'Grid_Integration': 'Grid',
-            'Planning_Approvals': 'Planning',
-            'Technical_Design': 'Performance',
-          };
-          const mappedCategory = categoryMap[flag.category] || 'Other';
-          
-          await db.execute(
-            `INSERT INTO redFlags (id, category, title, description, severity, triggerFactId, downstreamConsequences, mitigated) 
-             VALUES ('${flag.id}', '${mappedCategory}', '${escapeString(flag.title)}', '${escapeString(flag.description)}', '${flag.severity}', NULL, '${escapeString(flag.impact)}', FALSE)`
-          );
-        }
-        
-        // Insert processing jobs
-        for (const job of jobs) {
-          await db.execute(
-            `INSERT INTO processing_jobs (id, document_id, status, stage, progress_percent, error_message, started_at, completed_at, estimated_completion) 
-             VALUES ('${job.id}', '${job.document_id}', '${job.status}', '${job.stage}', ${job.progress_percent}, ${job.error_message ? `'${escapeString(job.error_message)}'` : 'NULL'}, '${job.started_at.toISOString().slice(0, 19).replace('T', ' ')}', ${job.completed_at ? `'${job.completed_at.toISOString().slice(0, 19).replace('T', ' ')}'` : 'NULL'}, ${job.estimated_completion ? `'${job.estimated_completion.toISOString().slice(0, 19).replace('T', ' ')}'` : 'NULL'})`
-          );
-        }
-        
-        return { 
-          success: true, 
-          counts: {
-            documents: documents.length,
-            facts: facts.length,
-            redFlags: redFlags.length,
-            jobs: jobs.length,
-          }
-        };
-      }),
-  }),
+  demo: demoRouter,
 
   projects: router({
     list: protectedProcedure.query(async ({ ctx }) => {
