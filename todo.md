@@ -201,3 +201,14 @@
 - [ ] Implement fact base Excel export
 - [ ] Add export buttons to fact verification and red-flag dashboards
 - [ ] Implement export history tracking
+
+## Dummy Data Workflow
+- [x] Create dummy data generation service with realistic renewable energy project data
+- [x] Generate sample documents (IM, DD Pack, Grid Study, Contract)
+- [x] Generate sample extracted facts with various confidence scores
+- [x] Generate sample red flags (planning gaps, grid risks, geotech issues)
+- [x] Generate sample processing jobs with different statuses
+- [x] Create simulation button in ProjectDashboard
+- [x] Implement workflow orchestration (create project → upload docs → process → extract facts → detect red flags)
+- [ ] Add progress indicators during simulation
+- [ ] Test complete workflow end-to-end

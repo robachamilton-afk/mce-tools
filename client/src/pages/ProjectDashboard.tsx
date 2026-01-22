@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 import { Plus, Loader2, AlertCircle, FolderOpen, Upload, ArrowLeft, Linkedin, Menu, FileText, Settings } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -33,6 +34,16 @@ export default function ProjectDashboard() {
     },
   });
 
+  const demoMutation = trpc.demo.simulateWorkflow.useMutation({
+    onSuccess: (data) => {
+      trpc.useUtils().projects.list.invalidate();
+      toast.success(`Demo data loaded! ${data.counts.documents} documents, ${data.counts.facts} facts, ${data.counts.redFlags} red flags`);
+    },
+    onError: (error) => {
+      toast.error(`Failed to load demo data: ${error.message}`);
+    },
+  });
+
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
@@ -40,6 +51,10 @@ export default function ProjectDashboard() {
       name: formData.name,
       description: formData.description || undefined,
     });
+  };
+
+  const handleLoadDemoData = async (projectId: string, dbName: string) => {
+    await demoMutation.mutateAsync({ projectId: dbName });
   };
 
   if (!isAuthenticated) {
@@ -314,6 +329,24 @@ export default function ProjectDashboard() {
                         >
                           <Loader2 className="mr-1 h-3 w-3" />
                           Processing Status
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="w-full text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLoadDemoData(project.id.toString(), project.dbName);
+                          }}
+                          disabled={demoMutation.isPending}
+                        >
+                          {demoMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            "🎯 Load Demo Data"
+                          )}
                         </Button>
                       </div>
                     </div>
