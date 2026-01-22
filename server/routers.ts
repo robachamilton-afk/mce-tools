@@ -228,7 +228,7 @@ export const appRouter = router({
         const { getProjectDb } = await import("./project-db-provisioner");
         const db = await getProjectDb(input.projectId);
         const [rows] = await db.execute(
-          "SELECT * FROM extracted_facts WHERE deleted_at IS NULL ORDER BY confidence_score DESC, created_at DESC"
+          "SELECT * FROM extracted_facts WHERE deleted_at IS NULL ORDER BY confidence DESC, created_at DESC"
         );
         return rows as unknown as any[];
       }),

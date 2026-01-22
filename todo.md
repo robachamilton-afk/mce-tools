@@ -253,3 +253,9 @@
 - [x] Updated db-project-schema.sql to use 'extracted_facts' with correct column names
 - [x] Added projects.resetDatabase endpoint to recreate project databases with updated schema
 - [x] Added Reset DB button to project cards for easy database reset
+
+## Column Name Mismatch Bug (Completed)
+- [x] Fix Facts query - using confidence_score but schema defines confidence column
+- [x] Find all SQL queries that reference confidence_score and update to confidence
+- [x] Verify Facts page loads correctly after fix
+- [x] Updated routers.ts line 231 to use confidence instead of confidence_score
