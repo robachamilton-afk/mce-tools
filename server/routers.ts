@@ -164,6 +164,32 @@ export const appRouter = router({
           ctx.user.id
         );
       }),
+    resetDatabase: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const project = await getProjectById(input.projectId);
+        if (!project || project.createdByUserId !== ctx.user.id) {
+          throw new Error("Project not found or access denied");
+        }
+        
+        const { provisionProjectDatabase, deleteProjectDatabase } = await import("./project-db-provisioner");
+        
+        // Parse DATABASE_URL to get connection details
+        const url = new URL(process.env.DATABASE_URL!);
+        const config = {
+          dbName: project.dbName,
+          dbHost: url.hostname,
+          dbPort: parseInt(url.port) || 3306,
+          dbUser: url.username,
+          dbPassword: url.password,
+        };
+        
+        // Delete and recreate the project database with updated schema
+        await deleteProjectDatabase(config);
+        await provisionProjectDatabase(config);
+        
+        return { success: true, message: "Project database reset successfully" };
+      }),
   }),
 
   processing: router({

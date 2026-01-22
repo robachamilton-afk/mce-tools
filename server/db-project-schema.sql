@@ -38,30 +38,27 @@ CREATE TABLE documents (
   INDEX idx_uploadDate (uploadDate)
 );
 
--- Facts table: extracted structured and unstructured facts from documents
-CREATE TABLE facts (
-  id CHAR(36) PRIMARY KEY,
-  category ENUM('Technology', 'Assumption', 'Parameter', 'Dependency', 'Risk', 'Other') NOT NULL,
-  key VARCHAR(255) NOT NULL,
-  value LONGTEXT NOT NULL,
-  dataType ENUM('String', 'Number', 'Date', 'Boolean', 'JSON') DEFAULT 'String',
-  confidence DECIMAL(5, 2) NOT NULL,
-  sourceDocumentId CHAR(36) NOT NULL,
-  sourceLocation VARCHAR(255),
-  extractionMethod ENUM('Deterministic_Regex', 'Ollama_LLM', 'Manual_Input') NOT NULL,
-  extractionModel VARCHAR(255),
-  verified BOOLEAN DEFAULT FALSE,
-  verifiedByUserId INT,
-  verifiedAt TIMESTAMP,
-  verificationNotes TEXT,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (sourceDocumentId) REFERENCES documents(id) ON DELETE CASCADE,
+-- Extracted facts table: extracted structured and unstructured facts from documents
+CREATE TABLE extracted_facts (
+  id VARCHAR(36) PRIMARY KEY,
+  project_id INT NOT NULL,
+  category VARCHAR(100) NOT NULL,
+  `key` VARCHAR(255) NOT NULL,
+  value TEXT NOT NULL,
+  data_type VARCHAR(50),
+  confidence VARCHAR(10),
+  source_document_id VARCHAR(36),
+  source_location TEXT,
+  extraction_method VARCHAR(50),
+  extraction_model VARCHAR(100),
+  verified INT DEFAULT 0,
+  verification_status VARCHAR(20) DEFAULT 'pending',
+  deleted_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_category (category),
-  INDEX idx_key (key),
+  INDEX idx_key (`key`),
   INDEX idx_verified (verified),
-  INDEX idx_confidence (confidence),
-  FULLTEXT INDEX ft_value (value)
+  INDEX idx_confidence (confidence)
 );
 
 -- Red flags table: detected risks and issues
@@ -78,7 +75,7 @@ CREATE TABLE redFlags (
   mitigationNotes TEXT,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (triggerFactId) REFERENCES facts(id) ON DELETE SET NULL,
+  FOREIGN KEY (triggerFactId) REFERENCES extracted_facts(id) ON DELETE SET NULL,
   INDEX idx_category (category),
   INDEX idx_severity (severity),
   INDEX idx_mitigated (mitigated)
@@ -92,7 +89,7 @@ CREATE TABLE factVerificationQueue (
   assignedToUserId INT,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (factId) REFERENCES facts(id) ON DELETE CASCADE,
+  FOREIGN KEY (factId) REFERENCES extracted_facts(id) ON DELETE CASCADE,
   INDEX idx_status (status)
 );
 

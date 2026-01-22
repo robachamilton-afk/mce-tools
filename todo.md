@@ -244,3 +244,12 @@
 - [x] Ensure project context is properly loaded on Upload, Facts, and Processing Status pages
 - [x] Root cause: wouter's useLocation() returns only pathname, not query params - fixed by using window.location.search
 - [x] Updated Facts and Processing Status pages to fetch project details first, then use dbName for queries
+
+## Table Name Mismatch Bug (Completed)
+- [x] Fix Facts page query - looking for extracted_facts table but demo data creates facts table
+- [x] Check schema definition and ensure consistent table naming
+- [x] Verify demo data inserts into correct table
+- [x] Root cause: db-project-schema.sql created 'facts' table but code references 'extracted_facts'
+- [x] Updated db-project-schema.sql to use 'extracted_facts' with correct column names
+- [x] Added projects.resetDatabase endpoint to recreate project databases with updated schema
+- [x] Added Reset DB button to project cards for easy database reset
