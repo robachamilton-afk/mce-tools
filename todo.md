@@ -697,3 +697,17 @@
   - [ ] Verify conflicts are detected and listed
   - [ ] Test each resolution action
   - [ ] Verify insights are updated correctly
+
+## Solar Analyzer Integration & Performance Validation
+- [x] Document complete Solar Analyzer integration architecture
+- [x] Install PySAM library in Solar Analyzer environment
+- [x] Build PySAM-based performance estimation API endpoint (weather data integration pending)
+- [ ] Design comprehensive input schema with assumption tracking
+- [ ] Implement assumption tracking system (value, source, assumption_basis)
+- [ ] Implement confidence scoring based on extracted vs assumed parameters
+- [ ] Integrate PVGIS weather API for benchmark data
+- [ ] Build weather data comparison logic (project vs benchmark)
+- [ ] Create Solar Analyzer client in ingestion engine
+- [ ] Integrate performance validation into document processing pipeline
+- [ ] Build performance validation results UI
+- [ ] Test end-to-end performance validation workflow
