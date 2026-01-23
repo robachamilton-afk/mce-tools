@@ -143,6 +143,113 @@ export type PerformanceValidation = typeof performanceValidations.$inferSelect;
 export type InsertPerformanceValidation = typeof performanceValidations.$inferInsert;
 
 /**
+ * Performance parameters extracted from project documents
+ * Used as inputs for Solar Analyzer performance validation
+ */
+export const performanceParameters = mysqlTable("performance_parameters", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  projectId: int("project_id").notNull(),
+  
+  // System design
+  dcCapacityMw: varchar("dc_capacity_mw", { length: 20 }),
+  acCapacityMw: varchar("ac_capacity_mw", { length: 20 }),
+  moduleModel: varchar("module_model", { length: 255 }),
+  modulePowerWatts: varchar("module_power_watts", { length: 20 }),
+  moduleCount: int("module_count"),
+  inverterModel: varchar("inverter_model", { length: 255 }),
+  inverterPowerKw: varchar("inverter_power_kw", { length: 20 }),
+  inverterCount: int("inverter_count"),
+  trackingType: varchar("tracking_type", { length: 50 }), // fixed_tilt, single_axis, dual_axis
+  tiltAngleDegrees: varchar("tilt_angle_degrees", { length: 20 }),
+  azimuthDegrees: varchar("azimuth_degrees", { length: 20 }),
+  
+  // Location
+  latitude: varchar("latitude", { length: 20 }),
+  longitude: varchar("longitude", { length: 20 }),
+  siteName: varchar("site_name", { length: 255 }),
+  elevationM: varchar("elevation_m", { length: 20 }),
+  timezone: varchar("timezone", { length: 50 }),
+  
+  // Performance assumptions
+  systemLossesPercent: varchar("system_losses_percent", { length: 20 }),
+  degradationRatePercent: varchar("degradation_rate_percent", { length: 20 }),
+  availabilityPercent: varchar("availability_percent", { length: 20 }),
+  soilingLossPercent: varchar("soiling_loss_percent", { length: 20 }),
+  
+  // Weather data
+  weatherFileUrl: varchar("weather_file_url", { length: 500 }),
+  ghiAnnualKwhM2: varchar("ghi_annual_kwh_m2", { length: 20 }),
+  dniAnnualKwhM2: varchar("dni_annual_kwh_m2", { length: 20 }),
+  temperatureAmbientC: varchar("temperature_ambient_c", { length: 20 }),
+  
+  // Contractor claims
+  p50GenerationGwh: varchar("p50_generation_gwh", { length: 20 }),
+  p90GenerationGwh: varchar("p90_generation_gwh", { length: 20 }),
+  capacityFactorPercent: varchar("capacity_factor_percent", { length: 20 }),
+  specificYieldKwhKwp: varchar("specific_yield_kwh_kwp", { length: 20 }),
+  
+  // Metadata
+  sourceDocumentId: varchar("source_document_id", { length: 36 }),
+  confidence: varchar("confidence", { length: 20 }),
+  extractionMethod: varchar("extraction_method", { length: 50 }), // llm, deterministic, manual
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Financial data extracted from project documents
+ * Used for CapEx/OpEx benchmarking and analysis
+ */
+export const financialData = mysqlTable("financial_data", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  projectId: int("project_id").notNull(),
+  
+  // CapEx breakdown (in USD)
+  totalCapexUsd: varchar("total_capex_usd", { length: 20 }),
+  modulesUsd: varchar("modules_usd", { length: 20 }),
+  invertersUsd: varchar("inverters_usd", { length: 20 }),
+  trackersUsd: varchar("trackers_usd", { length: 20 }),
+  civilWorksUsd: varchar("civil_works_usd", { length: 20 }),
+  gridConnectionUsd: varchar("grid_connection_usd", { length: 20 }),
+  developmentCostsUsd: varchar("development_costs_usd", { length: 20 }),
+  otherCapexUsd: varchar("other_capex_usd", { length: 20 }),
+  
+  // OpEx breakdown (annual, in USD)
+  totalOpexAnnualUsd: varchar("total_opex_annual_usd", { length: 20 }),
+  omUsd: varchar("om_usd", { length: 20 }),
+  insuranceUsd: varchar("insurance_usd", { length: 20 }),
+  landLeaseUsd: varchar("land_lease_usd", { length: 20 }),
+  assetManagementUsd: varchar("asset_management_usd", { length: 20 }),
+  otherOpexUsd: varchar("other_opex_usd", { length: 20 }),
+  
+  // Normalized metrics
+  capexPerWattUsd: varchar("capex_per_watt_usd", { length: 20 }),
+  opexPerMwhUsd: varchar("opex_per_mwh_usd", { length: 20 }),
+  
+  // Currency and date
+  originalCurrency: varchar("original_currency", { length: 10 }),
+  exchangeRateToUsd: varchar("exchange_rate_to_usd", { length: 20 }),
+  costYear: int("cost_year"),
+  escalationRatePercent: varchar("escalation_rate_percent", { length: 20 }),
+  
+  // Metadata
+  sourceDocumentId: varchar("source_document_id", { length: 36 }),
+  confidence: varchar("confidence", { length: 20 }),
+  extractionMethod: varchar("extraction_method", { length: 50 }), // llm, deterministic, manual
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PerformanceParameters = typeof performanceParameters.$inferSelect;
+export type InsertPerformanceParameters = typeof performanceParameters.$inferInsert;
+export type FinancialData = typeof financialData.$inferSelect;
+export type InsertFinancialData = typeof financialData.$inferInsert;
+
+/**
  * Projects table - stores project metadata and per-project database configuration
  */
 export const projects = mysqlTable("projects", {

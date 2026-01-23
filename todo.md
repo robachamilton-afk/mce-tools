@@ -727,3 +727,67 @@
 - [x] Test performance validation workflow end-to-end with mock data
 - [x] Fixed snake_case field names from MySQL database (annual_generation_gwh, etc.)
 - [x] Verified all visualizations render correctly with real data
+
+## Performance Parameter & Financial Data Extraction (Current - Jan 23, 2026)
+- [x] Design database schema for performance_parameters table
+  - [ ] System design fields (dc_capacity_mw, ac_capacity_mw, module_model, inverter_model, tracking_type)
+  - [ ] Location fields (latitude, longitude, site_name, elevation_m)
+  - [ ] Performance assumptions (system_losses_percent, degradation_rate_percent, availability_percent)
+  - [ ] Weather data references (weather_file_url, ghi_annual_kwh_m2, dni_annual_kwh_m2)
+  - [ ] Contractor claims (p50_generation_gwh, p90_generation_gwh, capacity_factor_percent)
+  - [ ] Metadata fields (source_document_id, confidence, extraction_method, created_at)
+- [x] Design database schema for financial_data table
+  - [ ] CapEx breakdown (total_capex_usd, modules_usd, inverters_usd, trackers_usd, civil_works_usd, grid_connection_usd, development_costs_usd, other_capex_usd)
+  - [ ] OpEx breakdown (total_opex_annual_usd, om_usd, insurance_usd, land_lease_usd, asset_management_usd, other_opex_usd)
+  - [ ] Normalized metrics (capex_per_watt_usd, opex_per_mwh_usd)
+  - [ ] Currency and date fields (currency, exchange_rate_to_usd, cost_year, escalation_rate_percent)
+  - [ ] Metadata fields (source_document_id, confidence, extraction_method, created_at)
+- [x] Generate Drizzle migrations for new tables
+- [x] Apply migrations to project database schema
+- [x] Extend LLM extraction prompts to identify performance parameters
+  - [ ] Add system design parameter extraction (capacity, equipment specs)
+  - [ ] Add location data extraction (coordinates, site details)
+  - [ ] Add performance assumption extraction (losses, degradation, availability)
+  - [ ] Add weather data reference extraction (TMY files, irradiation values)
+  - [ ] Add contractor claim extraction (P50/P90 generation estimates)
+- [x] Extend LLM extraction prompts to identify financial data
+  - [ ] Add CapEx extraction with category breakdown
+  - [ ] Add OpEx extraction with category breakdown
+  - [ ] Add currency and date extraction for normalization
+  - [ ] Add cost escalation and exchange rate extraction
+- [x] Update document processor to save performance parameters
+  - [ ] Add Pass 7: Performance parameter extraction
+  - [ ] Implement parameter validation and normalization
+  - [ ] Store extracted parameters in performance_parameters table
+  - [ ] Link parameters to source documents
+- [x] Update document processor to save financial data
+  - [ ] Add Pass 8: Financial data extraction
+  - [ ] Implement cost normalization ($/W, $/MWh calculations)
+  - [ ] Store extracted financial data in financial_data table
+  - [ ] Handle currency conversion using exchange rates
+- [x] Create backend endpoints for performance parameters
+  - [ ] Add performance.getParameters endpoint (fetch by project)
+  - [ ] Add performance.updateParameter endpoint (manual corrections)
+- [x] Create backend endpoints for financial data
+  - [ ] Add financial.getData endpoint (fetch by project)
+  - [ ] Add financial.updateData endpoint (manual corrections)
+- [x] Build Performance Parameters UI page
+  - [ ] Create /project/:id/performance-params route
+  - [ ] Display extracted system design parameters
+  - [ ] Show location and site data
+  - [ ] Display performance assumptions
+  - [ ] Show contractor claims
+  - [ ] Add edit functionality for manual corrections
+- [x] Build Financial Data UI page
+  - [ ] Create /project/:id/financial route
+  - [ ] Display CapEx breakdown with category charts
+  - [ ] Display OpEx breakdown with category charts
+  - [ ] Show normalized metrics ($/W, $/MWh)
+  - [ ] Add comparison with benchmark data (placeholder)
+  - [ ] Add edit functionality for manual corrections
+- [ ] Test extraction with sample documents (pending - needs document upload)
+  - [ ] Test with IM containing performance estimates
+  - [ ] Test with DD Pack containing equipment specifications
+  - [ ] Test with financial model containing CapEx/OpEx breakdown
+  - [ ] Verify parameter accuracy and completeness
+  - [ ] Verify financial data accuracy and normalization

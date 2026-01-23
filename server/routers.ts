@@ -325,8 +325,112 @@ export const appRouter = router({
                   }
                 }
                 
+                // Step 7: Extract performance parameters
+                await updateProgress('extracting_performance_params', 94);
+                console.log(`[Document Processor] Extracting performance parameters...`);
+                
+                const { PerformanceFinancialExtractor } = await import('./performance-financial-extractor');
+                const extractor = new PerformanceFinancialExtractor();
+                
+                try {
+                  const perfParams = await extractor.extractPerformanceParameters(
+                    result.extractedText,
+                    finalDocumentType as string
+                  );
+                  
+                  if (perfParams && perfParams.confidence > 0) {
+                    const { v4: uuidv4 } = await import('uuid');
+                    const paramId = uuidv4();
+                    
+                    // Build INSERT statement dynamically for non-null fields
+                    const fields = ['id', 'project_id', 'source_document_id', 'confidence', 'extraction_method'];
+                    const values = [`'${paramId}'`, projectIdNum.toString(), `'${document.id}'`, perfParams.confidence.toString(), `'${perfParams.extraction_method}'`];
+                    
+                    // Add non-null performance parameter fields
+                    const paramFields: (keyof typeof perfParams)[] = [
+                      'dc_capacity_mw', 'ac_capacity_mw', 'module_model', 'module_power_watts', 'module_count',
+                      'inverter_model', 'inverter_power_kw', 'inverter_count', 'tracking_type', 'tilt_angle_degrees',
+                      'azimuth_degrees', 'latitude', 'longitude', 'site_name', 'elevation_m', 'timezone',
+                      'system_losses_percent', 'degradation_rate_percent', 'availability_percent', 'soiling_loss_percent',
+                      'weather_file_url', 'ghi_annual_kwh_m2', 'dni_annual_kwh_m2', 'temperature_ambient_c',
+                      'p50_generation_gwh', 'p90_generation_gwh', 'capacity_factor_percent', 'specific_yield_kwh_kwp', 'notes'
+                    ];
+                    
+                    for (const field of paramFields) {
+                      const value = perfParams[field];
+                      if (value !== null && value !== undefined) {
+                        fields.push(field);
+                        if (typeof value === 'number') {
+                          values.push(value.toString());
+                        } else {
+                          const escapedValue = String(value).replace(/'/g, "''");
+                          values.push(`'${escapedValue}'`);
+                        }
+                      }
+                    }
+                    
+                    await projectDb.execute(
+                      `INSERT INTO performance_parameters (${fields.join(', ')}) VALUES (${values.join(', ')})`
+                    );
+                    
+                    console.log(`[Document Processor] Saved performance parameters (confidence: ${(perfParams.confidence * 100).toFixed(1)}%)`);
+                  }
+                } catch (perfError) {
+                  console.error(`[Document Processor] Performance parameter extraction failed:`, perfError);
+                }
+                
+                // Step 8: Extract financial data
+                await updateProgress('extracting_financial_data', 96);
+                console.log(`[Document Processor] Extracting financial data...`);
+                
+                try {
+                  const financialData = await extractor.extractFinancialData(
+                    result.extractedText,
+                    finalDocumentType as string
+                  );
+                  
+                  if (financialData && financialData.confidence > 0) {
+                    const { v4: uuidv4 } = await import('uuid');
+                    const finId = uuidv4();
+                    
+                    // Build INSERT statement dynamically for non-null fields
+                    const fields = ['id', 'project_id', 'source_document_id', 'confidence', 'extraction_method'];
+                    const values = [`'${finId}'`, projectIdNum.toString(), `'${document.id}'`, financialData.confidence.toString(), `'${financialData.extraction_method}'`];
+                    
+                    // Add non-null financial data fields
+                    const finFields: (keyof typeof financialData)[] = [
+                      'total_capex_usd', 'modules_usd', 'inverters_usd', 'trackers_usd', 'civil_works_usd',
+                      'grid_connection_usd', 'development_costs_usd', 'other_capex_usd', 'total_opex_annual_usd',
+                      'om_usd', 'insurance_usd', 'land_lease_usd', 'asset_management_usd', 'other_opex_usd',
+                      'capex_per_watt_usd', 'opex_per_mwh_usd', 'original_currency', 'exchange_rate_to_usd',
+                      'cost_year', 'escalation_rate_percent', 'notes'
+                    ];
+                    
+                    for (const field of finFields) {
+                      const value = financialData[field];
+                      if (value !== null && value !== undefined) {
+                        fields.push(field);
+                        if (typeof value === 'number') {
+                          values.push(value.toString());
+                        } else {
+                          const escapedValue = String(value).replace(/'/g, "''");
+                          values.push(`'${escapedValue}'`);
+                        }
+                      }
+                    }
+                    
+                    await projectDb.execute(
+                      `INSERT INTO financial_data (${fields.join(', ')}) VALUES (${values.join(', ')})`
+                    );
+                    
+                    console.log(`[Document Processor] Saved financial data (confidence: ${(financialData.confidence * 100).toFixed(1)}%)`);
+                  }
+                } catch (finError) {
+                  console.error(`[Document Processor] Financial data extraction failed:`, finError);
+                }
+                
                 await projectDb.end();
-                console.log(`[Document Processor] Saved ${result.facts.length} facts and generated narratives`);
+                console.log(`[Document Processor] Saved ${result.facts.length} facts, narratives, performance params, and financial data`);
               }
             }
           })
@@ -976,6 +1080,98 @@ Synthesized narrative:`;
         } catch (error: any) {
           await projectDb.end();
           throw new Error(`Failed to create performance validation: ${error.message}`);
+        }
+      }),
+  }),
+  
+  // Performance parameters router
+  performanceParams: router({
+    getByProject: protectedProcedure
+      .input(z.object({ projectDbName: z.string() }))
+      .query(async ({ input }) => {
+        const projectDb = mysql.createPool({
+          host: '127.0.0.1',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          const [rows] = await projectDb.execute(
+            `SELECT * FROM performance_parameters ORDER BY created_at DESC`
+          );
+          await projectDb.end();
+          return rows;
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to fetch performance parameters: ${error.message}`);
+        }
+      }),
+    
+    getById: protectedProcedure
+      .input(z.object({ projectDbName: z.string(), id: z.string() }))
+      .query(async ({ input }) => {
+        const projectDb = mysql.createPool({
+          host: '127.0.0.1',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          const [rows] = await projectDb.execute(
+            `SELECT * FROM performance_parameters WHERE id = ?`,
+            [input.id]
+          );
+          await projectDb.end();
+          return (rows as any[])[0] || null;
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to fetch performance parameter: ${error.message}`);
+        }
+      }),
+  }),
+  
+  // Financial data router
+  financial: router({
+    getByProject: protectedProcedure
+      .input(z.object({ projectDbName: z.string() }))
+      .query(async ({ input }) => {
+        const projectDb = mysql.createPool({
+          host: '127.0.0.1',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          const [rows] = await projectDb.execute(
+            `SELECT * FROM financial_data ORDER BY created_at DESC`
+          );
+          await projectDb.end();
+          return rows;
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to fetch financial data: ${error.message}`);
+        }
+      }),
+    
+    getById: protectedProcedure
+      .input(z.object({ projectDbName: z.string(), id: z.string() }))
+      .query(async ({ input }) => {
+        const projectDb = mysql.createPool({
+          host: '127.0.0.1',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          const [rows] = await projectDb.execute(
+            `SELECT * FROM financial_data WHERE id = ?`,
+            [input.id]
+          );
+          await projectDb.end();
+          return (rows as any[])[0] || null;
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to fetch financial data: ${error.message}`);
         }
       }),
   }),
