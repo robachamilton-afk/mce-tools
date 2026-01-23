@@ -475,14 +475,12 @@ export const appRouter = router({
         
         // Delete project record from main database
         await db.execute(
-          "DELETE FROM projects WHERE id = ?",
-          [input.projectId]
+          `DELETE FROM projects WHERE id = ${input.projectId}`
         );
         
         // Delete associated narratives
         await db.execute(
-          "DELETE FROM section_narratives WHERE project_db_name = ?",
-          [project.dbName]
+          "DELETE FROM section_narratives WHERE project_db_name = '" + project.dbName + "'"
         );
         
         return { success: true, message: "Project deleted successfully" };

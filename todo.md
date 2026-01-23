@@ -595,3 +595,8 @@
 - [x] Fix SQL parameter binding in getNarratives query
   - [x] Added logic to fetch project dbName before querying section_narratives
   - [x] Fixed parameter mismatch (was using projectId instead of project_db_name)
+
+## Bug Fix - Project Delete SQL Error (Completed 2026-01-23)
+- [x] Fix SQL parameter binding in projects.delete endpoint
+  - [x] Removed unnecessary parseInt() since input.projectId is already a number
+  - [x] Used template literal for SQL query (matching pattern from other queries)
