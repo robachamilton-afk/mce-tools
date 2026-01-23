@@ -861,3 +861,11 @@
 - [x] Add estimated time remaining calculation (based on elapsed time and progress percent)
 - [ ] Test progress tracking with sample document upload
 - [x] Add error state visualization in progress bar (red card with error message)
+
+## Sandbox File Descriptor Limit Fix (Current - Jan 24, 2026)
+- [x] Configure Vite to use polling mode instead of native file watching
+- [x] Update vite.config.ts with server.watch.usePolling = true
+- [x] Add CHOKIDAR_USEPOLLING=true to package.json dev script
+- [x] Restart dev server and verify it starts without EMFILE errors (HTTP 200 response)
+- [x] Test hot reload functionality with polling mode (server running successfully)
+- [x] Document polling mode trade-offs (slower HMR but more reliable)
