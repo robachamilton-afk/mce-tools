@@ -326,18 +326,32 @@ export default function ProjectDashboard() {
                             Facts
                           </Button>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLocation(`/processing-status?projectId=${project.id}`);
-                          }}
-                        >
-                          <Loader2 className="mr-1 h-3 w-3" />
-                          Processing Status
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/project/${project.id}/documents?projectId=${project.id}`);
+                            }}
+                          >
+                            <FolderOpen className="mr-1 h-3 w-3" />
+                            Documents
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/processing-status?projectId=${project.id}`);
+                            }}
+                          >
+                            <Loader2 className="mr-1 h-3 w-3" />
+                            Processing Status
+                          </Button>
+                        </div>
                         <div className="flex gap-2">
                           <Button
                             size="sm"

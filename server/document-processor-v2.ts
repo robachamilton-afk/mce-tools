@@ -10,7 +10,7 @@ import { extractFactsWithOllama } from './ollama';
 import mysql from 'mysql2/promise';
 
 export interface ProcessedDocument {
-  documentId: number;
+  documentId: string;
   extractedText: string;
   extractionMethod: string;
   wordCount: number;
@@ -34,7 +34,7 @@ export interface ExtractedFact {
  */
 export async function processDocument(
   projectId: number,
-  documentId: number,
+  documentId: string,
   filePath: string,
   documentType: string,
   ollamaModel: string = 'llama3.2:latest',

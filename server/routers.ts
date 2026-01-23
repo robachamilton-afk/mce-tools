@@ -107,26 +107,42 @@ export const appRouter = router({
           ctx.user.id
         );
 
-        // Start processing asynchronously (disabled for now - document.id is string but processDocument expects number)
-        // const projectIdNum = parseInt(input.projectId.replace(/^proj_/, ""));
-        // processDocument(projectIdNum, document.id, document.filePath, input.documentType).catch(err => {
-        //   console.error(`Failed to process document ${document.id}:`, err);
-        // });
+        // Start processing asynchronously
+        const projectIdNum = parseInt(input.projectId);
+        processDocument(projectIdNum, document.id, document.filePath, input.documentType).catch(err => {
+          console.error(`Failed to process document ${document.id}:`, err);
+        });
         
-        // TODO: Update processDocument to accept string documentId or convert schema to use integer IDs
-        console.log(`Document uploaded: ${document.id}, processing disabled temporarily`);
+        console.log(`Document uploaded: ${document.id}, processing started`);
 
         return document;
       }),
     list: protectedProcedure
       .input(z.object({ projectId: z.string() }))
       .query(async ({ input }) => {
-        const { getProjectDb } = await import("./project-db-provisioner");
-        const db = await getProjectDb(input.projectId);
-        const [rows] = await db.execute(
-          "SELECT * FROM documents WHERE deleted_at IS NULL ORDER BY uploaded_at DESC"
-        );
-        return rows as unknown as any[];
+        const mysql = await import('mysql2/promise');
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Get project dbName
+        const [projects] = await db.execute(`SELECT dbName FROM projects WHERE id = ${parseInt(input.projectId)}`) as any;
+        if (!projects || projects.length === 0) {
+          throw new Error(`Project ${input.projectId} not found`);
+        }
+        const projectDbName = projects[0].dbName;
+        
+        // Query documents from project database
+        const dbUrl = process.env.DATABASE_URL || "mysql://root@127.0.0.1:3306/ingestion_engine_main";
+        const connection = await mysql.createConnection(dbUrl.replace(/\/[^/]*$/, `/${projectDbName}`));
+        
+        try {
+          const [rows] = await connection.execute(
+            "SELECT id, fileName, filePath, fileSizeBytes, fileHash, documentType, uploadDate, status, processingError, pageCount, createdAt, updatedAt FROM documents ORDER BY uploadDate DESC"
+          );
+          return rows as unknown as any[];
+        } finally {
+          await connection.end();
+        }
       }),
     getProcessingStatus: protectedProcedure
       .input(z.object({ projectId: z.string(), documentId: z.string() }))

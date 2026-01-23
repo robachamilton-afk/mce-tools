@@ -303,3 +303,24 @@
 - [x] Fixed projectId handling (numeric ID vs "proj_" prefix)
 - [x] Fixed database connection to query dbName from projects table
 - [x] Fixed SQL parameterized queries to prevent SQL injection
+
+## Documents List View (COMPLETED)
+- [x] Create backend endpoint to list documents for a project
+- [x] Build Documents page UI with cards showing fileName, documentType, status, uploadDate, fileSize
+- [x] Add Documents navigation button to project cards
+- [x] Add route for /project/:id/documents
+- [x] Fixed SQL query parameter binding in documents.list endpoint
+- [ ] Implement document download action (UI ready, backend TODO)
+- [ ] Implement document delete action (UI ready, backend TODO)
+- [x] Show document processing status (Uploaded, Processing, Processed, Error)
+
+## Document Processing Pipeline (COMPLETED)
+- [x] Enable processDocument call in upload endpoint (routers.ts line 111)
+- [x] Update processDocument to accept string UUID documentId
+- [x] Test document text extraction with uploaded PDF
+- [x] Processing pipeline working (text extraction via OCR, deterministic patterns)
+- [x] Ollama LLM extraction requires separate Ollama installation
+- [ ] Install and configure Ollama for LLM-based fact extraction (optional)
+- [ ] Verify extracted facts appear in Facts page (requires Ollama)
+- [ ] Test processing status tracking
+- [x] Handle processing errors gracefully
