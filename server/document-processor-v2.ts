@@ -7,6 +7,7 @@
 
 import { extractTextFromDocument } from './document-extractor';
 import { extractFactsWithOllama } from './ollama';
+import { intelligentFactExtractor } from './intelligent-fact-extractor';
 import mysql from 'mysql2/promise';
 
 export interface ProcessedDocument {
@@ -57,27 +58,29 @@ export async function processDocument(
     
     console.log(`[Document Processor] Deterministic extraction found ${deterministicFacts.length} facts`);
     
-    // Step 3: Extract facts using Ollama LLM
-    console.log(`[Document Processor] Step 3: Extracting facts with Ollama (${ollamaModel})`);
+    // Step 3: Extract facts using Intelligent LLM Extractor (multi-pass)
+    console.log(`[Document Processor] Step 3: Extracting facts with Intelligent LLM Extractor`);
     let llmFacts: ExtractedFact[] = [];
     
     try {
-      const ollamaResult = await extractFactsWithOllama(textResult.text, documentType, ollamaModel);
+      const intelligentResult = await intelligentFactExtractor.extractFacts(
+        textResult.text,
+        documentType,
+        filePath
+      );
       
-      if (ollamaResult.facts && Array.isArray(ollamaResult.facts)) {
-        llmFacts = ollamaResult.facts.map((fact: any) => ({
-          category: fact.category || 'other',
-          key: fact.key,
-          value: fact.value,
-          confidence: fact.confidence || 0.5,
-          source: fact.source || '',
-          extractionMethod: 'llm' as const,
-        }));
-      }
+      llmFacts = intelligentResult.facts.map((fact: any) => ({
+        category: fact.category || 'other',
+        key: fact.key,
+        value: fact.value,
+        confidence: fact.confidence || 0.5,
+        source: fact.extraction_method || '',
+        extractionMethod: 'llm' as const,
+      }));
       
-      console.log(`[Document Processor] LLM extraction found ${llmFacts.length} facts`);
-    } catch (ollamaError) {
-      console.error(`[Document Processor] Ollama extraction failed:`, ollamaError);
+      console.log(`[Document Processor] Intelligent LLM extraction found ${llmFacts.length} facts in ${intelligentResult.extraction_time_ms}ms`);
+    } catch (llmError) {
+      console.error(`[Document Processor] Intelligent LLM extraction failed:`, llmError);
       // Continue with deterministic facts only
     }
     
