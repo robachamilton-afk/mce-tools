@@ -533,20 +533,10 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
-        // First get the project's dbName
-        const [projects] = await db.execute(
-          "SELECT dbName FROM projects WHERE id = " + parseInt(input.projectId)
-        ) as any;
-        
-        if (!projects || projects.length === 0) {
-          return {}; // Return empty if project not found
-        }
-        
-        const projectDbName = projects[0].dbName;
-        
-        // Now query narratives using the dbName
+        // projectId is actually the project_db_name (e.g., "proj_1_1769157846333")
+        // Query narratives directly using it
         const [rows] = await db.execute(
-          "SELECT section_name, narrative_text FROM section_narratives WHERE project_db_name = '" + projectDbName + "'"
+          `SELECT section_name, narrative_text FROM section_narratives WHERE project_db_name = '${input.projectId}'`
         );
         
         // Convert to map for easy lookup

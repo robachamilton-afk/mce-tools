@@ -600,3 +600,9 @@
 - [x] Fix SQL parameter binding in projects.delete endpoint
   - [x] Removed unnecessary parseInt() since input.projectId is already a number
   - [x] Used template literal for SQL query (matching pattern from other queries)
+
+## Bug Fix - NaN Error in getNarratives (Completed 2026-01-23)
+- [x] Fix parseInt usage in getNarratives query
+  - [x] Discovered frontend passes project_db_name (string like "proj_1_1769157846333") not numeric projectId
+  - [x] Removed unnecessary project lookup and parseInt() call
+  - [x] Query section_narratives directly using input.projectId as project_db_name
