@@ -478,3 +478,19 @@
 - [ ] Implement section name normalization to consolidate similar categories
 - [ ] Add document source linking (click fact to see source document)
 - [ ] Add export functionality (export facts to Excel/PDF)
+
+## Section Name Normalization & Red Flags Dashboard (Completed 2026-01-23)
+- [x] Implement section name normalization mapping to consolidate similar categories
+- [x] Map variations to canonical names (e.g., "Risks"/"Risk"/"Risks And Issues" → "Risks_And_Issues")
+- [x] Update Facts page to use normalized section names
+- [x] Create Red Flags dashboard page route
+- [x] Build Red Flags list view with severity classification
+- [x] Implement risk filtering by severity (Critical/High/Medium/Low)
+- [x] Add risk category grouping (Planning/Grid/Geotech/Timeline/etc)
+- [x] Display risk statements with source document links
+- [x] Add risk resolution workflow (Acknowledge/Dismiss)
+- [x] Create risk summary statistics cards
+- [x] Test with Marsa Solar risk facts (18 risks: 7 critical, 2 high, 8 medium, 1 low)
+- [x] Add Red Flags button to project cards
+- [x] Consolidate 44 fragmented sections into 6 canonical categories
+- [x] Add section descriptions and display names to Facts page

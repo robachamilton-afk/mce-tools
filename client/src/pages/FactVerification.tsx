@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { CheckCircle2, XCircle, Edit, FileText, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
+import { normalizeSection, getSectionDisplayName, getSectionDescription, getCanonicalSections } from "../../../shared/section-normalizer";
 
 interface Fact {
   id: number;
@@ -38,6 +39,8 @@ interface Fact {
 
 interface FactSection {
   name: string;
+  displayName: string;
+  description: string;
   facts: Fact[];
   totalFacts: number;
   pendingFacts: number;
@@ -153,25 +156,32 @@ export default function FactVerification() {
     setExpandedSections(new Set());
   };
 
-  // Group facts by category (section)
+  // Group facts by category (section) with normalization
   const sections: FactSection[] = facts ? Object.entries(
     facts.reduce((acc, fact) => {
-      const section = fact.category || "Other";
-      if (!acc[section]) acc[section] = [];
-      acc[section].push(fact);
+      // Normalize section name
+      const normalizedSection = normalizeSection(fact.category);
+      if (!acc[normalizedSection]) acc[normalizedSection] = [];
+      acc[normalizedSection].push(fact);
       return acc;
     }, {} as Record<string, Fact[]>)
-  ).map(([name, sectionFacts]) => {
+  ).map(([canonicalName, sectionFacts]) => {
     const typedFacts = sectionFacts as Fact[];
     return {
-      name,
+      name: canonicalName,
+      displayName: getSectionDisplayName(canonicalName),
+      description: getSectionDescription(canonicalName),
       facts: typedFacts,
       totalFacts: typedFacts.length,
       pendingFacts: typedFacts.filter(f => f.verification_status === "pending").length,
       approvedFacts: typedFacts.filter(f => f.verification_status === "approved").length,
       avgConfidence: typedFacts.reduce((sum: number, f: Fact) => sum + parseFloat(f.confidence || "0"), 0) / typedFacts.length,
     };
-  }).sort((a, b) => a.name.localeCompare(b.name)) : [];
+  }).sort((a, b) => {
+    // Sort by canonical section order
+    const order = getCanonicalSections();
+    return order.indexOf(a.name) - order.indexOf(b.name);
+  }) : [];
 
   // Filter sections based on search and status
   const filteredSections = sections.map(section => ({
@@ -364,7 +374,12 @@ export default function FactVerification() {
                     ) : (
                       <ChevronRight className="h-5 w-5 text-slate-400" />
                     )}
-                    <h3 className="text-lg font-semibold text-white">{section.name.replace(/_/g, " ")}</h3>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">{section.displayName}</h3>
+                      {section.description && (
+                        <p className="text-xs text-slate-500 mt-0.5">{section.description}</p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-sm text-slate-400">

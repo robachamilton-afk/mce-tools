@@ -11,6 +11,7 @@ import FactVerification from "./pages/FactVerification";
 import OllamaConfig from "./pages/OllamaConfig";
 import ProcessingStatus from "./pages/ProcessingStatus";
 import { Documents } from "./pages/Documents";
+import RedFlags from "./pages/RedFlags";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/project/:id/upload" component={DocumentUpload} />
       <Route path="/project/:id/documents" component={Documents} />
       <Route path="/facts" component={FactVerification} />
+      <Route path="/red-flags" component={RedFlags} />
       <Route path="/ollama-config" component={OllamaConfig} />
       <Route path="/processing-status" component={ProcessingStatus} />
       <Route path="/404" component={NotFound} />
