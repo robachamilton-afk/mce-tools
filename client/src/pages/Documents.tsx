@@ -3,12 +3,18 @@ import { trpc } from "../lib/trpc";
 import { useAuth } from "../_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FileText, Download, Trash2, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { FileText, Download, Trash2, AlertCircle, CheckCircle, Clock, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 
 export function Documents() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
+
+  const [editingDoc, setEditingDoc] = useState<any>(null);
+  const [newDocType, setNewDocType] = useState<string>("");
   
   // Get projectId from URL query params
   const searchParams = new URLSearchParams(window.location.search);
@@ -25,6 +31,42 @@ export function Documents() {
     { projectId: projectId || "0" },
     { enabled: !!projectId && isAuthenticated }
   );
+
+  // Update document type mutation
+  const updateDocTypeMutation = trpc.documents.updateDocumentType.useMutation({
+    onSuccess: () => {
+      alert("Document type updated successfully");
+      setEditingDoc(null);
+      refetch();
+    },
+    onError: (error) => {
+      alert(`Error: ${error.message || "Failed to update document type"}`);
+    },
+  });
+
+  const handleEditDocType = (doc: any) => {
+    setEditingDoc(doc);
+    setNewDocType(doc.documentType);
+  };
+
+  const handleSaveDocType = async () => {
+    if (!editingDoc || !newDocType) return;
+    await updateDocTypeMutation.mutateAsync({
+      projectId: projectId || "0",
+      documentId: editingDoc.id,
+      documentType: newDocType as any,
+    });
+  };
+
+  const DOCUMENT_TYPES = [
+    { value: "IM", label: "Information Memorandum" },
+    { value: "DD_PACK", label: "Due Diligence Pack" },
+    { value: "CONTRACT", label: "Contract" },
+    { value: "GRID_STUDY", label: "Grid Study" },
+    { value: "PLANNING", label: "Planning Document" },
+    { value: "CONCEPT_DESIGN", label: "Concept Design" },
+    { value: "OTHER", label: "Other" },
+  ];
 
   if (!isAuthenticated) {
     return (
@@ -168,6 +210,14 @@ export function Documents() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => handleEditDocType(doc)}
+                      title="Edit document type"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => {
                         // TODO: Implement download
                         console.log("Download", doc.id);
@@ -192,6 +242,47 @@ export function Documents() {
           </div>
         )}
       </div>
+
+      {/* Edit Document Type Dialog */}
+      <Dialog open={!!editingDoc} onOpenChange={(open) => !open && setEditingDoc(null)}>
+        <DialogContent className="bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">Edit Document Type</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Change the document type for: {editingDoc?.fileName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Document Type
+            </label>
+            <Select value={newDocType} onValueChange={setNewDocType}>
+              <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700">
+                {DOCUMENT_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value} className="text-white focus:bg-slate-800">
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingDoc(null)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveDocType} 
+              disabled={updateDocTypeMutation.isPending}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              {updateDocTypeMutation.isPending ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -19,6 +19,7 @@ interface UploadedFile {
 }
 
 const DOCUMENT_TYPES = [
+  { value: "AUTO", label: "🤖 Auto-detect (AI)" },
   { value: "IM", label: "Investment Memorandum" },
   { value: "DD_PACK", label: "Due Diligence Pack" },
   { value: "CONTRACT", label: "Contract" },
@@ -36,7 +37,7 @@ export default function DocumentUpload() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const projectId = params?.id ? parseInt(params.id) : null;
-  const [selectedType, setSelectedType] = useState("OTHER");
+  const [selectedType, setSelectedType] = useState("AUTO");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
   const fileObjectsRef = useRef<Map<string, File>>(new Map());
@@ -168,27 +169,32 @@ export default function DocumentUpload() {
       
       try {
         // Read file as base64
-        const base64 = await new Promise<string>((resolve, reject) => {
+        const fileData = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => {
-            const result = reader.result as string;
-            // Remove data URL prefix (e.g., "data:application/pdf;base64,")
-            const base64Data = result.split(',')[1];
-            resolve(base64Data);
+            const base64 = (reader.result as string).split(',')[1];
+            resolve(base64);
           };
           reader.onerror = reject;
           reader.readAsDataURL(fileObj);
         });
         
-        // Upload to backend
+        // Upload via tRPC with base64 data
         await uploadMutation.mutateAsync({
           projectId: String(projectId),
           fileName: fileObj.name,
           fileType: fileObj.type,
           fileSize: fileObj.size,
           documentType: fileInfo.type as any,
-          fileData: base64,
+          fileData,
         });
+        
+        console.log('Upload completed:', fileObj.name);
+        
+        // Mark as completed
+        setUploadedFiles(prev => prev.map(f => 
+          f.id === fileInfo.id ? { ...f, status: 'completed', progress: 100 } : f
+        ));
       } catch (error: any) {
         console.error('Upload failed:', error);
         setUploadedFiles(prev => prev.map(f => 
@@ -196,6 +202,11 @@ export default function DocumentUpload() {
         ));
       }
     }
+    
+    // Redirect to documents page after all uploads complete
+    setTimeout(() => {
+      setLocation(`/project/${projectId}/documents?projectId=${projectId}`);
+    }, 1500);
   };
 
   const formatFileSize = (bytes: number) => {

@@ -324,3 +324,25 @@
 - [ ] Verify extracted facts appear in Facts page (requires Ollama)
 - [ ] Test processing status tracking
 - [x] Handle processing errors gracefully
+
+## AI Document Type Detection & Upload Improvements (Current)
+- [ ] Switch upload endpoint from base64 JSON to multipart/form-data for large files (75MB+)
+- [ ] Update frontend to use FormData for file uploads instead of base64 encoding
+- [ ] Implement AI document type detection using LLM (analyze title and first page)
+- [ ] Add document type editing UI on Documents page
+- [ ] Create backend endpoint to update document type
+- [ ] Test upload with 75MB+ files
+- [ ] Test AI categorization accuracy with sample documents
+- [ ] Add loading indicator during AI categorization
+
+## AI Document Type Detection & Upload Improvements (COMPLETED)
+- [x] Increase JSON payload limit to 100MB for larger file uploads
+- [x] Implement AI document type detection using LLM
+- [x] Add "Auto-detect (AI)" option to upload form (default selection)
+- [x] Update upload endpoint to call AI detection when type is AUTO
+- [x] Test AI categorization with sample IM document
+- [x] Verified AI correctly identifies document types from filename and content
+- [x] AI detection working: analyzed "test_IM_document.pdf" and correctly detected as "IM"
+- [x] Edit document type functionality working (can change category after upload)
+- [x] Reverted from multipart/form-data to base64 upload (simpler, more reliable)
+- [ ] Test large file upload (50MB+) - requires actual large file

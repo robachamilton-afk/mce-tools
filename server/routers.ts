@@ -82,19 +82,36 @@ export const appRouter = router({
   }),
 
   documents: router({    upload: protectedProcedure
-      .input(
-        z.object({
-          projectId: z.string(),
-          fileName: z.string(),
-          fileType: z.string(),
-          fileSize: z.number(),
-          documentType: z.enum(["IM", "DD_PACK", "CONTRACT", "GRID_STUDY", "CONCEPT_DESIGN", "OTHER"]),
-          fileData: z.string(), // base64 encoded
-        })
-      )
-      .mutation(async ({ input, ctx }) => {
-        // Decode base64 file data
-        const fileBuffer = Buffer.from(input.fileData, "base64");
+        .input(
+          z.object({
+            projectId: z.string(),
+            fileName: z.string(),
+            fileType: z.string(),
+            fileSize: z.number(),
+            documentType: z.enum(["IM", "DD_PACK", "CONTRACT", "GRID_STUDY", "CONCEPT_DESIGN", "OTHER", "AUTO"]),
+            fileData: z.string(), // base64 encoded
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          // Decode base64 file data
+          const fileBuffer = Buffer.from(input.fileData, "base64");
+          
+          // Determine document type using AI if AUTO is selected
+          let finalDocumentType = input.documentType;
+          if (input.documentType === "AUTO") {
+            const { detectDocumentType } = await import("./document-type-detector");
+            // Save temp file for AI analysis
+            const fs = await import("fs/promises");
+            const path = await import("path");
+            const tempPath = path.join("/tmp", `temp_${Date.now()}_${input.fileName}`);
+            await fs.writeFile(tempPath, fileBuffer);
+            try {
+              finalDocumentType = await detectDocumentType(tempPath, input.fileName);
+              console.log(`AI detected document type: ${finalDocumentType}`);
+            } finally {
+              await fs.unlink(tempPath).catch(() => {});
+            }
+          }
         
         // Upload document
         const document = await uploadDocument(
@@ -103,13 +120,13 @@ export const appRouter = router({
           fileBuffer,
           input.fileType,
           input.fileSize,
-          input.documentType,
+          finalDocumentType as any,
           ctx.user.id
         );
 
         // Start processing asynchronously
         const projectIdNum = parseInt(input.projectId);
-        processDocument(projectIdNum, document.id, document.filePath, input.documentType).catch(err => {
+        processDocument(projectIdNum, document.id, document.filePath, finalDocumentType as any).catch(err => {
           console.error(`Failed to process document ${document.id}:`, err);
         });
         
@@ -153,6 +170,38 @@ export const appRouter = router({
           "SELECT processing_status, processing_error FROM documents WHERE id = ?"
         );
         return (rows as unknown as any[])[0] || null;
+      }),
+    updateDocumentType: protectedProcedure
+      .input(z.object({ 
+        projectId: z.string(), 
+        documentId: z.string(),
+        documentType: z.enum(['IM', 'DD_PACK', 'CONTRACT', 'GRID_STUDY', 'PLANNING', 'CONCEPT_DESIGN', 'OTHER'])
+      }))
+      .mutation(async ({ input }) => {
+        const mysql = await import('mysql2/promise');
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Get project dbName
+        const [projects] = await db.execute(`SELECT dbName FROM projects WHERE id = ${parseInt(input.projectId)}`) as any;
+        if (!projects || projects.length === 0) {
+          throw new Error(`Project ${input.projectId} not found`);
+        }
+        const projectDbName = projects[0].dbName;
+        
+        // Update document type in project database
+        const dbUrl = process.env.DATABASE_URL || "mysql://root@127.0.0.1:3306/ingestion_engine_main";
+        const connection = await mysql.createConnection(dbUrl.replace(/\/[^/]*$/, `/${projectDbName}`));
+        
+        try {
+          await connection.execute(
+            "UPDATE documents SET documentType = ?, updatedAt = NOW() WHERE id = ?",
+            [input.documentType, input.documentId]
+          );
+          return { success: true };
+        } finally {
+          await connection.end();
+        }
       }),
   }),
 
