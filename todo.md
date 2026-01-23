@@ -798,3 +798,30 @@
 - [x] Insert synthetic data into project database
 - [x] Test Performance Parameters UI with synthetic data
 - [x] Test Financial Data UI with synthetic data
+
+## Weather Data Processing for SAM (Current - Jan 24, 2026)
+- [x] Research SAM/PySAM weather file format requirements (SAM CSV format)
+- [x] Create weather data converter specifications (PVGIS → SAM CSV)
+- [x] Build PVGIS CSV parser and validator
+- [x] Build SAM CSV weather file generator
+- [x] Create weather data caching system (avoid repeated PVGIS API calls)
+- [x] Integrate weather converter into Solar Analyzer API
+- [x] Update PySAM API endpoint to use converted weather files
+- [x] Test with real PVGIS data for Malta location
+- [ ] Add error handling for missing/invalid weather data
+- [ ] Document weather data processing workflow
+
+## Smart Multi-Format Weather Data Processor (Current - Jan 24, 2026)
+- [x] Design architecture for multi-format weather data detection and conversion
+- [x] Build format detection engine (identify PVGIS, TMY3, EPW, PVsyst, SolarAnywhere, custom)
+- [x] Implement TMY3 format parser and converter
+- [x] Implement EPW format parser and converter
+- [ ] Implement PVsyst CSV parser and converter (deferred - uncommon format)
+- [ ] Implement SolarAnywhere format parser and converter (deferred - uncommon format)
+- [x] Add metadata extraction from various header formats
+- [x] Build validation engine (check gaps, outliers, required columns)
+- [x] Add quality scoring system for weather data
+- [x] Implement fallback to PVGIS API when no file provided
+- [x] Integrate smart processor into Solar Analyzer API
+- [ ] Test with sample files from each format (need sample files)
+- [ ] Document supported formats and conversion logic
