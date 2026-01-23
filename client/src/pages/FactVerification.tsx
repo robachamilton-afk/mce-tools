@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CheckCircle2, XCircle, Edit, FileText, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Search } from "lucide-react";
+import { CheckCircle2, XCircle, Edit, FileText, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { normalizeSection, getSectionDisplayName, getSectionDescription, getCanonicalSections, getSectionPresentationMode } from "../../../shared/section-normalizer";
 
@@ -80,14 +80,33 @@ export default function FactVerification() {
 
   const isLoading = isLoadingProject || isLoadingFacts;
 
+  const synthesizeNarrativeMutation = trpc.facts.synthesizeNarrative.useMutation({
+    onSuccess: (data, variables) => {
+      setNarratives(prev => ({ ...prev, [variables.section]: data.narrative }));
+      setLoadingNarratives(prev => {
+        const next = new Set(prev);
+        next.delete(variables.section);
+        return next;
+      });
+    },
+    onError: (error, variables) => {
+      toast.error(`Failed to synthesize narrative: ${error.message}`);
+      setLoadingNarratives(prev => {
+        const next = new Set(prev);
+        next.delete(variables.section);
+        return next;
+      });
+    },
+  });
+
   const updateFactMutation = trpc.facts.update.useMutation({
     onSuccess: () => {
-      toast.success("Fact updated successfully");
+      toast.success("Insight updated successfully");
       refetch();
       setEditDialogOpen(false);
     },
     onError: (error) => {
-      toast.error(`Failed to update fact: ${error.message}`);
+      toast.error(`Failed to update insight: ${error.message}`);
     },
   });
 
@@ -144,10 +163,27 @@ export default function FactVerification() {
 
   const toggleSection = (sectionName: string) => {
     const newExpanded = new Set(expandedSections);
+    const isExpanding = !newExpanded.has(sectionName);
+    
     if (newExpanded.has(sectionName)) {
       newExpanded.delete(sectionName);
     } else {
       newExpanded.add(sectionName);
+      
+      // Synthesize narrative for narrative-mode sections if not already done
+      const section = sections.find(s => s.name === sectionName);
+      if (section && section.presentationMode === 'narrative' && !narratives[sectionName] && !loadingNarratives.has(sectionName) && project?.dbName) {
+        setLoadingNarratives(prev => new Set(prev).add(sectionName));
+        synthesizeNarrativeMutation.mutate({
+          projectId: project.dbName,
+          section: section.displayName,
+          facts: section.facts.map(f => ({
+            key: f.key,
+            value: f.value,
+            confidence: f.confidence,
+          })),
+        });
+      }
     }
     setExpandedSections(newExpanded);
   };
@@ -236,8 +272,8 @@ export default function FactVerification() {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">Fact Verification</h1>
-              <p className="text-sm text-slate-400 mt-1">Review and approve extracted facts organized by section</p>
+              <h1 className="text-2xl font-bold text-white">Project Insights</h1>
+              <p className="text-sm text-slate-400 mt-1">Review and approve extracted insights organized by section</p>
             </div>
             <Button
               onClick={() => navigate(`/projects`)}
@@ -258,7 +294,7 @@ export default function FactVerification() {
               <FileText className="h-8 w-8 text-blue-400" />
               <div>
                 <p className="text-2xl font-bold text-white">{stats.total}</p>
-                <p className="text-sm text-slate-400">Total Facts</p>
+                <p className="text-sm text-slate-400">Total Insights</p>
               </div>
             </div>
           </Card>
@@ -308,7 +344,7 @@ export default function FactVerification() {
         <Card className="p-4 bg-slate-900/50 border-slate-800 mb-6">
           <div className="flex gap-4 items-end">
             <div className="flex-1">
-              <label className="text-sm text-slate-400 mb-2 block">Search Facts</label>
+              <label className="text-sm text-slate-400 mb-2 block">Search Insights</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
@@ -359,12 +395,12 @@ export default function FactVerification() {
         {/* Sections */}
         {isLoading ? (
           <Card className="p-8 bg-slate-900/50 border-slate-800 text-center">
-            <p className="text-slate-400">Loading facts...</p>
+            <p className="text-slate-400">Loading insights...</p>
           </Card>
         ) : filteredSections.length === 0 ? (
           <Card className="p-8 bg-slate-900/50 border-slate-800 text-center">
             <FileText className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400">No facts found matching your filters</p>
+            <p className="text-slate-400">No insights found matching your filters</p>
           </Card>
         ) : (
           <div className="space-y-4">
@@ -390,7 +426,7 @@ export default function FactVerification() {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-sm text-slate-400">
-                      {section.facts.length} facts
+                      {section.facts.length} insights
                     </div>
                     <div className="text-sm text-slate-400">
                       {section.pendingFacts} pending
@@ -401,14 +437,56 @@ export default function FactVerification() {
                   </div>
                 </button>
 
-                {/* Section Facts */}
+                {/* Section Content */}
                 {expandedSections.has(section.name) && (
                   <div className="border-t border-slate-800">
-                    {section.facts.map((fact, idx) => (
-                      <div
-                        key={fact.id}
-                        className={`p-4 ${idx !== section.facts.length - 1 ? "border-b border-slate-800/50" : ""} hover:bg-slate-800/30 transition-colors`}
-                      >
+                    {/* Narrative Mode */}
+                    {section.presentationMode === 'narrative' && (
+                      <div className="p-6">
+                        {loadingNarratives.has(section.name) ? (
+                          <div className="flex items-center gap-3 text-slate-400">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <span>Synthesizing narrative from {section.facts.length} insights...</span>
+                          </div>
+                        ) : narratives[section.name] ? (
+                          <div className="space-y-4">
+                            <div className="prose prose-invert max-w-none">
+                              <p className="text-slate-200 text-base leading-relaxed whitespace-pre-wrap">
+                                {narratives[section.name]}
+                              </p>
+                            </div>
+                            <div className="pt-4 border-t border-slate-800/50">
+                              <button
+                                onClick={() => {
+                                  // Toggle to itemized view by clearing narrative
+                                  setNarratives(prev => {
+                                    const next = { ...prev };
+                                    delete next[section.name];
+                                    return next;
+                                  });
+                                }}
+                                className="text-sm text-orange-400 hover:text-orange-300 transition-colors"
+                              >
+                                View {section.facts.length} individual insights →
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-slate-400 text-sm">
+                            Failed to synthesize narrative. Showing individual insights below.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Itemized Mode (or fallback for narrative mode) */}
+                    {(section.presentationMode === 'itemized' || !narratives[section.name]) && !loadingNarratives.has(section.name) && (
+                      <div>
+                        {section.facts.map((fact, idx) => (
+                          <div
+                            key={fact.id}
+                            className={`p-4 ${idx !== section.facts.length - 1 ? "border-b border-slate-800/50" : ""} hover:bg-slate-800/30 transition-colors`}
+                          >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
                             <p className="text-white text-base leading-relaxed mb-3">{fact.value}</p>
@@ -450,8 +528,10 @@ export default function FactVerification() {
                             </Button>
                           </div>
                         </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </Card>
@@ -464,9 +544,9 @@ export default function FactVerification() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="bg-slate-900 border-slate-800">
           <DialogHeader>
-            <DialogTitle className="text-white">Edit Fact</DialogTitle>
+            <DialogTitle className="text-white">Edit Insight</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Modify the fact value and approve it
+              Modify the insight value and approve it
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -484,7 +564,7 @@ export default function FactVerification() {
                 value={editedValue}
                 onChange={(e) => setEditedValue(e.target.value)}
                 className="bg-slate-800 border-slate-700 text-white min-h-[120px] resize-y"
-                placeholder="Enter the fact statement..."
+                placeholder="Enter the insight statement..."
               />
               <p className="text-xs text-slate-500 mt-1">{editedValue.length} characters</p>
             </div>

@@ -104,7 +104,7 @@ export default function Home() {
             </span>
           </h2>
           <p className="text-xl text-slate-300 leading-relaxed mb-8">
-            First stage of the Technical Advisory workflow. Ingest project documents, extract structured facts, and build the foundational Project Fact Base for downstream analysis.
+            First stage of the Technical Advisory workflow. Ingest project documents, extract structured insights, and build the foundational Project Intelligence Base for downstream analysis.
           </p>
           <p className="text-lg text-slate-400 leading-relaxed mb-8">
             Process IMs, DD packs, concept designs, and grid studies using hybrid extraction (deterministic parsing + Ollama LLM). Maintain data sovereignty with per-project databases while contributing de-identified insights to the knowledge base.
@@ -161,7 +161,7 @@ export default function Home() {
             </div>
             <h3 className="text-lg font-bold text-white mb-2">Project Fact Base</h3>
             <p className="text-sm text-slate-400">
-              Structured storage of extracted facts with source tracking and verification workflow.
+              Structured storage of extracted insights with source tracking and verification workflow.
             </p>
           </div>
 

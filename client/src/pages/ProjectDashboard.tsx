@@ -43,7 +43,7 @@ export default function ProjectDashboard() {
   const demoMutation = trpc.demo.simulateWorkflow.useMutation({
     onSuccess: (data) => {
       utils.projects.list.invalidate();
-      toast.success(`Demo data loaded! ${data.stats.documents} documents, ${data.stats.facts} facts, ${data.stats.redFlags} red flags`);
+      toast.success(`Demo data loaded! ${data.stats.documents} documents, ${data.stats.facts} insights, ${data.stats.redFlags} red flags`);
     },
     onError: (error) => {
       toast.error(`Failed to load demo data: ${error.message}`);
@@ -319,11 +319,11 @@ export default function ProjectDashboard() {
                             className="flex-1 text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setLocation(`/facts?projectId=${project.id}`);
+                              setLocation(`/insights?projectId=${project.id}`);
                             }}
                           >
                             <FileText className="mr-1 h-3 w-3" />
-                            Facts
+                            Insights
                           </Button>
                         </div>
                         <div className="flex gap-2">

@@ -523,3 +523,20 @@
   - [ ] Display who approved and when (requires schema change)
   - [ ] Add bulk approval buttons per section
   - [ ] Add approval history/audit trail (requires new table)
+
+## Rebranding & Narrative Synthesis UI (Completed 2026-01-23)
+- [x] Rebrand "Facts" to "Insights" throughout application
+  - [x] Update page titles and headers ("Project Insights", "Total Insights", etc.)
+  - [x] Update navigation labels ("Insights" button in project cards)
+  - [x] Update database table/column references in UI (kept backend table names unchanged)
+  - [x] Update button labels and tooltips ("Edit Insight", "Search Insights", etc.)
+  - [x] Update route names and URLs (/facts → /insights)
+  - [x] Update Home page descriptions ("Project Intelligence Base")
+- [x] Complete narrative synthesis UI
+  - [x] Add mutation hook for facts.synthesizeNarrative
+  - [x] Implement unified narrative rendering for all narrative-mode sections (Project Overview, Financial Structure, Technical Design)
+  - [x] Add loading state while synthesizing narrative ("Synthesizing narrative from X insights...")
+  - [x] Add "View Details" toggle to switch between narrative and itemized view
+  - [x] Cache synthesized narratives in component state to avoid re-generating
+  - [x] Automatic synthesis on section expand for narrative-mode sections
+  - [x] Fallback to itemized view if synthesis fails

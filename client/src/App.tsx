@@ -22,7 +22,7 @@ function Router() {
       <Route path="/project/:id" component={ProjectDashboard} />
       <Route path="/project/:id/upload" component={DocumentUpload} />
       <Route path="/project/:id/documents" component={Documents} />
-      <Route path="/facts" component={FactVerification} />
+      <Route path="/insights" component={FactVerification} />
       <Route path="/red-flags" component={RedFlags} />
       <Route path="/ollama-config" component={OllamaConfig} />
       <Route path="/processing-status" component={ProcessingStatus} />
