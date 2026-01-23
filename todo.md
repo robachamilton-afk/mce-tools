@@ -449,3 +449,32 @@
   * OLD: "51%" → NEW: "OQAE holds a 51% stake in the Marsa Solar Project joint venture"
   * OLD: "14/05/2025" → NEW: Facts now include milestone context
   * OLD: "300 MW" → NEW: Capacity facts include DC/AC distinction and purpose
+
+## Structured Facts Page UI Redesign (Current)
+- [ ] Group facts by section (Project_Overview, Financial_Structure, Technical_Design, etc.)
+- [ ] Implement collapsible section panels with expand/collapse all
+- [ ] Display full contextual statements instead of key-value table
+- [ ] Add section summaries (fact count, avg confidence, pending vs approved)
+- [ ] Show confidence scores with visual indicators (badges, progress bars)
+- [ ] Add section-level filtering (show/hide specific sections)
+- [ ] Implement search across all fact statements
+- [ ] Add verification status badges (Pending, Approved, Rejected)
+- [ ] Show extraction method and source document for each fact
+- [ ] Test with Marsa Solar facts (72 facts across 10+ sections)
+
+## Facts Page UI Redesign (Completed 2026-01-23)
+- [x] Replace flat table view with structured section grouping
+- [x] Implement collapsible panels for each category/section
+- [x] Display complete contextual statements prominently (not key-value pairs)
+- [x] Add section summaries showing fact count and average confidence per section
+- [x] Implement search functionality filtering by fact statement text
+- [x] Implement status filter dropdown (All Statuses / Pending / Approved / Rejected)
+- [x] Add Expand All / Collapse All controls
+- [x] Show verification status badges (pending/approved/rejected) per fact
+- [x] Display confidence badges with color coding (green/yellow/orange/red)
+- [x] Add approve/reject buttons for individual facts
+- [x] Test with Marsa Solar facts (186 facts across 44 sections)
+- [ ] Add bulk approve/reject actions per section
+- [ ] Implement section name normalization to consolidate similar categories
+- [ ] Add document source linking (click fact to see source document)
+- [ ] Add export functionality (export facts to Excel/PDF)

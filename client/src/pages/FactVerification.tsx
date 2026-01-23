@@ -13,14 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -28,20 +20,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CheckCircle2, XCircle, Edit, FileText, TrendingUp, AlertTriangle } from "lucide-react";
+import { CheckCircle2, XCircle, Edit, FileText, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 
 interface Fact {
   id: number;
   category: string;
-  fact_key: string;
+  key: string;
   value: string;
-  confidence_score: number;
-  source_document_id: number;
-  source_page: number | null;
+  confidence: string;
+  source_document_id: string;
+  source_location: string | null;
   extraction_method: string;
   verification_status: string;
   created_at: string;
+}
+
+interface FactSection {
+  name: string;
+  facts: Fact[];
+  totalFacts: number;
+  pendingFacts: number;
+  approvedFacts: number;
+  avgConfidence: number;
 }
 
 export default function FactVerification() {
@@ -53,8 +54,9 @@ export default function FactVerification() {
   const [selectedFact, setSelectedFact] = useState<Fact | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editedValue, setEditedValue] = useState("");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   // Fetch project details to get dbName
   const { data: project, isLoading: isLoadingProject } = trpc.projects.get.useQuery(
@@ -132,11 +134,55 @@ export default function FactVerification() {
     });
   };
 
-  const filteredFacts = facts?.filter((fact) => {
-    if (filterCategory !== "all" && fact.category !== filterCategory) return false;
-    if (filterStatus !== "all" && fact.verification_status !== filterStatus) return false;
-    return true;
-  });
+  const toggleSection = (sectionName: string) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(sectionName)) {
+      newExpanded.delete(sectionName);
+    } else {
+      newExpanded.add(sectionName);
+    }
+    setExpandedSections(newExpanded);
+  };
+
+  const expandAll = () => {
+    const allSections = new Set(sections.map(s => s.name));
+    setExpandedSections(allSections);
+  };
+
+  const collapseAll = () => {
+    setExpandedSections(new Set());
+  };
+
+  // Group facts by category (section)
+  const sections: FactSection[] = facts ? Object.entries(
+    facts.reduce((acc, fact) => {
+      const section = fact.category || "Other";
+      if (!acc[section]) acc[section] = [];
+      acc[section].push(fact);
+      return acc;
+    }, {} as Record<string, Fact[]>)
+  ).map(([name, sectionFacts]) => {
+    const typedFacts = sectionFacts as Fact[];
+    return {
+      name,
+      facts: typedFacts,
+      totalFacts: typedFacts.length,
+      pendingFacts: typedFacts.filter(f => f.verification_status === "pending").length,
+      approvedFacts: typedFacts.filter(f => f.verification_status === "approved").length,
+      avgConfidence: typedFacts.reduce((sum: number, f: Fact) => sum + parseFloat(f.confidence || "0"), 0) / typedFacts.length,
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name)) : [];
+
+  // Filter sections based on search and status
+  const filteredSections = sections.map(section => ({
+    ...section,
+    facts: section.facts.filter(fact => {
+      if (filterStatus !== "all" && fact.verification_status !== filterStatus) return false;
+      if (searchQuery && !fact.value.toLowerCase().includes(searchQuery.toLowerCase()) && 
+          !fact.key.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    }),
+  })).filter(section => section.facts.length > 0);
 
   const stats = {
     total: facts?.length || 0,
@@ -144,20 +190,26 @@ export default function FactVerification() {
     approved: facts?.filter((f) => f.verification_status === "approved").length || 0,
     rejected: facts?.filter((f) => f.verification_status === "rejected").length || 0,
     avgConfidence: facts?.length
-      ? (facts.reduce((sum, f) => sum + f.confidence_score, 0) / facts.length).toFixed(1)
+      ? (facts.reduce((sum, f) => sum + parseFloat(f.confidence || "0"), 0) / facts.length * 100).toFixed(0)
       : "0",
   };
 
   const getConfidenceBadge = (score: number) => {
-    if (score >= 0.8) return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">High</Badge>;
-    if (score >= 0.6) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Medium</Badge>;
-    return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Low</Badge>;
+    if (score >= 0.8) return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">{(score * 100).toFixed(0)}%</Badge>;
+    if (score >= 0.6) return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">{(score * 100).toFixed(0)}%</Badge>;
+    return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{(score * 100).toFixed(0)}%</Badge>;
   };
 
   const getStatusBadge = (status: string) => {
     if (status === "approved") return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Approved</Badge>;
     if (status === "rejected") return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Rejected</Badge>;
     return <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/30">Pending</Badge>;
+  };
+
+  const getMethodBadge = (method: string) => {
+    if (method === "deterministic") return <Badge variant="outline" className="border-blue-500/30 text-blue-400">Deterministic</Badge>;
+    if (method === "llm") return <Badge variant="outline" className="border-purple-500/30 text-purple-400">LLM</Badge>;
+    return <Badge variant="outline" className="border-slate-500/30 text-slate-400">{method}</Badge>;
   };
 
   return (
@@ -168,7 +220,7 @@ export default function FactVerification() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-white">Fact Verification</h1>
-              <p className="text-sm text-slate-400 mt-1">Review and approve extracted facts</p>
+              <p className="text-sm text-slate-400 mt-1">Review and approve extracted facts organized by section</p>
             </div>
             <Button
               onClick={() => navigate(`/projects`)}
@@ -228,35 +280,30 @@ export default function FactVerification() {
             <div className="flex items-center gap-3">
               <TrendingUp className="h-8 w-8 text-orange-400" />
               <div>
-                <p className="text-2xl font-bold text-white">{stats.avgConfidence}</p>
+                <p className="text-2xl font-bold text-white">{stats.avgConfidence}%</p>
                 <p className="text-sm text-slate-400">Avg Confidence</p>
               </div>
             </div>
           </Card>
         </div>
 
-        {/* Filters */}
+        {/* Filters and Controls */}
         <Card className="p-4 bg-slate-900/50 border-slate-800 mb-6">
-          <div className="flex gap-4">
+          <div className="flex gap-4 items-end">
             <div className="flex-1">
-              <label className="text-sm text-slate-400 mb-2 block">Category</label>
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="bg-slate-800 border-slate-700">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="specification">Specification</SelectItem>
-                  <SelectItem value="financial">Financial</SelectItem>
-                  <SelectItem value="technical">Technical</SelectItem>
-                  <SelectItem value="planning">Planning</SelectItem>
-                  <SelectItem value="risk">Risk</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm text-slate-400 mb-2 block">Search Facts</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search in fact statements..."
+                  className="pl-10 bg-slate-800 border-slate-700 text-white"
+                />
+              </div>
             </div>
 
-            <div className="flex-1">
+            <div className="w-48">
               <label className="text-sm text-slate-400 mb-2 block">Status</label>
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger className="bg-slate-800 border-slate-700">
@@ -270,90 +317,125 @@ export default function FactVerification() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={expandAll}
+                variant="outline"
+                size="sm"
+                className="border-slate-700 hover:bg-slate-800"
+              >
+                Expand All
+              </Button>
+              <Button
+                onClick={collapseAll}
+                variant="outline"
+                size="sm"
+                className="border-slate-700 hover:bg-slate-800"
+              >
+                Collapse All
+              </Button>
+            </div>
           </div>
         </Card>
 
-        {/* Facts Table */}
-        <Card className="bg-slate-900/50 border-slate-800">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-slate-800 hover:bg-slate-800/50">
-                  <TableHead className="text-slate-300">Category</TableHead>
-                  <TableHead className="text-slate-300">Key</TableHead>
-                  <TableHead className="text-slate-300">Value</TableHead>
-                  <TableHead className="text-slate-300">Confidence</TableHead>
-                  <TableHead className="text-slate-300">Method</TableHead>
-                  <TableHead className="text-slate-300">Status</TableHead>
-                  <TableHead className="text-slate-300">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-slate-400 py-8">
-                      Loading facts...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredFacts && filteredFacts.length > 0 ? (
-                  filteredFacts.map((fact) => (
-                    <TableRow key={fact.id} className="border-slate-800 hover:bg-slate-800/30">
-                      <TableCell>
-                        <Badge variant="outline" className="border-slate-700 text-slate-300">
-                          {fact.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium text-white">{fact.fact_key}</TableCell>
-                      <TableCell className="text-slate-300 max-w-md truncate">{fact.value}</TableCell>
-                      <TableCell>{getConfidenceBadge(fact.confidence_score)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="border-slate-700 text-slate-400">
-                          {fact.extraction_method}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(fact.verification_status)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {fact.verification_status === "pending" && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleApprove(fact.id)}
-                                className="bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30"
-                              >
-                                <CheckCircle2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => handleEdit(fact)}
-                                className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => handleReject(fact.id)}
-                                className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
+        {/* Sections */}
+        {isLoading ? (
+          <Card className="p-8 bg-slate-900/50 border-slate-800 text-center">
+            <p className="text-slate-400">Loading facts...</p>
+          </Card>
+        ) : filteredSections.length === 0 ? (
+          <Card className="p-8 bg-slate-900/50 border-slate-800 text-center">
+            <FileText className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400">No facts found matching your filters</p>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {filteredSections.map((section) => (
+              <Card key={section.name} className="bg-slate-900/50 border-slate-800 overflow-hidden">
+                {/* Section Header */}
+                <button
+                  onClick={() => toggleSection(section.name)}
+                  className="w-full p-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {expandedSections.has(section.name) ? (
+                      <ChevronDown className="h-5 w-5 text-slate-400" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-slate-400" />
+                    )}
+                    <h3 className="text-lg font-semibold text-white">{section.name.replace(/_/g, " ")}</h3>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-sm text-slate-400">
+                      {section.facts.length} facts
+                    </div>
+                    <div className="text-sm text-slate-400">
+                      {section.pendingFacts} pending
+                    </div>
+                    <div className="text-sm text-orange-400">
+                      {(section.avgConfidence * 100).toFixed(0)}% avg confidence
+                    </div>
+                  </div>
+                </button>
+
+                {/* Section Facts */}
+                {expandedSections.has(section.name) && (
+                  <div className="border-t border-slate-800">
+                    {section.facts.map((fact, idx) => (
+                      <div
+                        key={fact.id}
+                        className={`p-4 ${idx !== section.facts.length - 1 ? "border-b border-slate-800/50" : ""} hover:bg-slate-800/30 transition-colors`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <p className="text-white text-base leading-relaxed mb-3">{fact.value}</p>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {getConfidenceBadge(parseFloat(fact.confidence || "0"))}
+                              {getMethodBadge(fact.extraction_method)}
+                              {getStatusBadge(fact.verification_status)}
+                              {fact.key && (
+                                <span className="text-xs text-slate-500">Key: {fact.key}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0">
+                            {fact.verification_status === "pending" && (
+                              <>
+                                <Button
+                                  onClick={() => handleApprove(fact.id)}
+                                  size="sm"
+                                  className="bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30"
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  onClick={() => handleReject(fact.id)}
+                                  size="sm"
+                                  className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                            <Button
+                              onClick={() => handleEdit(fact)}
+                              size="sm"
+                              variant="outline"
+                              className="border-slate-700 hover:bg-slate-800"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-slate-400 py-8">
-                      No facts found. Upload documents to extract facts.
-                    </TableCell>
-                  </TableRow>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </TableBody>
-            </Table>
+              </Card>
+            ))}
           </div>
-        </Card>
+        )}
       </main>
 
       {/* Edit Dialog */}
@@ -362,17 +444,17 @@ export default function FactVerification() {
           <DialogHeader>
             <DialogTitle className="text-white">Edit Fact</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Modify the extracted value before approving
+              Modify the fact value and approve it
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
+              <label className="text-sm text-slate-400 mb-2 block">Category</label>
+              <p className="text-white">{selectedFact?.category}</p>
+            </div>
+            <div>
               <label className="text-sm text-slate-400 mb-2 block">Key</label>
-              <Input
-                value={selectedFact?.fact_key || ""}
-                disabled
-                className="bg-slate-800 border-slate-700 text-slate-300"
-              />
+              <p className="text-white">{selectedFact?.key}</p>
             </div>
             <div>
               <label className="text-sm text-slate-400 mb-2 block">Value</label>
@@ -385,9 +467,9 @@ export default function FactVerification() {
           </div>
           <DialogFooter>
             <Button
-              variant="outline"
               onClick={() => setEditDialogOpen(false)}
-              className="border-slate-700 hover:bg-slate-800"
+              variant="outline"
+              className="border-slate-700"
             >
               Cancel
             </Button>
