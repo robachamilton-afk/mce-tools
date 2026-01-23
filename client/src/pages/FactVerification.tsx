@@ -32,9 +32,13 @@ interface Fact {
   value: string;
   confidence: string;
   source_document_id: string;
+  source_documents?: string[];  // Array of document IDs
   source_location: string | null;
   extraction_method: string;
   verification_status: string;
+  enrichment_count?: number;
+  conflict_with?: string | null;
+  last_enriched_at?: string | null;
   created_at: string;
 }
 
@@ -471,6 +475,31 @@ export default function FactVerification() {
                               {getConfidenceBadge(parseFloat(fact.confidence || "0"))}
                               {getMethodBadge(fact.extraction_method)}
                               {getStatusBadge(fact.verification_status)}
+                              
+                              {/* Enrichment indicator */}
+                              {fact.enrichment_count && fact.enrichment_count > 1 && (
+                                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                                  <TrendingUp className="h-3 w-3 mr-1" />
+                                  Enriched {fact.enrichment_count}x
+                                </Badge>
+                              )}
+                              
+                              {/* Conflict warning */}
+                              {fact.conflict_with && (
+                                <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Conflict
+                                </Badge>
+                              )}
+                              
+                              {/* Source documents count */}
+                              {fact.source_documents && fact.source_documents.length > 1 && (
+                                <Badge className="bg-slate-700/50 text-slate-300 border-slate-600">
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  {fact.source_documents.length} docs
+                                </Badge>
+                              )}
+                              
                               {fact.key && (
                                 <span className="text-xs text-slate-500">Key: {fact.key}</span>
                               )}

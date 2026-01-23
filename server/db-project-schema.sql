@@ -48,17 +48,40 @@ CREATE TABLE extracted_facts (
   data_type VARCHAR(50),
   confidence VARCHAR(10),
   source_document_id VARCHAR(36),
+  source_documents JSON COMMENT 'Array of document IDs that contributed to this insight',
   source_location TEXT,
   extraction_method VARCHAR(50),
   extraction_model VARCHAR(100),
   verified INT DEFAULT 0,
   verification_status VARCHAR(20) DEFAULT 'pending',
+  enrichment_count INT DEFAULT 1 COMMENT 'Number of documents that enriched this insight',
+  conflict_with VARCHAR(36) NULL COMMENT 'ID of conflicting insight if any',
+  merged_from JSON COMMENT 'Array of insight IDs that were merged into this one',
+  last_enriched_at TIMESTAMP NULL COMMENT 'Last time this insight was enriched',
   deleted_at TIMESTAMP NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_category (category),
   INDEX idx_key (`key`),
   INDEX idx_verified (verified),
-  INDEX idx_confidence (confidence)
+  INDEX idx_confidence (confidence),
+  INDEX idx_conflict_with (conflict_with)
+);
+
+-- Insight conflicts table: tracks conflicting insights from different documents
+CREATE TABLE insight_conflicts (
+  id VARCHAR(36) PRIMARY KEY,
+  project_id INT NOT NULL,
+  insight_a_id VARCHAR(36) NOT NULL,
+  insight_b_id VARCHAR(36) NOT NULL,
+  conflict_type ENUM('value_mismatch', 'date_mismatch', 'numerical_mismatch') NOT NULL,
+  resolution_status ENUM('pending', 'resolved', 'ignored') DEFAULT 'pending',
+  resolved_by INT NULL,
+  resolved_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (insight_a_id) REFERENCES extracted_facts(id) ON DELETE CASCADE,
+  FOREIGN KEY (insight_b_id) REFERENCES extracted_facts(id) ON DELETE CASCADE,
+  INDEX idx_resolution_status (resolution_status),
+  INDEX idx_project_id (project_id)
 );
 
 -- Red flags table: detected risks and issues

@@ -191,13 +191,78 @@ export const appRouter = router({
                   database: projectDbName,
                 });
                 
+                // Import reconciliation functions
+                const { reconcileInsight, enrichInsight, createConflict } = await import('./insight-reconciler');
+                const { normalizeSection: normalizeSectionKey } = await import('../shared/section-normalizer');
+                const { v4: uuidv4 } = await import('uuid');
+                
+                // Process each fact through reconciliation
+                let insertedCount = 0;
+                let enrichedCount = 0;
+                let conflictCount = 0;
+                
                 for (const fact of result.facts) {
-                  await projectDb.execute(
-                    `INSERT INTO extracted_facts (id, source_document_id, project_id, category, \`key\`, value, confidence, extraction_method, verification_status, created_at) 
-                     VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
-                    [document.id, projectIdNum, fact.category, fact.key, fact.value, fact.confidence, fact.extractionMethod]
+                  const normalizedKey = normalizeSectionKey(fact.key);
+                  
+                  // Reconcile with existing insights
+                  const reconciliation = await reconcileInsight(
+                    projectDb,
+                    projectIdNum,
+                    {
+                      id: uuidv4(),
+                      key: normalizedKey,
+                      value: fact.value,
+                      confidence: String(fact.confidence),
+                      source_document_id: document.id,
+                      extraction_method: fact.extractionMethod
+                    },
+                    normalizedKey
                   );
+                  
+                  if (reconciliation.action === 'insert') {
+                    // Insert as new insight
+                    const insightId = uuidv4();
+                    const sourceDocsJson = JSON.stringify([document.id]).replace(/'/g, "''");
+                    const escapedValue = fact.value.replace(/'/g, "''");
+                    
+                    await projectDb.execute(
+                      `INSERT INTO extracted_facts (id, source_document_id, source_documents, project_id, category, \`key\`, value, confidence, extraction_method, verification_status, enrichment_count, created_at) 
+                       VALUES ('${insightId}', '${document.id}', '${sourceDocsJson}', ${projectIdNum}, '${fact.category}', '${normalizedKey}', '${escapedValue}', '${fact.confidence}', '${fact.extractionMethod}', 'pending', 1, NOW())`
+                    );
+                    insertedCount++;
+                  } else if (reconciliation.action === 'update') {
+                    // Enrich existing insight
+                    await enrichInsight(
+                      projectDb,
+                      reconciliation.existingInsightId!,
+                      reconciliation.mergedValue!,
+                      reconciliation.newConfidence!,
+                      document.id
+                    );
+                    enrichedCount++;
+                  } else if (reconciliation.action === 'conflict') {
+                    // Insert as new and create conflict
+                    const insightId = uuidv4();
+                    const sourceDocsJson = JSON.stringify([document.id]).replace(/'/g, "''");
+                    const escapedValue = fact.value.replace(/'/g, "''");
+                    
+                    await projectDb.execute(
+                      `INSERT INTO extracted_facts (id, source_document_id, source_documents, project_id, category, \`key\`, value, confidence, extraction_method, verification_status, enrichment_count, created_at) 
+                       VALUES ('${insightId}', '${document.id}', '${sourceDocsJson}', ${projectIdNum}, '${fact.category}', '${normalizedKey}', '${escapedValue}', '${fact.confidence}', '${fact.extractionMethod}', 'pending', 1, NOW())`
+                    );
+                    
+                    await createConflict(
+                      projectDb,
+                      projectIdNum,
+                      reconciliation.existingInsightId!,
+                      insightId,
+                      'value_mismatch'
+                    );
+                    conflictCount++;
+                  }
                 }
+                
+                console.log(`[Document Processor] Reconciliation complete: ${insertedCount} new, ${enrichedCount} enriched, ${conflictCount} conflicts`);
                 
                 // Step 6: Generate section narratives for narrative-mode sections
                 await updateProgress('generating_narratives', 92);

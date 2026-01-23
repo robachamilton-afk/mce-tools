@@ -622,10 +622,49 @@
   - [x] Narrative generation runs asynchronously after fact extraction (doesn't block upload)
   - [ ] TODO: Add retry logic for failed LLM calls
   - [ ] TODO: Add timeout handling for slow LLM responses
-- [ ] Implement insight deduplication and conflict detection
-  - [ ] Add similarity matching when processing new documents
-  - [ ] Flag insights that conflict with existing ones (different values for same key)
-  - [ ] Merge duplicate insights with confidence score weighting
-  - [ ] Add "Conflicts" section to show discrepancies between documents
-  - [ ] Update existing insights instead of creating duplicates
-  - [ ] Show source document for each insight to track provenance
+- [x] Implement insight reconciliation system (merge, enrich, detect conflicts) - PARTIALLY COMPLETE
+  - [x] Design reconciliation algorithm:
+    - [x] Exact match → Update confidence (weighted average)
+    - [x] Semantic similarity → Merge and enrich with additional details
+    - [x] Conflicting values → Flag as conflict, preserve both versions
+    - [x] New information → Add as new insight
+  - [x] Update database schema:
+    - [x] Add source_documents JSON field to track all contributing documents
+    - [x] Add conflict_with field to link conflicting insights
+    - [x] Add merged_from JSON field to track insight evolution history
+    - [x] Add enrichment_count to track how many documents contributed
+    - [x] Add last_enriched_at timestamp field
+    - [x] Create insight_conflicts table with resolution workflow
+  - [x] Implement similarity matching:
+    - [x] Use LLM to compute semantic similarity between insight values
+    - [x] Set threshold for exact match (>95%), similar (>70%), different (<70%)
+    - [x] Created computeSemanticSimilarity() function
+  - [x] Implement confidence scoring:
+    - [x] Weighted average when multiple documents agree
+    - [x] calculateWeightedConfidence() with enrichment count
+    - [x] parseConfidence() to normalize confidence formats
+  - [x] Implement insight merging:
+    - [x] Combine values from similar insights using LLM (mergeInsightValues)
+    - [x] Track all source documents that contributed (source_documents JSON array)
+    - [x] Update timestamps to show last enrichment (last_enriched_at)
+    - [x] enrichInsight() function to update existing insights
+  - [x] Implement conflict detection:
+    - [x] Create conflict records linking contradictory insights (insight_conflicts table)
+    - [x] createConflict() function to link conflicting insights
+    - [x] Update both insights with conflict_with field
+    - [ ] TODO: Add "Conflicts" section/page to Insights UI
+    - [ ] TODO: Show side-by-side comparison with source documents
+    - [ ] TODO: Add conflict resolution workflow (Accept A/B, Merge, Ignore)
+  - [x] Update UI:
+    - [x] Show source document count badges on each insight
+    - [x] Add "Enriched X times" indicator with blue badge
+    - [x] Add conflict warning icons with red badge
+    - [ ] TODO: Add insight evolution timeline/history view
+    - [ ] TODO: Add "View Sources" button to see all contributing documents
+  - [x] Integration:
+    - [x] Integrated reconciliation into document upload pipeline
+    - [x] Automatic reconciliation on every document upload
+    - [x] Logging of reconciliation stats (inserted/enriched/conflicts)
+  - [ ] TODO: Migration for existing databases
+    - [ ] Create migration script to add new columns to existing project databases
+    - [ ] Backfill source_documents for existing insights
