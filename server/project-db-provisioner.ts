@@ -18,15 +18,15 @@ export async function provisionProjectDatabase(config: ProjectDbConfig): Promise
 
   try {
     // Connect to MySQL server (not to a specific database)
+    // For local MySQL, don't use SSL; for remote (TiDB), use SSL
+    const isLocal = config.dbHost === 'localhost' || config.dbHost === '127.0.0.1';
     connection = await mysql.createConnection({
       host: config.dbHost,
       port: config.dbPort,
       user: config.dbUser,
       password: config.dbPassword,
       multipleStatements: true,
-      ssl: {
-        rejectUnauthorized: true,
-      },
+      ...(isLocal ? {} : { ssl: { rejectUnauthorized: true } }),
     });
 
     // Create the database
@@ -38,20 +38,30 @@ export async function provisionProjectDatabase(config: ProjectDbConfig): Promise
 
     // Read and execute the schema SQL
     const schemaPath = path.join(process.cwd(), "server", "db-project-schema.sql");
+    console.log(`[ProjectDB] Reading schema from: ${schemaPath}`);
     const schemaSql = fs.readFileSync(schemaPath, "utf-8");
+    console.log(`[ProjectDB] Schema file size: ${schemaSql.length} bytes`);
 
-    // Split by statement and execute
-    const statements = schemaSql
+    // Remove comments and split by semicolon
+    const cleanedSql = schemaSql
+      .split('\n')
+      .filter(line => !line.trim().startsWith('--'))
+      .join('\n');
+    
+    const statements = cleanedSql
       .split(";")
       .map((stmt) => stmt.trim())
-      .filter((stmt) => stmt.length > 0 && !stmt.startsWith("--"));
+      .filter((stmt) => stmt.length > 0);
+
+    console.log(`[ProjectDB] Found ${statements.length} SQL statements to execute`);
 
     for (const statement of statements) {
       try {
         await connection.execute(statement);
-        console.log(`[ProjectDB] Executed: ${statement.substring(0, 50)}...`);
+        console.log(`[ProjectDB] ✓ Executed: ${statement.substring(0, 60)}...`);
       } catch (error) {
-        console.error(`[ProjectDB] Error executing statement: ${statement}`, error);
+        console.error(`[ProjectDB] ✗ Error executing statement:`, error);
+        console.error(`[ProjectDB] Failed statement: ${statement}`);
         throw error;
       }
     }

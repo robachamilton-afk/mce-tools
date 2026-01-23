@@ -265,3 +265,24 @@
 - [x] Add SSL configuration to database connection in resetDatabase mutation
 - [x] Discovered TiDB Serverless doesn't allow DROP DATABASE - removed Reset DB feature
 - [x] Users can create new projects instead of resetting existing ones
+
+## MySQL Server Setup for Local Development (Current Issue)
+- [ ] Install and configure local MySQL server in sandbox
+- [ ] Update DATABASE_URL to point to local MySQL instead of TiDB Serverless
+- [ ] Run Drizzle migrations to create main database schema
+- [ ] Test project creation with separate database provisioning
+- [ ] Test demo data loading with local MySQL
+- [ ] Verify separate database per project architecture works correctly
+
+## Per-Project Database Table Creation Bug (FIXED)
+- [x] Verify project-db-provisioner.ts creates tables after creating database
+- [x] Check if db-project-schema.sql is being executed during provisioning
+- [x] Fix demo data INSERT to match actual schema column names
+- [x] Test demo button loads all data successfully
+- [x] Fixed DATABASE_URL override issue (was using TiDB Serverless instead of local MySQL)
+- [x] Fixed SQL statement parsing in provisioner (removed comment filtering bug)
+- [x] Fixed demo router to use raw mysql2 connection instead of Drizzle
+- [x] Fixed table names (red_flags → redFlags) and severity capitalization
+- [x] Verify Facts page displays demo data correctly
+- [x] Fixed Processing Status page query (fileName column name)
+- [x] All demo data loading and displaying correctly!

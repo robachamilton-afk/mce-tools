@@ -1,19 +1,33 @@
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/tidb-serverless";
+import { eq, desc } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import { InsertUser, users, projects, ollamaConfig, InsertOllamaConfig } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: any = null;
+
+// Force DATABASE_URL to use local MySQL (override Manus TiDB Serverless)
+const localMySQLUrl = "mysql://root@127.0.0.1:3306/ingestion_engine_main";
+process.env.DATABASE_URL = localMySQLUrl;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db) {
+    const pool = mysql.createPool(localMySQLUrl);
+    
+    // Test the connection and verify database
     try {
-      _db = drizzle({ connection: { url: process.env.DATABASE_URL }});
+      const [rows] = await pool.query('SELECT DATABASE() as db') as any;
+      console.log("[Database] Connected to database:", rows[0].db);
+      const [tables] = await pool.query('SHOW TABLES') as any;
+      console.log("[Database] Available tables:", tables.length);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
+      console.error("[Database] Connection test failed:", error);
+      throw error;
     }
+    
+    _db = drizzle(pool);
+    console.log("[Database] Connected to local MySQL");
   }
   return _db;
 }
@@ -109,15 +123,25 @@ export async function createProject(
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Note: We use table prefixes instead of separate databases for TiDB Serverless compatibility
-  // Tables will be prefixed with the dbName (e.g., proj_1_1234567890_documents)
-  
+  // Create the project record first
   const result = await db.insert(projects).values({
     name,
     description,
     dbName,
     createdByUserId,
   });
+
+  // Provision the per-project database with schema
+  const { provisionProjectDatabase } = await import("./project-db-provisioner");
+  // Use local MySQL credentials
+  const config = {
+    dbName,
+    dbHost: "localhost",
+    dbPort: 3306,
+    dbUser: "ingestion",
+    dbPassword: "ingestion_pass_2026",
+  };
+  await provisionProjectDatabase(config);
 
   return result;
 }
@@ -139,11 +163,19 @@ export async function getProjectsByUser(userId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db
-    .select()
-    .from(projects)
-    .where(eq(projects.createdByUserId, userId))
-    .orderBy(projects.createdAt);
+  try {
+    console.log('[DB] Querying projects for user:', userId);
+    const result = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.createdByUserId, userId))
+      .orderBy(desc(projects.createdAt));
+    console.log('[DB] Found projects:', result.length);
+    return result;
+  } catch (error) {
+    console.error('[DB] Error querying projects:', error);
+    throw error;
+  }
 }
 
 export async function getOllamaConfig() {

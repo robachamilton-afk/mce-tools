@@ -200,7 +200,7 @@ export const appRouter = router({
         const db = await getProjectDb(input.projectId);
         
         const [rows] = await db.execute(
-          `SELECT pj.*, d.file_name as document_name 
+          `SELECT pj.*, d.fileName as document_name 
            FROM processing_jobs pj 
            LEFT JOIN documents d ON pj.document_id = d.id 
            ORDER BY pj.started_at DESC`
