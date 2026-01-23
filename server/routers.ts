@@ -128,7 +128,53 @@ export const appRouter = router({
 
         // Start processing asynchronously and save facts
         const projectIdNum = parseInt(input.projectId);
-        processDocument(projectIdNum, document.id, document.filePath, finalDocumentType as any)
+        
+        // Create processing job record
+        const db = await getDb();
+        const [projectRows]: any = await db.execute(
+          sql`SELECT dbName FROM projects WHERE id = ${projectIdNum}`
+        );
+        const projectDbName = projectRows[0]?.dbName;
+        
+        if (projectDbName) {
+          const projectDb = mysql.createPool({
+            host: '127.0.0.1',
+            user: 'root',
+            database: projectDbName,
+          });
+          
+          // Insert initial processing job
+          await projectDb.execute(
+            `INSERT INTO processing_jobs (document_id, status, stage, progress_percent, started_at) 
+             VALUES (?, 'processing', 'queued', 0, NOW())`,
+            [document.id]
+          );
+          
+          await projectDb.end();
+        }
+        
+        // Progress callback to update job status
+        const updateProgress = async (stage: string, progress: number) => {
+          if (projectDbName) {
+            const projectDb = mysql.createPool({
+              host: '127.0.0.1',
+              user: 'root',
+              database: projectDbName,
+            });
+            
+            const status = progress >= 100 ? 'completed' : 'processing';
+            const completedAt = progress >= 100 ? ', completed_at = NOW()' : '';
+            
+            await projectDb.execute(
+              `UPDATE processing_jobs SET stage = ?, progress_percent = ?, status = ? ${completedAt} WHERE document_id = ?`,
+              [stage, progress, status, document.id]
+            );
+            
+            await projectDb.end();
+          }
+        };
+        
+        processDocument(projectIdNum, document.id, document.filePath, finalDocumentType as any, 'llama3.2:latest', undefined, updateProgress)
           .then(async (result) => {
             // Save extracted facts to database
             if (result.facts.length > 0) {
@@ -158,8 +204,24 @@ export const appRouter = router({
               }
             }
           })
-          .catch(err => {
+          .catch(async (err) => {
             console.error(`Failed to process document ${document.id}:`, err);
+            
+            // Update job status to failed
+            if (projectDbName) {
+              const projectDb = mysql.createPool({
+                host: '127.0.0.1',
+                user: 'root',
+                database: projectDbName,
+              });
+              
+              await projectDb.execute(
+                `UPDATE processing_jobs SET status = 'failed', error_message = ?, completed_at = NOW() WHERE document_id = ?`,
+                [err.message || 'Unknown error', document.id]
+              );
+              
+              await projectDb.end();
+            }
           });
         
         console.log(`Document uploaded: ${document.id}, processing started`);
@@ -360,6 +422,62 @@ export const appRouter = router({
         );
         
         return { success: true };
+      }),
+    synthesizeNarrative: protectedProcedure
+      .input(
+        z.object({
+          projectId: z.string(),
+          section: z.string(),
+          facts: z.array(z.object({
+            key: z.string(),
+            value: z.string(),
+            confidence: z.string(),
+          })),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { invokeLLM } = await import("./_core/llm");
+        
+        // Build facts list for LLM
+        const factsList = input.facts
+          .map((f, idx) => `${idx + 1}. ${f.value}`)
+          .join("\n");
+        
+        const prompt = `You are a technical writer creating a project summary document for a Technical Advisory team.
+
+Given the following extracted facts from the "${input.section}" section, synthesize them into a cohesive, flowing narrative paragraph (or multiple paragraphs if needed).
+
+Requirements:
+- Write in professional, technical prose suitable for executive review
+- Combine related facts into flowing sentences
+- Maintain all specific numbers, dates, and technical details
+- Remove redundancy while preserving all unique information
+- Use clear, concise language
+- Do NOT use bullet points or lists - write flowing paragraphs only
+- Do NOT add information not present in the facts
+
+Facts:
+${factsList}
+
+Synthesized narrative:`;
+
+        try {
+          const response = await invokeLLM({
+            messages: [
+              { role: "system", content: "You are a technical writer specializing in project documentation for Technical Advisory teams." },
+              { role: "user", content: prompt }
+            ],
+          });
+          
+          const content = response.choices[0]?.message?.content || "";
+          const narrative = typeof content === 'string' ? content.trim() : "";
+          
+          return { narrative };
+        } catch (error: any) {
+          console.error("Failed to synthesize narrative:", error);
+          // Fallback: return facts as bullet points
+          return { narrative: factsList };
+        }
       }),
   }),
 });

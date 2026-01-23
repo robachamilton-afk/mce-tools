@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { CheckCircle2, XCircle, Edit, FileText, TrendingUp, AlertTriangle, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
-import { normalizeSection, getSectionDisplayName, getSectionDescription, getCanonicalSections } from "../../../shared/section-normalizer";
+import { normalizeSection, getSectionDisplayName, getSectionDescription, getCanonicalSections, getSectionPresentationMode } from "../../../shared/section-normalizer";
 
 interface Fact {
   id: number;
@@ -41,6 +42,8 @@ interface FactSection {
   name: string;
   displayName: string;
   description: string;
+  presentationMode: 'narrative' | 'itemized';
+  narrative?: string;
   facts: Fact[];
   totalFacts: number;
   pendingFacts: number;
@@ -60,6 +63,8 @@ export default function FactVerification() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [narratives, setNarratives] = useState<Record<string, string>>({});
+  const [loadingNarratives, setLoadingNarratives] = useState<Set<string>>(new Set());
 
   // Fetch project details to get dbName
   const { data: project, isLoading: isLoadingProject } = trpc.projects.get.useQuery(
@@ -171,6 +176,8 @@ export default function FactVerification() {
       name: canonicalName,
       displayName: getSectionDisplayName(canonicalName),
       description: getSectionDescription(canonicalName),
+      presentationMode: getSectionPresentationMode(canonicalName),
+      narrative: narratives[canonicalName],
       facts: typedFacts,
       totalFacts: typedFacts.length,
       pendingFacts: typedFacts.filter(f => f.verification_status === "pending").length,
@@ -473,11 +480,13 @@ export default function FactVerification() {
             </div>
             <div>
               <label className="text-sm text-slate-400 mb-2 block">Value</label>
-              <Input
+              <Textarea
                 value={editedValue}
                 onChange={(e) => setEditedValue(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-white"
+                className="bg-slate-800 border-slate-700 text-white min-h-[120px] resize-y"
+                placeholder="Enter the fact statement..."
               />
+              <p className="text-xs text-slate-500 mt-1">{editedValue.length} characters</p>
             </div>
           </div>
           <DialogFooter>

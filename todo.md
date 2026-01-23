@@ -494,3 +494,32 @@
 - [x] Add Red Flags button to project cards
 - [x] Consolidate 44 fragmented sections into 6 canonical categories
 - [x] Add section descriptions and display names to Facts page
+
+## UX Improvements - Processing Status & Facts Presentation (Partially Complete)
+- [x] Enhanced Processing Status Dashboard
+  - [x] Show document name being processed
+  - [x] Display current processing stage (text_extraction → deterministic_extraction → llm_extraction → saving_facts → completed)
+  - [x] Add progress percentage indicator (0% → 10% → 30% → 50% → 80% → 90% → 100%)
+  - [x] Show timestamps (started, estimated completion)
+  - [x] Display processing errors with details
+  - [x] Create processing_jobs record on document upload
+  - [x] Update job status with progress callbacks
+  - [x] Handle failed jobs with error messages
+- [ ] Dual-mode Facts Presentation (In Progress)
+  - [x] Add section-level presentation mode configuration (narrative vs itemized)
+  - [x] Create narrative synthesis endpoint in backend (facts.synthesizeNarrative)
+  - [ ] Implement narrative mode UI for overview sections (Project Overview, Financial Structure, Technical Design)
+  - [ ] Use LLM to synthesize facts into flowing paragraphs on section expand
+  - [ ] Keep itemized mode for actionable sections (Risks & Issues, Dependencies, Engineering Assumptions)
+  - [ ] Add "View Details" toggle to switch between narrative and itemized view
+- [x] Improved Fact Editing UX
+  - [x] Replace single-line input with multi-line textarea
+  - [x] Add proper height for long contextual statements (min-h-[120px])
+  - [x] Add character count indicator
+  - [ ] Consider markdown support for formatted text (future enhancement)
+- [ ] Enhanced Approval Workflow
+  - [x] Better visual feedback for approve/reject actions (existing badges work well)
+  - [x] Show approval status badges (Pending/Approved/Rejected)
+  - [ ] Display who approved and when (requires schema change)
+  - [ ] Add bulk approval buttons per section
+  - [ ] Add approval history/audit trail (requires new table)

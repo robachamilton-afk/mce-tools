@@ -33,13 +33,18 @@ export interface ExtractedFact {
 /**
  * Process a document: extract text, then extract facts
  */
+export interface ProgressCallback {
+  (stage: string, progress: number): Promise<void>;
+}
+
 export async function processDocument(
   projectId: number,
   documentId: string,
   filePath: string,
   documentType: string,
   ollamaModel: string = 'llama3.2:latest',
-  projectDbConnection?: mysql.Connection
+  projectDbConnection?: mysql.Connection,
+  onProgress?: ProgressCallback
 ): Promise<ProcessedDocument> {
   const startTime = Date.now();
   
@@ -48,18 +53,23 @@ export async function processDocument(
   try {
     // Step 1: Extract text from document
     console.log(`[Document Processor] Step 1: Extracting text from ${filePath}`);
+    if (onProgress) await onProgress('text_extraction', 10);
     const textResult = await extractTextFromDocument(filePath);
     
     console.log(`[Document Processor] Text extraction completed: ${textResult.wordCount} words via ${textResult.extractionMethod}`);
+    if (onProgress) await onProgress('text_extraction', 30);
     
     // Step 2: Extract facts using deterministic patterns
     console.log(`[Document Processor] Step 2: Extracting facts with deterministic patterns`);
+    if (onProgress) await onProgress('deterministic_extraction', 40);
     const deterministicFacts = extractDeterministicFacts(textResult.text, documentType);
     
     console.log(`[Document Processor] Deterministic extraction found ${deterministicFacts.length} facts`);
+    if (onProgress) await onProgress('deterministic_extraction', 50);
     
     // Step 3: Extract facts using Intelligent LLM Extractor V2 (contextual statements)
     console.log(`[Document Processor] Step 3: Extracting facts with Intelligent LLM Extractor V2`);
+    if (onProgress) await onProgress('llm_extraction', 60);
     let llmFacts: ExtractedFact[] = [];
     
     try {
@@ -79,6 +89,7 @@ export async function processDocument(
       }));
       
       console.log(`[Document Processor] Intelligent LLM extraction V2 found ${llmFacts.length} facts in ${intelligentResult.extraction_time_ms}ms`);
+      if (onProgress) await onProgress('llm_extraction', 80);
     } catch (llmError) {
       console.error(`[Document Processor] Intelligent LLM extraction V2 failed:`, llmError);
       // Continue with deterministic facts only
@@ -89,6 +100,7 @@ export async function processDocument(
     const deduplicatedFacts = deduplicateFacts(allFacts);
     
     console.log(`[Document Processor] Total facts after deduplication: ${deduplicatedFacts.length}`);
+    if (onProgress) await onProgress('saving_facts', 90);
     
     // Step 5: Store results in project database
     // Note: Database storage will be implemented when integrating with routers
@@ -98,6 +110,7 @@ export async function processDocument(
     const processingTime = Date.now() - startTime;
     
     console.log(`[Document Processor] Processing completed in ${(processingTime / 1000).toFixed(2)}s`);
+    if (onProgress) await onProgress('completed', 100);
     
     return {
       documentId,

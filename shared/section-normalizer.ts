@@ -27,6 +27,19 @@ export const SECTION_DISPLAY_NAMES: Record<string, string> = {
   [CANONICAL_SECTIONS.OTHER]: "Other"
 };
 
+// Section presentation modes
+export type PresentationMode = 'narrative' | 'itemized';
+
+export const SECTION_PRESENTATION_MODES: Record<string, PresentationMode> = {
+  [CANONICAL_SECTIONS.PROJECT_OVERVIEW]: 'narrative',
+  [CANONICAL_SECTIONS.FINANCIAL_STRUCTURE]: 'narrative',
+  [CANONICAL_SECTIONS.TECHNICAL_DESIGN]: 'narrative',
+  [CANONICAL_SECTIONS.DEPENDENCIES]: 'itemized',
+  [CANONICAL_SECTIONS.RISKS_AND_ISSUES]: 'itemized',
+  [CANONICAL_SECTIONS.ENGINEERING_ASSUMPTIONS]: 'itemized',
+  [CANONICAL_SECTIONS.OTHER]: 'itemized'
+};
+
 // Section descriptions for UI
 export const SECTION_DESCRIPTIONS: Record<string, string> = {
   [CANONICAL_SECTIONS.PROJECT_OVERVIEW]: "Project identity, location, ownership, and high-level context",
@@ -172,4 +185,13 @@ export function getCanonicalSections(): string[] {
     CANONICAL_SECTIONS.ENGINEERING_ASSUMPTIONS,
     CANONICAL_SECTIONS.OTHER,
   ];
+}
+
+/**
+ * Get presentation mode for a section
+ * @param canonicalSection - Canonical section name
+ * @returns Presentation mode ('narrative' or 'itemized')
+ */
+export function getSectionPresentationMode(canonicalSection: string): PresentationMode {
+  return SECTION_PRESENTATION_MODES[canonicalSection] || 'itemized';
 }
