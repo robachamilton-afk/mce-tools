@@ -587,3 +587,11 @@
   - [x] Add visual feedback when status changes (toast notifications)
   - [x] Update section statistics after status change (automatic refetch)
   - [x] Approve/reject buttons styled with green/red themes
+
+## Bug Fixes - SSL & SQL Errors (Completed 2026-01-23)
+- [x] Fix SSL certificate error in database connections
+  - [x] Set rejectUnauthorized: false in deleteProjectDatabase SSL config
+  - [x] Allows connection to databases with self-signed certificates
+- [x] Fix SQL parameter binding in getNarratives query
+  - [x] Added logic to fetch project dbName before querying section_narratives
+  - [x] Fixed parameter mismatch (was using projectId instead of project_db_name)

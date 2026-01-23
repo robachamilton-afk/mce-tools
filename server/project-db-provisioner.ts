@@ -91,7 +91,7 @@ export async function deleteProjectDatabase(config: ProjectDbConfig): Promise<bo
       user: config.dbUser,
       password: config.dbPassword,
       ssl: {
-        rejectUnauthorized: true,
+        rejectUnauthorized: false,
       },
     });
 
