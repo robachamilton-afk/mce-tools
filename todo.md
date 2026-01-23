@@ -564,3 +564,26 @@
 - [x] Load pre-generated narratives from database via facts.getNarratives endpoint
 - [x] Replace on-demand synthesis with pre-generated narratives
 - [ ] Test complete workflow with document upload
+
+## Delete & Accept Functionality (Completed 2026-01-23)
+- [x] Implement project delete functionality
+  - [x] Add projects.delete backend endpoint
+  - [x] Drop per-project database on delete
+  - [x] Delete project record from main database
+  - [x] Delete associated narratives from section_narratives table
+  - [x] Add delete button to project cards with confirmation dialog
+  - [x] Handle delete errors gracefully with toast notifications
+  - [x] Styled delete button with red theme to indicate destructive action
+- [x] Implement document delete functionality
+  - [x] Add documents.delete backend endpoint
+  - [x] Delete document file from filesystem
+  - [x] Delete document record from project database
+  - [x] Delete associated facts (extracted_facts table)
+  - [x] Delete associated processing jobs (processing_jobs table)
+  - [x] Add delete button to document list (trash icon)
+  - [x] Add confirmation dialog for document deletion with warning message
+- [x] Verify and enhance insight accept/reject functionality
+  - [x] Ensure approve/reject buttons update verification_status correctly (already working)
+  - [x] Add visual feedback when status changes (toast notifications)
+  - [x] Update section statistics after status change (automatic refetch)
+  - [x] Approve/reject buttons styled with green/red themes

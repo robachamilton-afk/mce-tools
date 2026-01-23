@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Plus, Loader2, AlertCircle, FolderOpen, Upload, ArrowLeft, Linkedin, Menu, FileText, Settings, AlertTriangle } from "lucide-react";
+import { Plus, Loader2, AlertCircle, FolderOpen, Upload, ArrowLeft, Linkedin, Menu, FileText, Settings, AlertTriangle, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -18,6 +18,8 @@ export default function ProjectDashboard() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [formData, setFormData] = useState({ name: "", description: "" });
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
 
   // Fetch projects
   const { data: projects, isLoading, error } = trpc.projects.list.useQuery(undefined, {
@@ -47,6 +49,18 @@ export default function ProjectDashboard() {
     },
     onError: (error) => {
       toast.error(`Failed to load demo data: ${error.message}`);
+    },
+  });
+
+  const deleteMutation = trpc.projects.delete.useMutation({
+    onSuccess: () => {
+      utils.projects.list.invalidate();
+      toast.success("Project deleted successfully!");
+      setDeleteConfirmOpen(false);
+      setProjectToDelete(null);
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete project: ${error.message}`);
     },
   });
 
@@ -385,7 +399,21 @@ export default function ProjectDashboard() {
                               "🎯 Load Demo Data"
                             )}
                           </Button>
-
+                        </div>
+                        <div className="flex gap-2 pt-2 border-t border-slate-800">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-xs border-red-900/50 text-red-400 hover:bg-red-950/50 hover:text-red-300"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjectToDelete(project.id);
+                              setDeleteConfirmOpen(true);
+                            }}
+                          >
+                            <Trash2 className="mr-1 h-3 w-3" />
+                            Delete Project
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -475,6 +503,54 @@ export default function ProjectDashboard() {
           </div>
         )}
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-400" />
+              Delete Project?
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              This action cannot be undone. This will permanently delete the project, all documents, insights, and associated data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 justify-end pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setProjectToDelete(null);
+              }}
+              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (projectToDelete) {
+                  deleteMutation.mutate({ projectId: projectToDelete });
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Project
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

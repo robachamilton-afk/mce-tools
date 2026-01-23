@@ -352,6 +352,47 @@ export const appRouter = router({
           await connection.end();
         }
       }),
+    delete: protectedProcedure
+      .input(z.object({ 
+        projectId: z.string(), 
+        documentId: z.string()
+      }))
+      .mutation(async ({ input }) => {
+        const fs = await import('fs/promises');
+        const { getProjectDb } = await import("./project-db-provisioner");
+        const db = await getProjectDb(input.projectId);
+        
+        // Get document file path before deleting
+        const [docs] = await db.execute(
+          "SELECT filePath FROM documents WHERE id = " + parseInt(input.documentId)
+        ) as any;
+        
+        if (docs && docs.length > 0 && docs[0].filePath) {
+          try {
+            await fs.unlink(docs[0].filePath);
+          } catch (error) {
+            console.error(`Failed to delete file: ${error}`);
+            // Continue even if file deletion fails
+          }
+        }
+        
+        // Delete associated facts
+        await db.execute(
+          "DELETE FROM extracted_facts WHERE source_document_id = " + parseInt(input.documentId)
+        );
+        
+        // Delete associated processing jobs
+        await db.execute(
+          "DELETE FROM processing_jobs WHERE document_id = " + parseInt(input.documentId)
+        );
+        
+        // Delete document record
+        await db.execute(
+          "DELETE FROM documents WHERE id = " + parseInt(input.documentId)
+        );
+        
+        return { success: true, message: "Document deleted successfully" };
+      }),
   }),
 
   demo: demoRouter,
@@ -406,6 +447,45 @@ export const appRouter = router({
         await provisionProjectDatabase(config);
         
         return { success: true, message: "Project database reset successfully" };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const project = await getProjectById(input.projectId);
+        if (!project || project.createdByUserId !== ctx.user.id) {
+          throw new Error("Project not found or access denied");
+        }
+        
+        const { deleteProjectDatabase } = await import("./project-db-provisioner");
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        // Parse DATABASE_URL to get connection details
+        const url = new URL(process.env.DATABASE_URL!);
+        const config = {
+          dbName: project.dbName,
+          dbHost: url.hostname,
+          dbPort: parseInt(url.port) || 3306,
+          dbUser: url.username,
+          dbPassword: url.password,
+        };
+        
+        // Delete the project database
+        await deleteProjectDatabase(config);
+        
+        // Delete project record from main database
+        await db.execute(
+          "DELETE FROM projects WHERE id = ?",
+          [input.projectId]
+        );
+        
+        // Delete associated narratives
+        await db.execute(
+          "DELETE FROM section_narratives WHERE project_db_name = ?",
+          [project.dbName]
+        );
+        
+        return { success: true, message: "Project deleted successfully" };
       }),
   }),
 

@@ -15,6 +15,8 @@ export function Documents() {
 
   const [editingDoc, setEditingDoc] = useState<any>(null);
   const [newDocType, setNewDocType] = useState<string>("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [docToDelete, setDocToDelete] = useState<any>(null);
   
   // Get projectId from URL query params
   const searchParams = new URLSearchParams(window.location.search);
@@ -41,6 +43,19 @@ export function Documents() {
     },
     onError: (error) => {
       alert(`Error: ${error.message || "Failed to update document type"}`);
+    },
+  });
+
+  // Delete document mutation
+  const deleteMutation = trpc.documents.delete.useMutation({
+    onSuccess: () => {
+      alert("Document deleted successfully");
+      setDeleteConfirmOpen(false);
+      setDocToDelete(null);
+      refetch();
+    },
+    onError: (error) => {
+      alert(`Error: ${error.message || "Failed to delete document"}`);
     },
   });
 
@@ -226,11 +241,11 @@ export function Documents() {
                       <Download className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => {
-                        // TODO: Implement delete
-                        console.log("Delete", doc.id);
+                        setDocToDelete(doc);
+                        setDeleteConfirmOpen(true);
                       }}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -279,6 +294,47 @@ export function Documents() {
               className="bg-orange-500 hover:bg-orange-600"
             >
               {updateDocTypeMutation.isPending ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+              Delete Document?
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              This will permanently delete "{docToDelete?.fileName}" and all associated insights. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setDocToDelete(null);
+              }}
+              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (docToDelete && projectId) {
+                  deleteMutation.mutate({
+                    projectId: projectId,
+                    documentId: docToDelete.id
+                  });
+                }
+              }}
+              disabled={deleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete Document"}
             </Button>
           </DialogFooter>
         </DialogContent>
