@@ -540,3 +540,27 @@
   - [x] Cache synthesized narratives in component state to avoid re-generating
   - [x] Automatic synthesis on section expand for narrative-mode sections
   - [x] Fallback to itemized view if synthesis fails
+
+## Narrative Synthesis Bug Fix (In Progress)
+- [ ] Debug why narrative synthesis hangs when expanding sections
+- [ ] Check browser console for errors
+- [ ] Verify backend synthesizeNarrative endpoint receives requests
+- [ ] Check if LLM invocation is working correctly
+- [ ] Test with actual project data
+- [ ] Fix identified issues
+
+## Narrative Pre-generation & Toggle UX Fix (Completed 2026-01-23)
+- [x] Add database schema for storing section narratives
+- [x] Create section_narratives table with columns: id, project_db_name, section_name, narrative_text, created_at, updated_at
+- [x] Implement narrative pre-generation in document processor
+- [x] Add Pass 6 to extraction pipeline: "Generating narratives" (92%)
+- [x] Generate narratives for Project Overview, Financial Structure, Technical Design after facts are saved
+- [x] Store narratives in section_narratives table
+- [x] Update processing progress tracking to show narrative generation stage
+- [x] Fix narrative/insights toggle UX
+- [x] Remove error message when clicking "View individual insights"
+- [x] Show narrative at top with individual insights below when toggled
+- [x] Add "Hide individual insights" button to collapse back to narrative-only view
+- [x] Load pre-generated narratives from database via facts.getNarratives endpoint
+- [x] Replace on-demand synthesis with pre-generated narratives
+- [ ] Test complete workflow with document upload

@@ -199,8 +199,63 @@ export const appRouter = router({
                   );
                 }
                 
+                // Step 6: Generate section narratives for narrative-mode sections
+                await updateProgress('generating_narratives', 92);
+                console.log(`[Document Processor] Generating section narratives...`);
+                
+                const { normalizeSection, getSectionDisplayName } = await import('../shared/section-normalizer');
+                const { invokeLLM } = await import('./_core/llm');
+                
+                // Group facts by normalized section
+                const factsBySection = new Map<string, typeof result.facts>();
+                for (const fact of result.facts) {
+                  const canonical = normalizeSection(fact.key);
+                  if (!factsBySection.has(canonical)) {
+                    factsBySection.set(canonical, []);
+                  }
+                  factsBySection.get(canonical)!.push(fact);
+                }
+                
+                // Generate narratives for narrative-mode sections
+                const narrativeSections = ['Project_Overview', 'Financial_Structure', 'Technical_Design'];
+                const db = await getDb();
+                
+                for (const sectionName of narrativeSections) {
+                  const sectionFacts = factsBySection.get(sectionName);
+                  if (sectionFacts && sectionFacts.length > 0) {
+                    const displayName = getSectionDisplayName(sectionName);
+                    const factsText = sectionFacts.map((f, i) => `${i + 1}. ${f.value}`).join('\n');
+                    
+                    const response = await invokeLLM({
+                      messages: [
+                        {
+                          role: 'system',
+                          content: `You are a technical writing assistant. Synthesize the following project insights into a cohesive, flowing narrative paragraph suitable for executive review. Maintain all factual details but present them as connected prose rather than bullet points.`
+                        },
+                        {
+                          role: 'user',
+                          content: `Section: ${displayName}\n\nInsights:\n${factsText}\n\nSynthesize these insights into 2-3 well-structured paragraphs.`
+                        }
+                      ]
+                    });
+                    
+                    const narrative = response.choices[0]?.message?.content || '';
+                    
+                    if (narrative) {
+                      // Store narrative in main database
+                      await db.execute(
+                        `INSERT INTO section_narratives (project_db_name, section_name, narrative_text) 
+                         VALUES (?, ?, ?) 
+                         ON DUPLICATE KEY UPDATE narrative_text = VALUES(narrative_text), updated_at = NOW()`,
+                        [projectDbName, sectionName, narrative]
+                      );
+                      console.log(`[Document Processor] Generated narrative for ${displayName}`);
+                    }
+                  }
+                }
+                
                 await projectDb.end();
-                console.log(`[Document Processor] Saved ${result.facts.length} facts to database`);
+                console.log(`[Document Processor] Saved ${result.facts.length} facts and generated narratives`);
               }
             }
           })
@@ -394,6 +449,25 @@ export const appRouter = router({
         );
         return rows as unknown as any[];
       }),
+    getNarratives: protectedProcedure
+      .input(z.object({ projectId: z.string() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const [rows] = await db.execute(
+          "SELECT section_name, narrative_text FROM section_narratives WHERE project_db_name = ?",
+          [input.projectId]
+        );
+        
+        // Convert to map for easy lookup
+        const narratives: Record<string, string> = {};
+        for (const row of rows as any[]) {
+          narratives[row.section_name] = row.narrative_text;
+        }
+        
+        return narratives;
+      }),
     update: protectedProcedure
       .input(
         z.object({
@@ -423,11 +497,12 @@ export const appRouter = router({
         
         return { success: true };
       }),
-    synthesizeNarrative: protectedProcedure
+    synthesizeNarrativeOnDemand: protectedProcedure
       .input(
         z.object({
           projectId: z.string(),
           section: z.string(),
+          canonicalName: z.string(), // Canonical section name for state key
           facts: z.array(z.object({
             key: z.string(),
             value: z.string(),

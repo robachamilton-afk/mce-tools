@@ -64,7 +64,7 @@ export default function FactVerification() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [narratives, setNarratives] = useState<Record<string, string>>({});
-  const [loadingNarratives, setLoadingNarratives] = useState<Set<string>>(new Set());
+  const [showIndividualInsights, setShowIndividualInsights] = useState<Set<string>>(new Set());
 
   // Fetch project details to get dbName
   const { data: project, isLoading: isLoadingProject } = trpc.projects.get.useQuery(
@@ -78,26 +78,20 @@ export default function FactVerification() {
     { enabled: !!project?.dbName }
   );
 
-  const isLoading = isLoadingProject || isLoadingFacts;
+  // Fetch pre-generated narratives
+  const { data: preGeneratedNarratives } = trpc.facts.getNarratives.useQuery(
+    { projectId: project?.dbName || "" },
+    { enabled: !!project?.dbName }
+  );
 
-  const synthesizeNarrativeMutation = trpc.facts.synthesizeNarrative.useMutation({
-    onSuccess: (data, variables) => {
-      setNarratives(prev => ({ ...prev, [variables.section]: data.narrative }));
-      setLoadingNarratives(prev => {
-        const next = new Set(prev);
-        next.delete(variables.section);
-        return next;
-      });
-    },
-    onError: (error, variables) => {
-      toast.error(`Failed to synthesize narrative: ${error.message}`);
-      setLoadingNarratives(prev => {
-        const next = new Set(prev);
-        next.delete(variables.section);
-        return next;
-      });
-    },
-  });
+  // Update narratives state when pre-generated narratives load
+  useEffect(() => {
+    if (preGeneratedNarratives) {
+      setNarratives(preGeneratedNarratives);
+    }
+  }, [preGeneratedNarratives]);
+
+  const isLoading = isLoadingProject || isLoadingFacts;
 
   const updateFactMutation = trpc.facts.update.useMutation({
     onSuccess: () => {
@@ -169,21 +163,6 @@ export default function FactVerification() {
       newExpanded.delete(sectionName);
     } else {
       newExpanded.add(sectionName);
-      
-      // Synthesize narrative for narrative-mode sections if not already done
-      const section = sections.find(s => s.name === sectionName);
-      if (section && section.presentationMode === 'narrative' && !narratives[sectionName] && !loadingNarratives.has(sectionName) && project?.dbName) {
-        setLoadingNarratives(prev => new Set(prev).add(sectionName));
-        synthesizeNarrativeMutation.mutate({
-          projectId: project.dbName,
-          section: section.displayName,
-          facts: section.facts.map(f => ({
-            key: f.key,
-            value: f.value,
-            confidence: f.confidence,
-          })),
-        });
-      }
     }
     setExpandedSections(newExpanded);
   };
@@ -441,46 +420,44 @@ export default function FactVerification() {
                 {expandedSections.has(section.name) && (
                   <div className="border-t border-slate-800">
                     {/* Narrative Mode */}
-                    {section.presentationMode === 'narrative' && (
-                      <div className="p-6">
-                        {loadingNarratives.has(section.name) ? (
-                          <div className="flex items-center gap-3 text-slate-400">
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            <span>Synthesizing narrative from {section.facts.length} insights...</span>
-                          </div>
-                        ) : narratives[section.name] ? (
-                          <div className="space-y-4">
-                            <div className="prose prose-invert max-w-none">
-                              <p className="text-slate-200 text-base leading-relaxed whitespace-pre-wrap">
-                                {narratives[section.name]}
-                              </p>
-                            </div>
-                            <div className="pt-4 border-t border-slate-800/50">
-                              <button
-                                onClick={() => {
-                                  // Toggle to itemized view by clearing narrative
-                                  setNarratives(prev => {
-                                    const next = { ...prev };
-                                    delete next[section.name];
-                                    return next;
-                                  });
-                                }}
-                                className="text-sm text-orange-400 hover:text-orange-300 transition-colors"
-                              >
-                                View {section.facts.length} individual insights →
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-slate-400 text-sm">
-                            Failed to synthesize narrative. Showing individual insights below.
-                          </div>
-                        )}
+                    {section.presentationMode === 'narrative' && narratives[section.name] && (
+                      <div className="p-6 space-y-4">
+                        <div className="prose prose-invert max-w-none">
+                          <p className="text-slate-200 text-base leading-relaxed whitespace-pre-wrap">
+                            {narratives[section.name]}
+                          </p>
+                        </div>
+                        <div className="pt-4 border-t border-slate-800/50">
+                          <button
+                            onClick={() => {
+                              const newShowIndividual = new Set(showIndividualInsights);
+                              if (newShowIndividual.has(section.name)) {
+                                newShowIndividual.delete(section.name);
+                              } else {
+                                newShowIndividual.add(section.name);
+                              }
+                              setShowIndividualInsights(newShowIndividual);
+                            }}
+                            className="text-sm text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-2"
+                          >
+                            {showIndividualInsights.has(section.name) ? (
+                              <>
+                                <ChevronDown className="h-4 w-4" />
+                                Hide {section.facts.length} individual insights
+                              </>
+                            ) : (
+                              <>
+                                <ChevronRight className="h-4 w-4" />
+                                View {section.facts.length} individual insights
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     )}
                     
-                    {/* Itemized Mode (or fallback for narrative mode) */}
-                    {(section.presentationMode === 'itemized' || !narratives[section.name]) && !loadingNarratives.has(section.name) && (
+                    {/* Itemized Mode (always show for itemized sections, or when toggled for narrative sections) */}
+                    {(section.presentationMode === 'itemized' || showIndividualInsights.has(section.name)) && (
                       <div>
                         {section.facts.map((fact, idx) => (
                           <div
