@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { trpc } from "@/lib/trpc";
 import { Upload, File, AlertCircle, CheckCircle, Loader2, X, ArrowLeft, Linkedin, Menu } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 
 interface UploadedFile {
@@ -20,12 +20,11 @@ interface UploadedFile {
 
 const DOCUMENT_TYPES = [
   { value: "IM", label: "Investment Memorandum" },
-  { value: "DD_Pack", label: "Due Diligence Pack" },
-  { value: "Contract", label: "Contract" },
-  { value: "Grid_Study", label: "Grid Study" },
-  { value: "Planning", label: "Planning Document" },
-  { value: "Design", label: "Design Document" },
-  { value: "Other", label: "Other" },
+  { value: "DD_PACK", label: "Due Diligence Pack" },
+  { value: "CONTRACT", label: "Contract" },
+  { value: "GRID_STUDY", label: "Grid Study" },
+  { value: "CONCEPT_DESIGN", label: "Concept Design" },
+  { value: "OTHER", label: "Other" },
 ];
 
 const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".doc", ".xls", ".txt", ".pptx"];
@@ -37,9 +36,26 @@ export default function DocumentUpload() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const projectId = params?.id ? parseInt(params.id) : null;
-  const [selectedType, setSelectedType] = useState("Other");
+  const [selectedType, setSelectedType] = useState("OTHER");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
+  const fileObjectsRef = useRef<Map<string, File>>(new Map());
+  
+  // Upload mutation
+  const uploadMutation = trpc.documents.upload.useMutation({
+    onSuccess: (data, variables) => {
+      // Mark file as completed
+      setUploadedFiles(prev => prev.map(f => 
+        f.name === variables.fileName ? { ...f, status: 'completed', progress: 100 } : f
+      ));
+    },
+    onError: (error, variables) => {
+      // Mark file as error
+      setUploadedFiles(prev => prev.map(f => 
+        f.name === variables.fileName ? { ...f, status: 'error', error: error.message } : f
+      ));
+    },
+  });
 
   // Fetch project details
   const { data: project, isLoading: projectLoading } = trpc.projects.get.useQuery(
@@ -104,10 +120,11 @@ export default function DocumentUpload() {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const ext = "." + file.name.split(".").pop()?.toLowerCase();
+      const fileId = `${Date.now()}-${i}`;
 
       if (!ALLOWED_EXTENSIONS.includes(ext)) {
         newFiles.push({
-          id: `${Date.now()}-${i}`,
+          id: fileId,
           name: file.name,
           size: file.size,
           type: selectedType,
@@ -117,13 +134,15 @@ export default function DocumentUpload() {
         });
       } else {
         newFiles.push({
-          id: `${Date.now()}-${i}`,
+          id: fileId,
           name: file.name,
           size: file.size,
           type: selectedType,
           progress: 0,
           status: "pending",
         });
+        // Store file object for later upload
+        fileObjectsRef.current.set(fileId, file);
       }
     }
 
@@ -132,6 +151,51 @@ export default function DocumentUpload() {
 
   const removeFile = (id: string) => {
     setUploadedFiles(uploadedFiles.filter((f) => f.id !== id));
+    fileObjectsRef.current.delete(id);
+  };
+  
+  const handleUploadAll = async () => {
+    const filesToUpload = uploadedFiles.filter(f => f.status === 'pending');
+    
+    for (const fileInfo of filesToUpload) {
+      const fileObj = fileObjectsRef.current.get(fileInfo.id);
+      if (!fileObj) continue;
+      
+      // Mark as uploading
+      setUploadedFiles(prev => prev.map(f => 
+        f.id === fileInfo.id ? { ...f, status: 'uploading', progress: 50 } : f
+      ));
+      
+      try {
+        // Read file as base64
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            // Remove data URL prefix (e.g., "data:application/pdf;base64,")
+            const base64Data = result.split(',')[1];
+            resolve(base64Data);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(fileObj);
+        });
+        
+        // Upload to backend
+        await uploadMutation.mutateAsync({
+          projectId: String(projectId),
+          fileName: fileObj.name,
+          fileType: fileObj.type,
+          fileSize: fileObj.size,
+          documentType: fileInfo.type as any,
+          fileData: base64,
+        });
+      } catch (error: any) {
+        console.error('Upload failed:', error);
+        setUploadedFiles(prev => prev.map(f => 
+          f.id === fileInfo.id ? { ...f, status: 'error', error: error.message || 'Upload failed' } : f
+        ));
+      }
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -385,7 +449,8 @@ export default function DocumentUpload() {
                 {uploadedFiles.length > 0 && (
                   <Button
                     className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white"
-                    disabled={uploadedFiles.some((f) => f.status === "error")}
+                    disabled={uploadedFiles.some((f) => f.status === "error") || uploadedFiles.every((f) => f.status !== "pending")}
+                    onClick={handleUploadAll}
                   >
                     <Upload className="mr-2 h-4 w-4" />
                     Upload All Files

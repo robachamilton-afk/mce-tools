@@ -13,7 +13,7 @@ interface DocumentMetadata {
   uploadDate: Date;
 }
 
-const DATA_DIR = process.env.DATA_DIR || "/data/projects";
+const DATA_DIR = process.env.DATA_DIR || "/home/ubuntu/project-ingestion-engine/data/projects";
 
 /**
  * Ensures project storage directory exists
@@ -218,21 +218,38 @@ export async function uploadDocument(
   fileSize: number,
   documentType: string,
   uploadedBy: number
-): Promise<{ id: number; fileName: string; filePath: string }> {
-  const { getProjectDb } = await import("./project-db-provisioner");
+): Promise<{ id: string; fileName: string; filePath: string }> {
+  const mysql = await import('mysql2/promise');
+  
+  // Get project dbName from main database
+  const dbUrl = process.env.DATABASE_URL || "mysql://root@127.0.0.1:3306/ingestion_engine_main";
+  const mainConn = await mysql.createConnection(dbUrl);
+  const [rows] = await mainConn.execute('SELECT dbName FROM projects WHERE id = ?', [projectId]);
+  await mainConn.end();
+  
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new Error(`Project ${projectId} not found`);
+  }
+  const projectDbName = (rows[0] as any).dbName;
   
   // Save file to disk
-  const metadata = await saveDocument(parseInt(projectId.replace(/^proj_/, "")), fileBuffer, fileName, documentType);
+  const metadata = await saveDocument(parseInt(projectId), fileBuffer, fileName, documentType);
   
-  // Save metadata to database
-  const db = await getProjectDb(projectId);
-  const [result] = await db.execute(
-    `INSERT INTO documents (file_name, file_path, file_size_bytes, file_hash, document_type, uploaded_by, processing_status)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  );
+  // Save metadata to database using raw mysql2 connection
+  const connection = await mysql.createConnection(dbUrl.replace(/\/[^/]*$/, `/${projectDbName}`));
+  
+  try {
+    await connection.execute(
+      `INSERT INTO documents (id, fileName, filePath, fileSizeBytes, fileHash, documentType, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [metadata.id, fileName, metadata.filePath, fileSize, metadata.fileHash, documentType, 'Uploaded']
+    );
+  } finally {
+    await connection.end();
+  }
   
   return {
-    id: (result as any).insertId,
+    id: metadata.id,
     fileName,
     filePath: metadata.filePath,
   };

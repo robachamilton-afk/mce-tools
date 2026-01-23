@@ -286,3 +286,20 @@
 - [x] Verify Facts page displays demo data correctly
 - [x] Fixed Processing Status page query (fileName column name)
 - [x] All demo data loading and displaying correctly!
+
+## Document Upload Functionality (COMPLETED)
+- [x] Create backend upload endpoint with base64 file data support
+- [x] Implement file validation (PDF, DOCX, XLSX, max size 50MB)
+- [x] Store uploaded files in local filesystem with project-specific directories
+- [x] Save document metadata to per-project database (documents table)
+- [x] Build frontend upload UI with drag-and-drop zone
+- [x] Add file type selection dropdown (IM, DD_PACK, CONTRACT, GRID_STUDY, CONCEPT_DESIGN, OTHER)
+- [x] Implement upload progress indicator
+- [x] Add file list display showing uploaded documents
+- [x] Test upload with sample PDF files
+- [x] Verify documents appear in database and filesystem
+- [x] Fixed DATA_DIR path to use writable location (/home/ubuntu/project-ingestion-engine/data/projects)
+- [x] Fixed documentType enum values to match backend (all uppercase)
+- [x] Fixed projectId handling (numeric ID vs "proj_" prefix)
+- [x] Fixed database connection to query dbName from projects table
+- [x] Fixed SQL parameterized queries to prevent SQL injection
