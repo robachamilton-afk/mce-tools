@@ -541,7 +541,7 @@ export const appRouter = router({
         
         console.log(`Document uploaded: ${document.id}, processing started`);
 
-        return document;
+        return { ...document, documentId: document.id };
       }),
     list: protectedProcedure
       .input(z.object({ projectId: z.string() }))
@@ -652,6 +652,35 @@ export const appRouter = router({
         );
         
         return { success: true, message: "Document deleted successfully" };
+      }),
+    getProgress: protectedProcedure
+      .input(z.object({ projectDbName: z.string(), documentId: z.string() }))
+      .query(async ({ input }) => {
+        const db = mysql.createPool({
+          host: process.env.DB_HOST || 'localhost',
+          user: process.env.DB_USER || 'root',
+          password: process.env.DB_PASSWORD || '',
+          database: input.projectDbName,
+          waitForConnections: true,
+          connectionLimit: 10,
+        });
+        
+        const [rows] = await db.execute(
+          `SELECT status, stage, progress_percent, error_message, started_at, completed_at 
+           FROM processing_jobs 
+           WHERE document_id = ? 
+           ORDER BY started_at DESC 
+           LIMIT 1`,
+          [input.documentId]
+        ) as any;
+        
+        await db.end();
+        
+        if (rows.length === 0) {
+          return null;
+        }
+        
+        return rows[0];
       }),
   }),
 

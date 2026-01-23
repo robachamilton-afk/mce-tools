@@ -849,3 +849,15 @@
 - [ ] Test document upload with CSV files
 - [ ] Test extraction pipeline with re-uploaded document
 - [ ] Verify extraction produces ~70 insights again
+
+## Real-Time Extraction Progress Bar (Current - Jan 24, 2026)
+- [x] Design progress tracking system architecture (polling-based, 500ms interval)
+- [x] Add processing_progress field to documents table (already exists: processing_jobs table)
+- [x] Update document processor to emit progress events at each stage (updateProgress callback already implemented)
+- [x] Create backend endpoint to fetch current progress for a document (trpc.documents.getProgress)
+- [x] Build ProgressBar UI component with stage indicators (ExtractionProgressBar.tsx)
+- [x] Add progress polling to DocumentUpload page (integrated with file upload status)
+- [x] Show progress stages: Text Extraction → Deterministic → LLM Pass 1-4 → Performance → Financial → Weather → Complete
+- [x] Add estimated time remaining calculation (based on elapsed time and progress percent)
+- [ ] Test progress tracking with sample document upload
+- [x] Add error state visualization in progress bar (red card with error message)

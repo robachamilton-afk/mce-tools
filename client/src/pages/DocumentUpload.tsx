@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { trpc } from "@/lib/trpc";
 import { Upload, File, AlertCircle, CheckCircle, Loader2, X, ArrowLeft, Linkedin, Menu } from "lucide-react";
+import { ExtractionProgressBar } from "@/components/ExtractionProgressBar";
 import { useState, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 
@@ -14,8 +15,9 @@ interface UploadedFile {
   size: number;
   type: string;
   progress: number;
-  status: "pending" | "uploading" | "completed" | "error";
+  status: "pending" | "uploading" | "completed" | "error" | "extracting";
   error?: string;
+  documentId?: string;
 }
 
 const DOCUMENT_TYPES = [
@@ -45,9 +47,9 @@ export default function DocumentUpload() {
   // Upload mutation
   const uploadMutation = trpc.documents.upload.useMutation({
     onSuccess: (data, variables) => {
-      // Mark file as completed
+      // Mark file as extracting and store document ID
       setUploadedFiles(prev => prev.map(f => 
-        f.name === variables.fileName ? { ...f, status: 'completed', progress: 100 } : f
+        f.name === variables.fileName ? { ...f, status: 'extracting', progress: 100, documentId: data.documentId } : f
       ));
     },
     onError: (error, variables) => {
@@ -444,6 +446,9 @@ export default function DocumentUpload() {
                           {file.status === "completed" && (
                             <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0" />
                           )}
+                          {file.status === "extracting" && (
+                            <Loader2 className="h-3 w-3 text-blue-400 animate-spin flex-shrink-0" />
+                          )}
                           {file.status === "error" && (
                             <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
                           )}
@@ -451,6 +456,21 @@ export default function DocumentUpload() {
 
                         {file.error && (
                           <p className="text-xs text-red-400 mt-2">{file.error}</p>
+                        )}
+                        
+                        {/* Extraction progress */}
+                        {file.status === "extracting" && file.documentId && project?.dbName && (
+                          <div className="mt-3">
+                            <ExtractionProgressBar
+                              documentId={file.documentId}
+                              projectDbName={project.dbName}
+                              onComplete={() => {
+                                setUploadedFiles(prev => prev.map(f => 
+                                  f.id === file.id ? { ...f, status: 'completed' } : f
+                                ));
+                              }}
+                            />
+                          </div>
                         )}
                       </div>
                     ))}
