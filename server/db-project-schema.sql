@@ -254,3 +254,35 @@ CREATE TABLE performance_validations (
   INDEX idx_project_id (project_id),
   INDEX idx_calculation_id (calculation_id)
 );
+
+-- Weather files for performance validation
+CREATE TABLE IF NOT EXISTS weather_files (
+  id VARCHAR(36) PRIMARY KEY,
+  project_id INT NOT NULL,
+  file_key VARCHAR(500) NOT NULL,
+  file_url VARCHAR(500) NOT NULL,
+  file_name VARCHAR(255) NOT NULL,
+  file_size_bytes INT NOT NULL,
+  source_type VARCHAR(50) NOT NULL,
+  source_document_id VARCHAR(36),
+  extracted_url VARCHAR(500),
+  original_format VARCHAR(50),
+  converted_format VARCHAR(50) DEFAULT 'sam_csv',
+  converted_file_key VARCHAR(500),
+  latitude VARCHAR(20),
+  longitude VARCHAR(20),
+  elevation VARCHAR(20),
+  timezone VARCHAR(20),
+  location_name VARCHAR(255),
+  quality_score VARCHAR(20),
+  record_count INT,
+  missing_hours INT,
+  outlier_count INT,
+  validation_warnings TEXT,
+  status VARCHAR(20) DEFAULT 'pending',
+  processing_error TEXT,
+  used_in_validation_id VARCHAR(36),
+  is_active INT DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

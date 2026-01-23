@@ -18,6 +18,7 @@ import {
   Bar,
 } from "recharts";
 import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Zap, Sun, Gauge } from "lucide-react";
+import { WeatherFileUpload } from "@/components/WeatherFileUpload";
 
 export default function PerformanceValidation() {
   const params = useParams();
@@ -35,6 +36,12 @@ export default function PerformanceValidation() {
   );
 
   const latestValidation = validations?.[0];
+  
+  // Refetch validations when weather file is uploaded
+  const utils = trpc.useUtils();
+  const handleWeatherUpload = () => {
+    utils.performance.getByProject.invalidate({ projectDbName: projectDbName || "" });
+  };
 
   if (isLoading || !projectDbName) {
     return (
@@ -52,13 +59,27 @@ export default function PerformanceValidation() {
 
   if (!latestValidation) {
     return (
-      <div className="container py-8">
+      <div className="container py-8 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Performance Validation</h1>
+          <p className="text-muted-foreground mt-2">
+            Independent solar farm performance analysis using NREL PySAM
+          </p>
+        </div>
+        
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             No performance validation results available yet. Performance validation will be run automatically after document processing completes.
           </AlertDescription>
         </Alert>
+        
+        {/* Weather file upload */}
+        <WeatherFileUpload
+          projectId={parseInt(projectId)}
+          projectDbName={projectDbName}
+          onUploadComplete={handleWeatherUpload}
+        />
       </div>
     );
   }

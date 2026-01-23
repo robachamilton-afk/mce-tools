@@ -244,10 +244,62 @@ export const financialData = mysqlTable("financial_data", {
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
 
+/**
+ * Weather files for performance validation
+ * Supports both extracted (from documents) and manually uploaded files
+ */
+export const weatherFiles = mysqlTable("weather_files", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  projectId: int("project_id").notNull(),
+  
+  // File storage
+  fileKey: varchar("file_key", { length: 500 }).notNull(), // S3 key
+  fileUrl: varchar("file_url", { length: 500 }).notNull(), // S3 URL
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileSizeBytes: int("file_size_bytes").notNull(),
+  
+  // Source tracking
+  sourceType: varchar("source_type", { length: 50 }).notNull(), // extracted, manual_upload, pvgis_api
+  sourceDocumentId: varchar("source_document_id", { length: 36 }), // If extracted from document
+  extractedUrl: varchar("extracted_url", { length: 500 }), // Original URL if extracted
+  
+  // Format and metadata
+  originalFormat: varchar("original_format", { length: 50 }), // pvgis, tmy3, epw, pvsyst, sam_csv
+  convertedFormat: varchar("converted_format", { length: 50 }).default("sam_csv"),
+  convertedFileKey: varchar("converted_file_key", { length: 500 }), // S3 key for SAM CSV
+  
+  // Location metadata
+  latitude: varchar("latitude", { length: 20 }),
+  longitude: varchar("longitude", { length: 20 }),
+  elevation: varchar("elevation", { length: 20 }),
+  timezone: varchar("timezone", { length: 20 }),
+  locationName: varchar("location_name", { length: 255 }),
+  
+  // Quality metrics
+  qualityScore: varchar("quality_score", { length: 20 }), // 0.0-1.0
+  recordCount: int("record_count"), // Should be 8760 for hourly annual
+  missingHours: int("missing_hours"),
+  outlierCount: int("outlier_count"),
+  validationWarnings: text("validation_warnings"), // JSON array of warnings
+  
+  // Status
+  status: varchar("status", { length: 20 }).default("pending"), // pending, processing, ready, failed
+  processingError: text("processing_error"),
+  
+  // Usage tracking
+  usedInValidationId: varchar("used_in_validation_id", { length: 36 }), // Link to performance_validations
+  isActive: int("is_active").default(1), // Allow multiple files, mark which is active
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
 export type PerformanceParameters = typeof performanceParameters.$inferSelect;
 export type InsertPerformanceParameters = typeof performanceParameters.$inferInsert;
 export type FinancialData = typeof financialData.$inferSelect;
 export type InsertFinancialData = typeof financialData.$inferInsert;
+export type WeatherFile = typeof weatherFiles.$inferSelect;
+export type InsertWeatherFile = typeof weatherFiles.$inferInsert;
 
 /**
  * Projects table - stores project metadata and per-project database configuration

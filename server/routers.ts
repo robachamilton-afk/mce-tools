@@ -429,8 +429,93 @@ export const appRouter = router({
                   console.error(`[Document Processor] Financial data extraction failed:`, finError);
                 }
                 
+                // Step 9: Extract and download weather files
+                await updateProgress('extracting_weather_files', 98);
+                console.log(`[Document Processor] Extracting weather file references...`);
+                
+                try {
+                  const { WeatherFileExtractor } = await import('./weather-file-extractor');
+                  const weatherExtractor = new WeatherFileExtractor();
+                  
+                  const weatherData = await weatherExtractor.extractWeatherReferences(
+                    result.extractedText,
+                    document.id,
+                    document.fileName
+                  );
+                  
+                  if (weatherData.references.length > 0) {
+                    console.log(`[Document Processor] Found ${weatherData.references.length} weather file references`);
+                    
+                    // Process each reference (download if URL)
+                    for (const reference of weatherData.references) {
+                      if (reference.type === 'url' && reference.url) {
+                        console.log(`[Document Processor] Downloading weather file: ${reference.url}`);
+                        
+                        const downloadResult = await weatherExtractor.processWeatherFile(
+                          reference,
+                          projectIdNum,
+                          document.id
+                        );
+                        
+                        if (downloadResult) {
+                          // Save to weather_files table
+                          const { v4: uuidv4 } = await import('uuid');
+                          const weatherFileId = uuidv4();
+                          
+                          await projectDb.execute(
+                            `INSERT INTO weather_files (
+                              id, project_id, file_key, file_url, file_name, file_size_bytes,
+                              source_type, source_document_id, extracted_url, original_format,
+                              status, created_at, updated_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+                            [
+                              weatherFileId,
+                              projectIdNum,
+                              downloadResult.fileKey,
+                              downloadResult.fileUrl,
+                              downloadResult.fileName,
+                              downloadResult.fileSizeBytes,
+                              'extracted',
+                              document.id,
+                              reference.url,
+                              downloadResult.originalFormat,
+                              'pending' // Will be processed by validation trigger
+                            ]
+                          );
+                          
+                          console.log(`[Document Processor] Saved weather file: ${downloadResult.fileName}`);
+                        }
+                      } else if (reference.type === 'reference') {
+                        console.log(`[Document Processor] Found weather data reference: ${reference.description}`);
+                        // Could create a placeholder record for manual follow-up
+                      }
+                    }
+                  }
+                } catch (weatherError) {
+                  console.error(`[Document Processor] Weather file extraction failed:`, weatherError);
+                }
+                
                 await projectDb.end();
-                console.log(`[Document Processor] Saved ${result.facts.length} facts, narratives, performance params, and financial data`);
+                console.log(`[Document Processor] Saved ${result.facts.length} facts, narratives, performance params, financial data, and weather files`);
+                
+                // Step 10: Auto-trigger validation if ready
+                await updateProgress('checking_validation_trigger', 99);
+                console.log(`[Document Processor] Checking if validation can be triggered...`);
+                
+                try {
+                  const { ValidationTrigger } = await import('./validation-trigger');
+                  const trigger = new ValidationTrigger();
+                  
+                  const triggerResult = await trigger.autoTriggerIfReady(projectIdNum, projectDbName);
+                  
+                  if (triggerResult.triggered) {
+                    console.log(`[Document Processor] ✓ Auto-triggered validation: ${triggerResult.validationId}`);
+                  } else {
+                    console.log(`[Document Processor] Validation not triggered: ${triggerResult.reason}`);
+                  }
+                } catch (triggerError) {
+                  console.error(`[Document Processor] Validation trigger check failed:`, triggerError);
+                }
               }
             }
           })
@@ -1172,6 +1257,112 @@ Synthesized narrative:`;
         } catch (error: any) {
           await projectDb.end();
           throw new Error(`Failed to fetch financial data: ${error.message}`);
+        }
+      }),
+  }),
+  
+  // Weather files router
+  weatherFiles: router({
+    getByProject: protectedProcedure
+      .input(z.object({ projectDbName: z.string() }))
+      .query(async ({ input }) => {
+        const projectDb = mysql.createPool({
+          host: '127.0.0.1',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          const [rows] = await projectDb.execute(
+            `SELECT * FROM weather_files ORDER BY created_at DESC`
+          );
+          await projectDb.end();
+          return rows;
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to fetch weather files: ${error.message}`);
+        }
+      }),
+    
+    upload: protectedProcedure
+      .input(z.object({
+        projectDbName: z.string(),
+        projectId: z.number(),
+        fileName: z.string(),
+        fileContent: z.string(), // Base64 encoded
+        sourceDocumentId: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const projectDb = mysql.createPool({
+          host: '127.0.0.1',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          // Decode base64 content
+          const fileBuffer = Buffer.from(input.fileContent, 'base64');
+          const fileContent = fileBuffer.toString('utf-8');
+          const fileSizeBytes = fileBuffer.length;
+          
+          // Upload to S3
+          const { v4: uuidv4 } = await import('uuid');
+          const fileId = uuidv4();
+          const fileKey = `project-${input.projectId}/weather/manual/${fileId}-${input.fileName}`;
+          
+          const { storagePut } = await import('./storage');
+          const { url: fileUrl } = await storagePut(
+            fileKey,
+            fileContent,
+            'text/csv'
+          );
+          
+          // Detect format from filename
+          const ext = input.fileName.toLowerCase().split('.').pop();
+          let originalFormat = 'unknown';
+          if (ext === 'csv') originalFormat = 'csv';
+          else if (ext === 'epw') originalFormat = 'epw';
+          else if (ext === 'tm2' || ext === 'tm3') originalFormat = 'tmy3';
+          
+          // Save to database (will be processed by Solar Analyzer when validation runs)
+          await projectDb.execute(
+            `INSERT INTO weather_files (
+              id, project_id, file_key, file_url, file_name, file_size_bytes,
+              source_type, source_document_id, original_format, status,
+              is_active, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+            [
+              fileId,
+              input.projectId,
+              fileKey,
+              fileUrl,
+              input.fileName,
+              fileSizeBytes,
+              'manual_upload',
+              input.sourceDocumentId || null,
+              originalFormat,
+              'pending', // Will be processed when validation runs
+              1 // Set as active
+            ]
+          );
+          
+          await projectDb.end();
+          
+          console.log(`[Weather Upload] Saved weather file: ${input.fileName}`);
+          
+          // Auto-trigger validation if ready
+          const { ValidationTrigger } = await import('./validation-trigger');
+          const trigger = new ValidationTrigger();
+          const triggerResult = await trigger.autoTriggerIfReady(input.projectId, input.projectDbName);
+          
+          return {
+            id: fileId,
+            status: 'pending',
+            triggered: triggerResult.triggered
+          };
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to upload weather file: ${error.message}`);
         }
       }),
   }),

@@ -825,3 +825,18 @@
 - [x] Integrate smart processor into Solar Analyzer API
 - [ ] Test with sample files from each format (need sample files)
 - [ ] Document supported formats and conversion logic
+
+## Extraction-to-Validation Pipeline Connection (Current - Jan 24, 2026)
+- [x] Design dual-pathway weather data architecture (extraction + manual upload)
+- [x] Add weather_files table to database schema (28 fields: file_key, source_type, format, quality_score, location, validation metrics)
+- [x] Extend LLM extraction prompts to identify weather file references/URLs in documents (WeatherFileExtractor)
+- [x] Build weather file downloader for extracted URLs (downloads and uploads to S3)
+- [x] Store extracted weather files in S3 with metadata in database (weather_files table)
+- [x] Create auto-trigger logic: run validation when parameters + weather data complete (ValidationTrigger)
+- [x] Build backend endpoint for manual weather file upload (trpc.weatherFiles.upload)
+- [x] Add weather file upload UI component to Performance Validation page (WeatherFileUpload)
+- [x] Implement weather file selection (choose between extracted vs manual) - is_active flag
+- [ ] Add validation status tracking (pending, running, complete, failed) - schema ready, Solar Analyzer integration pending
+- [ ] Test automatic pathway with document containing weather file reference (need sample document)
+- [ ] Test manual pathway with TMY3/EPW file upload (need sample file)
+- [ ] Document both weather data ingestion pathways
