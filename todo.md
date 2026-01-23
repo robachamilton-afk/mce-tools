@@ -606,3 +606,26 @@
   - [x] Discovered frontend passes project_db_name (string like "proj_1_1769157846333") not numeric projectId
   - [x] Removed unnecessary project lookup and parseInt() call
   - [x] Query section_narratives directly using input.projectId as project_db_name
+
+## Parameter Standardization & Performance Optimization (In Progress)
+- [ ] Standardize projectId parameter naming
+  - [ ] Audit all endpoints using projectId parameter
+  - [ ] Rename to projectNumericId when expecting number
+  - [ ] Rename to projectDbName when expecting database name string
+  - [ ] Update frontend calls to match new parameter names
+  - [ ] Add zod validation for correct types
+- [x] Debug and optimize narrative generation performance
+  - [x] Fixed SQL query to use template literals instead of parameterized queries
+  - [x] Added proper string type checking for narrative content
+  - [x] Added error logging for narrative save failures
+  - [x] Added character count logging to track narrative generation
+  - [x] Narrative generation runs asynchronously after fact extraction (doesn't block upload)
+  - [ ] TODO: Add retry logic for failed LLM calls
+  - [ ] TODO: Add timeout handling for slow LLM responses
+- [ ] Implement insight deduplication and conflict detection
+  - [ ] Add similarity matching when processing new documents
+  - [ ] Flag insights that conflict with existing ones (different values for same key)
+  - [ ] Merge duplicate insights with confidence score weighting
+  - [ ] Add "Conflicts" section to show discrepancies between documents
+  - [ ] Update existing insights instead of creating duplicates
+  - [ ] Show source document for each insight to track provenance

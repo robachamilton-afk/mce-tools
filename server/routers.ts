@@ -239,17 +239,23 @@ export const appRouter = router({
                       ]
                     });
                     
-                    const narrative = response.choices[0]?.message?.content || '';
+                    const narrativeContent = response.choices[0]?.message?.content;
+                    const narrative = typeof narrativeContent === 'string' ? narrativeContent : '';
                     
-                    if (narrative) {
-                      // Store narrative in main database
-                      await db.execute(
-                        `INSERT INTO section_narratives (project_db_name, section_name, narrative_text) 
-                         VALUES (?, ?, ?) 
-                         ON DUPLICATE KEY UPDATE narrative_text = VALUES(narrative_text), updated_at = NOW()`,
-                        [projectDbName, sectionName, narrative]
-                      );
-                      console.log(`[Document Processor] Generated narrative for ${displayName}`);
+                    if (narrative && db) {
+                      try {
+                        // Store narrative in main database
+                        // Escape single quotes in narrative text
+                        const escapedNarrative = narrative.replace(/'/g, "''");
+                        await db.execute(
+                          `INSERT INTO section_narratives (project_db_name, section_name, narrative_text) 
+                           VALUES ('${projectDbName}', '${sectionName}', '${escapedNarrative}') 
+                           ON DUPLICATE KEY UPDATE narrative_text = '${escapedNarrative}', updated_at = NOW()`
+                        );
+                        console.log(`[Document Processor] Generated and saved narrative for ${displayName} (${narrative.length} chars)`);
+                      } catch (error) {
+                        console.error(`[Document Processor] Failed to save narrative for ${displayName}:`, error);
+                      }
                     }
                   }
                 }
