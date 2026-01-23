@@ -7,7 +7,7 @@
 
 import { extractTextFromDocument } from './document-extractor';
 import { extractFactsWithOllama } from './ollama';
-import { intelligentFactExtractor } from './intelligent-fact-extractor';
+import { IntelligentFactExtractorV2 } from './intelligent-fact-extractor-v2';
 import mysql from 'mysql2/promise';
 
 export interface ProcessedDocument {
@@ -58,29 +58,29 @@ export async function processDocument(
     
     console.log(`[Document Processor] Deterministic extraction found ${deterministicFacts.length} facts`);
     
-    // Step 3: Extract facts using Intelligent LLM Extractor (multi-pass)
-    console.log(`[Document Processor] Step 3: Extracting facts with Intelligent LLM Extractor`);
+    // Step 3: Extract facts using Intelligent LLM Extractor V2 (contextual statements)
+    console.log(`[Document Processor] Step 3: Extracting facts with Intelligent LLM Extractor V2`);
     let llmFacts: ExtractedFact[] = [];
     
     try {
-      const intelligentResult = await intelligentFactExtractor.extractFacts(
+      const intelligentExtractor = new IntelligentFactExtractorV2();
+      const intelligentResult = await intelligentExtractor.extractFacts(
         textResult.text,
-        documentType,
-        filePath
+        documentType
       );
       
       llmFacts = intelligentResult.facts.map((fact: any) => ({
-        category: fact.category || 'other',
+        category: fact.section || 'other',
         key: fact.key,
-        value: fact.value,
+        value: fact.statement || fact.value,
         confidence: fact.confidence || 0.5,
         source: fact.extraction_method || '',
         extractionMethod: 'llm' as const,
       }));
       
-      console.log(`[Document Processor] Intelligent LLM extraction found ${llmFacts.length} facts in ${intelligentResult.extraction_time_ms}ms`);
+      console.log(`[Document Processor] Intelligent LLM extraction V2 found ${llmFacts.length} facts in ${intelligentResult.extraction_time_ms}ms`);
     } catch (llmError) {
-      console.error(`[Document Processor] Intelligent LLM extraction failed:`, llmError);
+      console.error(`[Document Processor] Intelligent LLM extraction V2 failed:`, llmError);
       // Continue with deterministic facts only
     }
     

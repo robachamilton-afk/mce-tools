@@ -406,3 +406,46 @@
 - Timeline and milestone extraction
 - Technical specification capture
 - Financial and regulatory information extraction
+
+## Structured Contextual Fact Extraction (Current - Jan 23, 2026)
+
+**Problem**: Current extraction produces disconnected data points without context (e.g., "7 Aug 2025" under Timeline, "51%" under Financial)
+
+**Solution**: Restructure extraction to produce meaningful, contextual information organized into coherent sections
+
+- [ ] Redesign extraction prompts to produce full sentences with context
+  - Instead of: "Timeline: 7 Aug 2025"
+  - Produce: "ESIA Scoping completion scheduled for 7 Aug 2025"
+- [ ] Implement hierarchical fact relationships (parent-child structure)
+  - Example: "Grid Connection" → "Primary: 132kV LILO at Clare Substation" → "Future: 400kV line 4km away"
+- [ ] Create section-based organization
+  - Project Overview (name, location, partners, ownership)
+  - Technical Design (capacity, technology, configuration)
+  - Timeline & Milestones (key dates with descriptions)
+  - Financial Structure (ownership %, investment, revenue model)
+  - Grid Connection (voltage levels, distances, connection points)
+  - Site Characteristics (area, topography, access, constraints)
+  - Risks & Issues (identified risks with severity and mitigation)
+  - Regulatory & Approvals (permits, studies, compliance)
+  - Dependencies & Assumptions (critical dependencies, design assumptions)
+- [ ] Update database schema to support hierarchical facts
+  - Add parent_fact_id column for fact relationships
+  - Add section column for grouping
+  - Add statement column for full contextual sentence
+- [ ] Update Facts page UI to display hierarchical structure
+  - Group facts by section
+  - Show parent-child relationships
+  - Display full contextual statements instead of key-value pairs
+- [ ] Test with Marsa Solar PDF and verify structured output
+- [ ] Generate Project Summary document from structured facts
+
+## Structured Contextual Fact Extraction (COMPLETED)
+- [x] Redesign extraction prompts to produce complete sentences with full context
+- [x] Replace disconnected key-value pairs with self-contained statements
+- [x] Organize facts into meaningful sections (Project_Overview, Financial_Structure, Technical_Design, etc.)
+- [x] Test with Marsa Solar PDF - 72 contextual facts extracted
+- [x] Verified facts read like structured brief instead of database dump
+- [x] Example improvements:
+  * OLD: "51%" → NEW: "OQAE holds a 51% stake in the Marsa Solar Project joint venture"
+  * OLD: "14/05/2025" → NEW: Facts now include milestone context
+  * OLD: "300 MW" → NEW: Capacity facts include DC/AC distinction and purpose
