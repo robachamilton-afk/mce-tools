@@ -9,6 +9,8 @@ import { z } from "zod";
 import { uploadDocument } from "./document-service";
 import { processDocument } from "./document-processor-v2";
 import { demoRouter } from "./demo-router";
+import mysql from 'mysql2/promise';
+import { sql } from 'drizzle-orm';
 
 export const appRouter = router({
   system: systemRouter,
@@ -124,11 +126,41 @@ export const appRouter = router({
           ctx.user.id
         );
 
-        // Start processing asynchronously
+        // Start processing asynchronously and save facts
         const projectIdNum = parseInt(input.projectId);
-        processDocument(projectIdNum, document.id, document.filePath, finalDocumentType as any).catch(err => {
-          console.error(`Failed to process document ${document.id}:`, err);
-        });
+        processDocument(projectIdNum, document.id, document.filePath, finalDocumentType as any)
+          .then(async (result) => {
+            // Save extracted facts to database
+            if (result.facts.length > 0) {
+              const db = await getDb();
+              const [projectRows]: any = await db.execute(
+                sql`SELECT dbName FROM projects WHERE id = ${projectIdNum}`
+              );
+              const projectDbName = projectRows[0]?.dbName;
+              
+              if (projectDbName) {
+                const projectDb = mysql.createPool({
+                  host: '127.0.0.1',
+                  user: 'root',
+                  database: projectDbName,
+                });
+                
+                for (const fact of result.facts) {
+                  await projectDb.execute(
+                    `INSERT INTO extracted_facts (id, source_document_id, project_id, category, \`key\`, value, confidence, extraction_method, verification_status, created_at) 
+                     VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
+                    [document.id, projectIdNum, fact.category, fact.key, fact.value, fact.confidence, fact.extractionMethod]
+                  );
+                }
+                
+                await projectDb.end();
+                console.log(`[Document Processor] Saved ${result.facts.length} facts to database`);
+              }
+            }
+          })
+          .catch(err => {
+            console.error(`Failed to process document ${document.id}:`, err);
+          });
         
         console.log(`Document uploaded: ${document.id}, processing started`);
 

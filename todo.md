@@ -346,3 +346,24 @@
 - [x] Edit document type functionality working (can change category after upload)
 - [x] Reverted from multipart/form-data to base64 upload (simpler, more reliable)
 - [ ] Test large file upload (50MB+) - requires actual large file
+
+## Document Processing Pipeline Review & Improvements (Current)
+- [ ] Analyze current document-processor-v2.ts implementation
+- [ ] Check text extraction errors (pdf-parse issues in logs)
+- [ ] Review fact extraction logic (deterministic + Ollama)
+- [ ] Verify extracted facts are being stored in database
+- [ ] Check processing status updates in processing_jobs table
+- [ ] Test with uploaded documents and verify Facts page shows results
+- [ ] Fix any errors preventing successful processing
+- [ ] Add better error handling and logging
+- [ ] Improve extraction quality for different document types
+
+## Document Processing Pipeline Review (COMPLETED)
+- [x] Fixed PDF extraction (pdf-parse import issue - switched to PDFParse class)
+- [x] Fixed fact storage to database (schema column names: source_document_id, key, value, extraction_method)
+- [x] Verified deterministic fact extraction working (capacity, voltage, technology)
+- [x] Verified facts display on Facts page (15 total facts showing correctly)
+- [x] Processing pipeline fully functional: upload → extract text → extract facts → save to DB
+- [x] Confirmed 5 facts extracted and saved from test document (150 MW, 120 MW, 1000 MW, 132 kV, solar)
+- [ ] Fix "NaN" average confidence display (confidence stored as string not number)
+- [ ] Fix Facts table display (Key column showing empty, values in wrong columns)

@@ -10,7 +10,7 @@
 
 import { promises as fs } from 'fs';
 import path from 'path';
-import * as pdfParse from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 import { createWorker } from 'tesseract.js';
 
 export interface PdfExtractionResult {
@@ -42,7 +42,15 @@ export async function extractTextFromPdf(pdfBuffer: Buffer): Promise<PdfExtracti
   
   try {
     // Try direct text extraction first
-    const data = await (pdfParse as any).default(pdfBuffer);
+    const parser = new PDFParse({ data: pdfBuffer });
+    const result = await parser.getText();
+    const data = {
+      numpages: result.total,
+      text: result.text,
+      info: {},
+      metadata: null,
+      version: '1.0'
+    };
     
     console.log(`[PDF Extractor] Direct extraction completed: ${data.numpages} pages, ${data.text.length} characters`);
     
@@ -69,16 +77,7 @@ export async function extractTextFromPdf(pdfBuffer: Buffer): Promise<PdfExtracti
       pageCount: data.numpages,
       method: 'direct',
       pages,
-      metadata: data.info ? {
-        title: data.info.Title,
-        author: data.info.Author,
-        subject: data.info.Subject,
-        keywords: data.info.Keywords,
-        creator: data.info.Creator,
-        producer: data.info.Producer,
-        creationDate: data.info.CreationDate ? new Date(data.info.CreationDate) : undefined,
-        modificationDate: data.info.ModDate ? new Date(data.info.ModDate) : undefined,
-      } : undefined,
+      metadata: undefined,
     };
   } catch (error) {
     console.error('[PDF Extractor] Direct extraction failed:', error);
