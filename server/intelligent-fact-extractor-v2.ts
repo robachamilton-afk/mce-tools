@@ -67,7 +67,7 @@ export class IntelligentFactExtractorV2 {
     const prompt = `Extract structured information from this ${docType} document and present each fact as a complete, contextual statement.
 
 Document text:
-${text.substring(0, 8000)}
+${text.substring(0, 50000)}
 
 Extract information in these sections:
 - Project_Overview: project identity, partners, ownership structure, location
@@ -111,7 +111,7 @@ Return a JSON array of facts.`;
     const prompt = `Identify critical relationships and dependencies in this ${docType} document.
 
 Document text:
-${text.substring(0, 8000)}
+${text.substring(0, 50000)}
 
 Identify:
 1. Critical dependencies (what depends on what)
@@ -146,7 +146,7 @@ Return a JSON array of facts.`;
     const prompt = `Identify risks, concerns, and potential issues in this ${docType} document.
 
 Document text:
-${text.substring(0, 8000)}
+${text.substring(0, 50000)}
 
 Look for:
 1. Explicitly stated risks or concerns
@@ -183,7 +183,7 @@ Return a JSON array of facts.`;
     const prompt = `Extract design assumptions and engineering parameters from this ${docType} document.
 
 Document text:
-${text.substring(0, 8000)}
+${text.substring(0, 50000)}
 
 Identify:
 1. Design assumptions and their rationale

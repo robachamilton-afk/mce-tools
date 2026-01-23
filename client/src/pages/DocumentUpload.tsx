@@ -28,7 +28,7 @@ const DOCUMENT_TYPES = [
   { value: "OTHER", label: "Other" },
 ];
 
-const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".doc", ".xls", ".txt", ".pptx"];
+const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".doc", ".xls", ".txt", ".pptx", ".csv"];
 
 export default function DocumentUpload() {
   const { user, isAuthenticated } = useAuth();

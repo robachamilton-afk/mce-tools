@@ -840,3 +840,12 @@
 - [ ] Test automatic pathway with document containing weather file reference (need sample document)
 - [ ] Test manual pathway with TMY3/EPW file upload (need sample file)
 - [ ] Document both weather data ingestion pathways
+
+## Extraction Engine Bug Fix & CSV Upload (Current - Jan 24, 2026)
+- [x] Diagnose extraction engine breakage (check logs, test document upload)
+- [x] Identify what changes broke the extraction pipeline (8000 char limit in IntelligentFactExtractorV2)
+- [x] Fix extraction engine issues (increased to 50000 chars across all 4 passes)
+- [x] Add CSV file type to document upload validation
+- [ ] Test document upload with CSV files
+- [ ] Test extraction pipeline with re-uploaded document
+- [ ] Verify extraction produces ~70 insights again
