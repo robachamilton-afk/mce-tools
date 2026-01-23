@@ -831,6 +831,154 @@ Synthesized narrative:`;
         }
       }),
   }),
+
+  performance: router({
+    // Get all performance validations for a project
+    getByProject: protectedProcedure
+      .input(z.object({ projectDbName: z.string() }))
+      .query(async ({ input }) => {
+        const projectDb = await mysql.createConnection({
+          host: process.env.DATABASE_HOST || 'localhost',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          const [rows] = await projectDb.execute(
+            "SELECT * FROM performance_validations ORDER BY created_at DESC"
+          ) as any;
+          await projectDb.end();
+          return rows || [];
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to fetch performance validations: ${error.message}`);
+        }
+      }),
+
+    // Get single performance validation by ID
+    getById: protectedProcedure
+      .input(z.object({ projectDbName: z.string(), validationId: z.string() }))
+      .query(async ({ input }) => {
+        const projectDb = await mysql.createConnection({
+          host: process.env.DATABASE_HOST || 'localhost',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          const [rows] = await projectDb.execute(
+            "SELECT * FROM performance_validations WHERE id = ?",
+            [input.validationId]
+          ) as any;
+          await projectDb.end();
+          return rows[0] || null;
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to fetch performance validation: ${error.message}`);
+        }
+      }),
+
+    // Create new performance validation (will be called by Solar Analyzer integration)
+    create: protectedProcedure
+      .input(z.object({
+        projectDbName: z.string(),
+        calculationId: z.string(),
+        annualGenerationGwh: z.string().optional(),
+        capacityFactorPercent: z.string().optional(),
+        performanceRatioPercent: z.string().optional(),
+        specificYieldKwhKwp: z.string().optional(),
+        contractorClaimGwh: z.string().optional(),
+        variancePercent: z.string().optional(),
+        varianceGwh: z.string().optional(),
+        flagTriggered: z.number().optional(),
+        confidenceLevel: z.string().optional(),
+        dcCapacityMw: z.string().optional(),
+        acCapacityMw: z.string().optional(),
+        moduleModel: z.string().optional(),
+        inverterModel: z.string().optional(),
+        trackingType: z.string().optional(),
+        totalSystemLossesPercent: z.string().optional(),
+        parametersExtractedCount: z.number().optional(),
+        parametersAssumedCount: z.number().optional(),
+        confidenceScore: z.string().optional(),
+        weatherDataSource: z.string().optional(),
+        ghiAnnualKwhM2: z.string().optional(),
+        poaAnnualKwhM2: z.string().optional(),
+        monthlyProfile: z.string().optional(), // JSON string
+        modelUsed: z.string().optional(),
+        pysamVersion: z.string().optional(),
+        calculationTimeSeconds: z.string().optional(),
+        warnings: z.string().optional(), // JSON string
+      }))
+      .mutation(async ({ input }) => {
+        const projectDb = await mysql.createConnection({
+          host: process.env.DATABASE_HOST || 'localhost',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          const validationId = `pv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          // Get project_id from project database name
+          const mainDb = await getDb();
+          const [projectRows] = await mainDb.execute(
+            "SELECT id FROM projects WHERE dbName = ?",
+            [input.projectDbName]
+          ) as any;
+          const projectId = projectRows[0]?.id;
+          
+          await projectDb.execute(
+            `INSERT INTO performance_validations (
+              id, project_id, calculation_id,
+              annual_generation_gwh, capacity_factor_percent, performance_ratio_percent, specific_yield_kwh_kwp,
+              contractor_claim_gwh, variance_percent, variance_gwh, flag_triggered, confidence_level,
+              dc_capacity_mw, ac_capacity_mw, module_model, inverter_model, tracking_type,
+              total_system_losses_percent, parameters_extracted_count, parameters_assumed_count, confidence_score,
+              weather_data_source, ghi_annual_kwh_m2, poa_annual_kwh_m2, monthly_profile,
+              model_used, pysam_version, calculation_time_seconds, warnings
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              validationId,
+              projectId,
+              input.calculationId,
+              input.annualGenerationGwh,
+              input.capacityFactorPercent,
+              input.performanceRatioPercent,
+              input.specificYieldKwhKwp,
+              input.contractorClaimGwh,
+              input.variancePercent,
+              input.varianceGwh,
+              input.flagTriggered || 0,
+              input.confidenceLevel,
+              input.dcCapacityMw,
+              input.acCapacityMw,
+              input.moduleModel,
+              input.inverterModel,
+              input.trackingType,
+              input.totalSystemLossesPercent,
+              input.parametersExtractedCount,
+              input.parametersAssumedCount,
+              input.confidenceScore,
+              input.weatherDataSource,
+              input.ghiAnnualKwhM2,
+              input.poaAnnualKwhM2,
+              input.monthlyProfile,
+              input.modelUsed,
+              input.pysamVersion,
+              input.calculationTimeSeconds,
+              input.warnings,
+            ]
+          );
+
+          await projectDb.end();
+          return { success: true, validationId };
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to create performance validation: ${error.message}`);
+        }
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Plus, Loader2, AlertCircle, FolderOpen, Upload, ArrowLeft, Linkedin, Menu, FileText, Settings, AlertTriangle, Trash2 } from "lucide-react";
+import { Plus, Loader2, AlertCircle, FolderOpen, Upload, ArrowLeft, Linkedin, Menu, FileText, Settings, AlertTriangle, Trash2, Zap } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -390,6 +390,18 @@ export default function ProjectDashboard() {
                           >
                             <Loader2 className="mr-1 h-3 w-3" />
                             Processing Status
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-xs border-blue-700 text-blue-400 hover:bg-blue-950"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/project/${project.id}/performance`);
+                            }}
+                          >
+                            <Zap className="mr-1 h-3 w-3" />
+                            Performance
                           </Button>
                         </div>
                         <div className="flex gap-2">

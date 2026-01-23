@@ -85,6 +85,52 @@ export const processingJobs = mysqlTable("processing_jobs", {
   errorMessage: text("error_message"),
 });
 
+export const performanceValidations = mysqlTable("performance_validations", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  projectId: int("project_id").notNull(),
+  calculationId: varchar("calculation_id", { length: 100 }).notNull(),
+  
+  // Results
+  annualGenerationGwh: varchar("annual_generation_gwh", { length: 20 }),
+  capacityFactorPercent: varchar("capacity_factor_percent", { length: 20 }),
+  performanceRatioPercent: varchar("performance_ratio_percent", { length: 20 }),
+  specificYieldKwhKwp: varchar("specific_yield_kwh_kwp", { length: 20 }),
+  
+  // Contractor claims comparison
+  contractorClaimGwh: varchar("contractor_claim_gwh", { length: 20 }),
+  variancePercent: varchar("variance_percent", { length: 20 }),
+  varianceGwh: varchar("variance_gwh", { length: 20 }),
+  flagTriggered: int("flag_triggered").default(0),
+  confidenceLevel: varchar("confidence_level", { length: 20 }),
+  
+  // Input summary
+  dcCapacityMw: varchar("dc_capacity_mw", { length: 20 }),
+  acCapacityMw: varchar("ac_capacity_mw", { length: 20 }),
+  moduleModel: varchar("module_model", { length: 255 }),
+  inverterModel: varchar("inverter_model", { length: 255 }),
+  trackingType: varchar("tracking_type", { length: 50 }),
+  totalSystemLossesPercent: varchar("total_system_losses_percent", { length: 20 }),
+  parametersExtractedCount: int("parameters_extracted_count"),
+  parametersAssumedCount: int("parameters_assumed_count"),
+  confidenceScore: varchar("confidence_score", { length: 20 }),
+  
+  // Weather data
+  weatherDataSource: varchar("weather_data_source", { length: 255 }),
+  ghiAnnualKwhM2: varchar("ghi_annual_kwh_m2", { length: 20 }),
+  poaAnnualKwhM2: varchar("poa_annual_kwh_m2", { length: 20 }),
+  
+  // Monthly profile (stored as JSON)
+  monthlyProfile: text("monthly_profile"),
+  
+  // Metadata
+  modelUsed: varchar("model_used", { length: 50 }),
+  pysamVersion: varchar("pysam_version", { length: 20 }),
+  calculationTimeSeconds: varchar("calculation_time_seconds", { length: 20 }),
+  warnings: text("warnings"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = typeof documents.$inferInsert;
 export type ExtractedFact = typeof extractedFacts.$inferSelect;
@@ -93,6 +139,8 @@ export type RedFlag = typeof redFlags.$inferSelect;
 export type InsertRedFlag = typeof redFlags.$inferInsert;
 export type ProcessingJob = typeof processingJobs.$inferSelect;
 export type InsertProcessingJob = typeof processingJobs.$inferInsert;
+export type PerformanceValidation = typeof performanceValidations.$inferSelect;
+export type InsertPerformanceValidation = typeof performanceValidations.$inferInsert;
 
 /**
  * Projects table - stores project metadata and per-project database configuration

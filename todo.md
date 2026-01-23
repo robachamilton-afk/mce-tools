@@ -711,3 +711,19 @@
 - [ ] Integrate performance validation into document processing pipeline
 - [ ] Build performance validation results UI
 - [ ] Test end-to-end performance validation workflow
+
+## Performance Validation UI
+- [x] Create performance_validations table in per-project database schema
+- [x] Add backend endpoints for storing/retrieving performance validation results (getByProject, getById, create)
+- [x] Create Performance Validation page component
+- [x] Build performance metrics summary cards (generation, CF, PR)
+- [x] Implement contractor claims comparison visualization
+- [x] Add variance analysis with red flag indicators
+- [x] Create input summary showing extracted vs assumed parameters
+- [x] Build monthly generation profile chart (Recharts bar chart with monthly data)
+- [x] Add confidence score visualization (HIGH/MEDIUM/LOW badge + percentage)
+- [x] Add "Validate Performance" button to project cards
+- [x] Add Performance navigation item (/project/:projectId/performance route)
+- [x] Test performance validation workflow end-to-end with mock data
+- [x] Fixed snake_case field names from MySQL database (annual_generation_gwh, etc.)
+- [x] Verified all visualizations render correctly with real data
