@@ -12,6 +12,7 @@ import OllamaConfig from "./pages/OllamaConfig";
 import ProcessingStatus from "./pages/ProcessingStatus";
 import { Documents } from "./pages/Documents";
 import RedFlags from "./pages/RedFlags";
+import Conflicts from "./pages/Conflicts";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/project/:id/documents" component={Documents} />
       <Route path="/insights" component={FactVerification} />
       <Route path="/red-flags" component={RedFlags} />
+      <Route path="/conflicts" component={Conflicts} />
       <Route path="/ollama-config" component={OllamaConfig} />
       <Route path="/processing-status" component={ProcessingStatus} />
       <Route path="/404" component={NotFound} />

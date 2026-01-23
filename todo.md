@@ -652,9 +652,9 @@
     - [x] Create conflict records linking contradictory insights (insight_conflicts table)
     - [x] createConflict() function to link conflicting insights
     - [x] Update both insights with conflict_with field
-    - [ ] TODO: Add "Conflicts" section/page to Insights UI
-    - [ ] TODO: Show side-by-side comparison with source documents
-    - [ ] TODO: Add conflict resolution workflow (Accept A/B, Merge, Ignore)
+    - [x] TODO: Add "Conflicts" section/page to Insights UI (Created /conflicts page)
+    - [x] TODO: Show side-by-side comparison with source documents (Two-column layout with sources)
+    - [x] TODO: Add conflict resolution workflow (Accept A/B, Merge, Ignore) (All 4 actions implemented)
   - [x] Update UI:
     - [x] Show source document count badges on each insight
     - [x] Add "Enriched X times" indicator with blue badge
@@ -668,3 +668,32 @@
   - [ ] TODO: Migration for existing databases
     - [ ] Create migration script to add new columns to existing project databases
     - [ ] Backfill source_documents for existing insights
+
+## Conflicts Resolution UI (In Progress)
+- [ ] Create backend endpoints for conflicts
+  - [ ] conflicts.list - Get all pending conflicts for a project
+  - [ ] conflicts.resolve - Resolve a conflict (accept_a, accept_b, merge, ignore)
+  - [ ] conflicts.getDetails - Get full details of both conflicting insights
+- [ ] Build Conflicts page
+  - [ ] Create /conflicts route
+  - [ ] List all pending conflicts with summary cards
+  - [ ] Side-by-side comparison view for each conflict
+  - [ ] Show source documents for each insight
+  - [ ] Display confidence scores and enrichment history
+  - [ ] Highlight differences between conflicting values
+- [ ] Implement resolution actions
+  - [ ] "Accept A" - Keep first insight, delete second
+  - [ ] "Accept B" - Keep second insight, delete first
+  - [ ] "Merge" - Combine both insights using LLM, delete originals
+  - [ ] "Ignore" - Mark conflict as ignored, keep both insights
+  - [ ] Update conflict resolution_status in database
+  - [ ] Show confirmation dialog before resolving
+- [ ] Add navigation
+  - [ ] Add "Conflicts" button to Project Dashboard cards
+  - [ ] Add "View Conflicts" link to Insights page header
+  - [ ] Show conflict count badge on navigation items
+- [ ] Test workflow
+  - [ ] Upload two documents with conflicting information
+  - [ ] Verify conflicts are detected and listed
+  - [ ] Test each resolution action
+  - [ ] Verify insights are updated correctly

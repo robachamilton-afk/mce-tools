@@ -356,6 +356,18 @@ export default function ProjectDashboard() {
                           <Button
                             size="sm"
                             variant="outline"
+                            className="flex-1 text-xs border-red-700 text-red-400 hover:bg-red-950"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/conflicts?projectId=${project.id}&projectDbName=${project.dbName}`);
+                            }}
+                          >
+                            <AlertTriangle className="mr-1 h-3 w-3" />
+                            Conflicts
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             className="flex-1 text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
                             onClick={(e) => {
                               e.stopPropagation();

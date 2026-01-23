@@ -268,13 +268,13 @@ export const appRouter = router({
                 await updateProgress('generating_narratives', 92);
                 console.log(`[Document Processor] Generating section narratives...`);
                 
-                const { normalizeSection, getSectionDisplayName } = await import('../shared/section-normalizer');
+                const { getSectionDisplayName } = await import('../shared/section-normalizer');
                 const { invokeLLM } = await import('./_core/llm');
                 
                 // Group facts by normalized section
                 const factsBySection = new Map<string, typeof result.facts>();
                 for (const fact of result.facts) {
-                  const canonical = normalizeSection(fact.key);
+                  const canonical = normalizeSectionKey(fact.key);
                   if (!factsBySection.has(canonical)) {
                     factsBySection.set(canonical, []);
                   }
@@ -702,6 +702,132 @@ Synthesized narrative:`;
           console.error("Failed to synthesize narrative:", error);
           // Fallback: return facts as bullet points
           return { narrative: factsList };
+        }
+      }),
+  }),
+
+  conflicts: router({
+    list: protectedProcedure
+      .input(z.object({ projectDbName: z.string() }))
+      .query(async ({ input }) => {
+        const projectDb = await mysql.createConnection({
+          host: process.env.DATABASE_HOST || 'localhost',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          const [conflicts] = await projectDb.execute(`
+            SELECT 
+              c.*,
+              f1.value as insight_a_value,
+              f1.confidence as insight_a_confidence,
+              f1.source_documents as insight_a_sources,
+              f2.value as insight_b_value,
+              f2.confidence as insight_b_confidence,
+              f2.source_documents as insight_b_sources
+            FROM insight_conflicts c
+            JOIN extracted_facts f1 ON c.insight_a_id = f1.id
+            JOIN extracted_facts f2 ON c.insight_b_id = f2.id
+            WHERE c.resolution_status = 'pending'
+            ORDER BY c.created_at DESC
+          `) as any;
+
+          await projectDb.end();
+          return conflicts;
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to fetch conflicts: ${error.message}`);
+        }
+      }),
+
+    resolve: protectedProcedure
+      .input(z.object({
+        projectDbName: z.string(),
+        conflictId: z.string(),
+        resolution: z.enum(['accept_a', 'accept_b', 'merge', 'ignore']),
+        mergedValue: z.string().optional(), // For merge resolution
+      }))
+      .mutation(async ({ input }) => {
+        const projectDb = await mysql.createConnection({
+          host: process.env.DATABASE_HOST || 'localhost',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          // Get conflict details
+          const [conflicts] = await projectDb.execute(`
+            SELECT * FROM insight_conflicts WHERE id = '${input.conflictId}'
+          `) as any;
+
+          if (conflicts.length === 0) {
+            throw new Error('Conflict not found');
+          }
+
+          const conflict = conflicts[0];
+
+          // Handle different resolution types
+          if (input.resolution === 'accept_a') {
+            // Keep insight A, delete insight B
+            await projectDb.execute(`DELETE FROM extracted_facts WHERE id = '${conflict.insight_b_id}'`);
+            await projectDb.execute(`UPDATE extracted_facts SET conflict_with = NULL WHERE id = '${conflict.insight_a_id}'`);
+          } else if (input.resolution === 'accept_b') {
+            // Keep insight B, delete insight A
+            await projectDb.execute(`DELETE FROM extracted_facts WHERE id = '${conflict.insight_a_id}'`);
+            await projectDb.execute(`UPDATE extracted_facts SET conflict_with = NULL WHERE id = '${conflict.insight_b_id}'`);
+          } else if (input.resolution === 'merge') {
+            // Create new merged insight, delete both originals
+            const { v4: uuidv4 } = await import('uuid');
+            const mergedId = uuidv4();
+            
+            // Get both insights
+            const [insightsA] = await projectDb.execute(`SELECT * FROM extracted_facts WHERE id = '${conflict.insight_a_id}'`) as any;
+            const [insightsB] = await projectDb.execute(`SELECT * FROM extracted_facts WHERE id = '${conflict.insight_b_id}'`) as any;
+            
+            const insightA = insightsA[0];
+            const insightB = insightsB[0];
+            
+            // Merge source documents
+            const sourcesA = insightA.source_documents ? JSON.parse(insightA.source_documents) : [insightA.source_document_id];
+            const sourcesB = insightB.source_documents ? JSON.parse(insightB.source_documents) : [insightB.source_document_id];
+            const mergedSources = Array.from(new Set([...sourcesA, ...sourcesB]));
+            
+            // Calculate weighted confidence
+            const confA = parseFloat(insightA.confidence);
+            const confB = parseFloat(insightB.confidence);
+            const mergedConf = ((confA + confB) / 2).toFixed(2);
+            
+            await projectDb.execute(`
+              INSERT INTO extracted_facts (
+                id, category, \`key\`, value, confidence, 
+                source_document_id, extraction_method, verification_status,
+                source_documents, enrichment_count, merged_from
+              ) VALUES (
+                '${mergedId}', '${insightA.category}', '${insightA.key}', 
+                '${input.mergedValue?.replace(/'/g, "''")}', '${mergedConf}',
+                '${insightA.source_document_id}', 'merged', 'pending',
+                '${JSON.stringify(mergedSources).replace(/'/g, "''")}', 
+                ${(insightA.enrichment_count || 1) + (insightB.enrichment_count || 1)},
+                '${JSON.stringify([conflict.insight_a_id, conflict.insight_b_id]).replace(/'/g, "''")}'              )
+            `);
+            
+            // Delete originals
+            await projectDb.execute(`DELETE FROM extracted_facts WHERE id IN ('${conflict.insight_a_id}', '${conflict.insight_b_id}')`);
+          }
+
+          // Update conflict status
+          await projectDb.execute(`
+            UPDATE insight_conflicts 
+            SET resolution_status = '${input.resolution}', resolved_at = NOW()
+            WHERE id = '${input.conflictId}'
+          `);
+
+          await projectDb.end();
+          return { success: true };
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to resolve conflict: ${error.message}`);
         }
       }),
   }),
