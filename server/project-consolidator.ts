@@ -58,7 +58,11 @@ export class ProjectConsolidator {
     await this.updateProgress('weather', 85, 'Processing weather files...');
     await this.processWeatherFiles();
 
-    // Step 6: Check validation trigger
+    // Step 6: Consolidate location from all sources
+    await this.updateProgress('location', 90, 'Consolidating project location...');
+    await this.consolidateLocation();
+
+    // Step 7: Check validation trigger
     await this.updateProgress('validation', 95, 'Checking validation readiness...');
     await this.checkValidationTrigger();
 
@@ -475,11 +479,17 @@ export class ProjectConsolidator {
                 monthly_irradiance = '${monthlyDataJson}',
                 annual_summary = '${annualSummaryJson}',
                 parsed_location = '${locationJson}',
+                latitude = '${parsedData.location.latitude}',
+                longitude = '${parsedData.location.longitude}',
+                elevation = ${parsedData.location.elevation_m || 'NULL'},
                 updated_at = NOW()
               WHERE id = '${weatherFile.id}'`
             );
 
+            console.log(`[Consolidator] Extracted location from weather file: ${parsedData.location.latitude}, ${parsedData.location.longitude}`);
+
             console.log(`[Consolidator] Parsed weather file ${weatherFile.file_name}:`);
+            console.log(`  - Location: ${parsedData.location.latitude}, ${parsedData.location.longitude}`);
             console.log(`  - Annual GHI: ${parsedData.annualSummary.ghi_total_kwh_m2} kWh/m²`);
             console.log(`  - Annual DNI: ${parsedData.annualSummary.dni_total_kwh_m2} kWh/m²`);
             console.log(`  - Avg Temp: ${parsedData.annualSummary.temperature_avg_c}°C`);
@@ -490,6 +500,110 @@ export class ProjectConsolidator {
           console.error(`[Consolidator] Error processing weather file ${weatherFile.file_name}:`, error);
         }
       }
+    } finally {
+      await projectDb.end();
+    }
+  }
+
+  private async consolidateLocation(): Promise<void> {
+    const projectDb = mysql.createPool({
+      host: '127.0.0.1',
+      user: 'root',
+      database: this.projectDbName,
+    });
+
+    try {
+      const { LocationService } = await import('./location-service');
+      const locationService = new LocationService();
+      const locationSources: any[] = [];
+
+      // Source 1: Weather file location
+      const [weatherFiles]: any = await projectDb.execute(
+        `SELECT latitude, longitude, location_name FROM weather_files WHERE latitude IS NOT NULL LIMIT 1`
+      );
+
+      if (weatherFiles && weatherFiles.length > 0) {
+        const wf = weatherFiles[0];
+        locationSources.push({
+          latitude: parseFloat(wf.latitude),
+          longitude: parseFloat(wf.longitude),
+          source: 'weather_file',
+          confidence: 0.95,
+          details: wf.location_name || 'Weather file'
+        });
+        console.log(`[Consolidator] Found location from weather file: ${wf.latitude}, ${wf.longitude}`);
+      }
+
+      // Source 2: Performance parameters (extracted from documents)
+      const [perfParams]: any = await projectDb.execute(
+        `SELECT latitude, longitude, site_name FROM performance_parameters WHERE latitude IS NOT NULL LIMIT 1`
+      );
+
+      if (perfParams && perfParams.length > 0) {
+        const pp = perfParams[0];
+        locationSources.push({
+          latitude: parseFloat(pp.latitude),
+          longitude: parseFloat(pp.longitude),
+          source: 'document',
+          confidence: 0.85,
+          details: pp.site_name || 'Performance parameters'
+        });
+        console.log(`[Consolidator] Found location from performance parameters: ${pp.latitude}, ${pp.longitude}`);
+      }
+
+      // Source 3: Extract from document facts using LLM
+      const [facts]: any = await projectDb.execute(
+        `SELECT \`key\`, value FROM extracted_facts WHERE project_id = ${this.projectId} AND deleted_at IS NULL LIMIT 100`
+      );
+
+      if (facts && facts.length > 0) {
+        const factsSummary = facts.map((f: any) => `${f.key}: ${f.value}`).join('\n');
+        const extractedLocation = await locationService.extractLocationFromFacts(factsSummary);
+        if (extractedLocation) {
+          locationSources.push(extractedLocation);
+          console.log(`[Consolidator] Extracted location from facts: ${extractedLocation.latitude}, ${extractedLocation.longitude}`);
+        }
+      }
+
+      // Consolidate all sources
+      if (locationSources.length > 0) {
+        const consolidated = locationService.consolidateLocations(locationSources);
+        if (consolidated) {
+          console.log(`[Consolidator] Consolidated location: ${consolidated.latitude}, ${consolidated.longitude} (source: ${consolidated.source})`);
+
+          // Update performance_parameters with consolidated location if not already set
+          const [existing]: any = await projectDb.execute(
+            `SELECT id FROM performance_parameters WHERE latitude IS NOT NULL LIMIT 1`
+          );
+
+          if (!existing || existing.length === 0) {
+            // No location in performance_parameters, insert or update
+            const [anyParams]: any = await projectDb.execute(
+              `SELECT id FROM performance_parameters LIMIT 1`
+            );
+
+            if (anyParams && anyParams.length > 0) {
+              // Update existing record
+              await projectDb.execute(
+                `UPDATE performance_parameters SET latitude = '${consolidated.latitude}', longitude = '${consolidated.longitude}' WHERE id = '${anyParams[0].id}'`
+              );
+              console.log('[Consolidator] Updated performance_parameters with consolidated location');
+            } else {
+              // Create new record
+              const { v4: uuidv4 } = await import('uuid');
+              const paramId = uuidv4();
+              await projectDb.execute(
+                `INSERT INTO performance_parameters (id, project_id, latitude, longitude, confidence, extraction_method) VALUES ('${paramId}', ${this.projectId}, '${consolidated.latitude}', '${consolidated.longitude}', ${consolidated.confidence}, 'location_consolidation')`
+              );
+              console.log('[Consolidator] Created performance_parameters with consolidated location');
+            }
+          }
+        }
+      } else {
+        console.log('[Consolidator] No location sources found');
+      }
+    } catch (error) {
+      console.error('[Consolidator] Location consolidation failed:', error);
     } finally {
       await projectDb.end();
     }

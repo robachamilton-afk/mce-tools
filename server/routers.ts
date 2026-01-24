@@ -1221,12 +1221,29 @@ Synthesized narrative:`;
             };
           }
           
+          // Fall back to free weather data if location available
+          let latitude = input.latitude;
+          let longitude = input.longitude;
+
+          // If location not provided, try to get from performance_parameters
+          if (latitude === undefined || longitude === undefined) {
+            const [perfParams] = await projectDb.execute(
+              `SELECT latitude, longitude FROM performance_parameters WHERE latitude IS NOT NULL LIMIT 1`
+            );
+            
+            if (perfParams && (perfParams as any[]).length > 0) {
+              const params = (perfParams as any[])[0];
+              latitude = parseFloat(params.latitude);
+              longitude = parseFloat(params.longitude);
+              console.log(`[WeatherData] Using location from performance_parameters: ${latitude}, ${longitude}`);
+            }
+          }
+
           await projectDb.end();
           
-          // Fall back to free weather data if location available
-          if (input.latitude !== undefined && input.longitude !== undefined) {
+          if (latitude !== undefined && longitude !== undefined) {
             const { fetchFreeWeatherData } = await import('./free-weather-service');
-            const freeData = await fetchFreeWeatherData(input.latitude, input.longitude);
+            const freeData = await fetchFreeWeatherData(latitude, longitude);
             return freeData;
           }
           

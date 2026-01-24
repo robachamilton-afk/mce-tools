@@ -973,3 +973,17 @@
 - [x] Test chart displays all irradiance data correctly
 - [ ] Extract location (lat/lon) from TMY file header and store in weather_files table
 - [ ] Use extracted location for map display and free weather data fallback
+
+## Intelligent Location Extraction
+- [x] Design project_location table schema (lat, lon, source, confidence, city, country, address)
+- [x] Extract location from weather file headers (lat/lon from PVGIS/EPW metadata)
+- [x] Extract location from document text using LLM (coordinates, addresses, city names)
+- [x] Add geocoding service to convert city/address to coordinates
+- [x] Implement location consolidation logic (prioritize: lat/lon > city > region)
+- [x] Store consolidated location in project database during consolidation
+- [x] Update map component to use extracted location instead of hardcoded coordinates
+- [x] Update free weather service to use extracted location for API calls
+- [ ] Test location extraction with various input formats (coordinates, cities, addresses)
+  * Blocked by: weather_files record creation bug (P0 from audit)
+  * Blocked by: LLM quota exhausted (can't test document-based extraction)
+  * Architecture complete and ready for testing once blockers resolved
