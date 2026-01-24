@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { normalizeSection, CANONICAL_SECTIONS } from "../../../shared/section-normalizer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,14 +77,34 @@ export default function ProjectDetailDashboard() {
   const completedCount = processingJobs?.filter((j: any) => j.status === 'completed').length || 0;
   const failedCount = processingJobs?.filter((j: any) => j.status === 'failed').length || 0;
 
+  // Risk severity classification (same logic as RedFlags page)
+  const classifyRiskSeverity = (fact: any): "critical" | "high" | "medium" | "low" => {
+    const value = fact.value.toLowerCase();
+    const confidence = parseFloat(fact.confidence || "0");
+    
+    const criticalKeywords = ["must", "critical", "fatal", "failure", "impossible", "cannot", "blocked", "showstopper"];
+    const highKeywords = ["significant", "major", "substantial", "severe", "serious", "urgent", "delay"];
+    const mediumKeywords = ["moderate", "potential", "possible", "may", "could", "risk", "issue", "concern"];
+    
+    if (criticalKeywords.some(kw => value.includes(kw))) return "critical";
+    if (highKeywords.some(kw => value.includes(kw))) return "high";
+    if (mediumKeywords.some(kw => value.includes(kw))) return "medium";
+    if (confidence < 0.8) return "low";
+    return "medium";
+  };
+
   // Calculate red flags from facts (Risks_And_Issues section)
-  const redFlagsData = facts?.filter((f: any) => f.key === 'Risks_And_Issues') || [];
+  const redFlagsData = facts
+    ? facts
+        .filter((f: any) => normalizeSection(f.category) === CANONICAL_SECTIONS.RISKS_AND_ISSUES)
+        .map((f: any) => ({ ...f, severity: classifyRiskSeverity(f) }))
+    : [];
 
   const redFlags = {
-    critical: redFlagsData.filter((f: any) => f.severity?.toLowerCase() === 'critical').length,
-    high: redFlagsData.filter((f: any) => f.severity?.toLowerCase() === 'high').length,
-    medium: redFlagsData.filter((f: any) => f.severity?.toLowerCase() === 'medium').length,
-    low: redFlagsData.filter((f: any) => f.severity?.toLowerCase() === 'low').length,
+    critical: redFlagsData.filter((f: any) => f.severity === 'critical').length,
+    high: redFlagsData.filter((f: any) => f.severity === 'high').length,
+    medium: redFlagsData.filter((f: any) => f.severity === 'medium').length,
+    low: redFlagsData.filter((f: any) => f.severity === 'low').length,
   };
 
   // Data completeness

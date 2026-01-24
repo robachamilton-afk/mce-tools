@@ -1196,3 +1196,4 @@
 - [x] Fix confidence calculation bug (showing 2000% instead of proper percentage)
 - [x] Increase file upload limit from 100MB to 200MB
 - [x] Make Red Flags card clickable on project dashboard
+- [x] Fix Red Flags count display on project dashboard (showing 0 instead of actual count)
