@@ -287,7 +287,7 @@ export default function ProjectDashboard() {
                 <div
                   key={project.id}
                   className="group cursor-pointer"
-                  onClick={() => setLocation(`/project/${project.id}`)}
+                  onClick={() => setLocation(`/project-dashboard?projectId=${project.id}`)}
                 >
                   <div className="h-full flex flex-col bg-slate-900/50 border border-slate-700/50 rounded-xl p-6 transition-all duration-300 hover:border-orange-500/50 hover:bg-slate-900/80 hover:shadow-lg hover:shadow-orange-500/10">
                     <div className="flex items-start justify-between mb-4">

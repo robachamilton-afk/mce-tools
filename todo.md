@@ -922,3 +922,17 @@
 - [x] Add weather file parsing and monthly irradiance extraction (parseTMYFile function added)
 - [x] Implement financial data extraction in consolidator
 - [x] Add consolidation progress modal to show real-time progress (simulated stages with progress bar)
+
+## Project Dashboard (Session 5 - Jan 24, 2026)
+- [x] Create ProjectDetailDashboard page component (central hub for each project)
+- [x] Integrate Google Maps showing project location with marker
+- [x] Add key metrics cards:
+  - [x] Total insights count with confidence indicator
+  - [x] Red flags summary (critical/high/medium/low counts - placeholder)
+  - [x] Documents count with processing status
+  - [x] Data completeness progress indicator
+- [x] Add project overview narrative section (from consolidated insights)
+- [x] Build quick actions panel with links to all processes
+- [x] Update routing: clicking project card → /project-dashboard?projectId=X
+- [x] Add back navigation to Projects list
+- [ ] Test dashboard with real project data

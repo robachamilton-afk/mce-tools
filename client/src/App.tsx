@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import ProjectDashboard from "./pages/ProjectDashboard";
+import ProjectDetailDashboard from "./pages/ProjectDetailDashboard";
 import DocumentUpload from "./pages/DocumentUpload";
 import FactVerification from "./pages/FactVerification";
 import OllamaConfig from "./pages/OllamaConfig";
@@ -23,7 +24,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/projects" component={ProjectDashboard} />
-      <Route path="/project/:id" component={ProjectDashboard} />
+      <Route path="/project-dashboard" component={ProjectDetailDashboard} />
       <Route path="/project/:id/upload" component={DocumentUpload} />
       <Route path="/project/:id/documents" component={Documents} />
       <Route path="/insights" component={FactVerification} />
