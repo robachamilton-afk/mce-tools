@@ -224,13 +224,25 @@ export class ProjectConsolidator {
             const narrativeContent = response.choices[0]?.message?.content;
             const narrative = typeof narrativeContent === 'string' ? narrativeContent : '';
 
-            if (narrative && mainDb) {
+            if (narrative) {
               const escapedNarrative = narrative.replace(/'/g, "''");
-              await mainDb.execute(
-                `INSERT INTO section_narratives (project_db_name, section_name, narrative_text) 
-                 VALUES ('${this.projectDbName}', '${sectionName}', '${escapedNarrative}') 
-                 ON DUPLICATE KEY UPDATE narrative_text = '${escapedNarrative}', updated_at = NOW()`
+              
+              // Save to main database for cross-project aggregation
+              if (mainDb) {
+                await mainDb.execute(
+                  `INSERT INTO section_narratives (project_db_name, section_name, narrative_text) 
+                   VALUES ('${this.projectDbName}', '${sectionName}', '${escapedNarrative}') 
+                   ON DUPLICATE KEY UPDATE narrative_text = '${escapedNarrative}', updated_at = NOW()`
+                );
+              }
+              
+              // Save to project database for performance extraction
+              await projectDb.execute(
+                `INSERT INTO section_narratives (project_id, section_key, narrative) 
+                 VALUES (${this.projectId}, '${sectionName}', '${escapedNarrative}') 
+                 ON DUPLICATE KEY UPDATE narrative = '${escapedNarrative}', updated_at = NOW()`
               );
+              
               console.log(`[Consolidator] Generated narrative for ${displayName} (${narrative.length} chars)`);
             }
           } catch (narrativeError) {
