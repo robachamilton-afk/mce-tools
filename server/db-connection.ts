@@ -23,21 +23,20 @@ function parseDatabaseUrl(url: string) {
  * Get database connection configuration
  * Works in both development (local MySQL) and production (Manus DATABASE_URL)
  */
-export function getDbConfig(databaseName?: string) {
+export function getDbConfig(databaseName?: string): string | object {
   const databaseUrl = process.env.DATABASE_URL;
 
   if (databaseUrl) {
     // Use DATABASE_URL directly - it already contains SSL configuration
-    // If we need a different database name, modify the URL
+    // mysql2 accepts URI strings directly
     if (databaseName) {
-      const parsed = parseDatabaseUrl(databaseUrl);
       // Rebuild URL with new database name but preserve query params
       const urlObj = new URL(databaseUrl);
       urlObj.pathname = `/${databaseName}`;
-      return { uri: urlObj.toString() };
+      return urlObj.toString();
     }
     // Use DATABASE_URL as-is (includes SSL params)
-    return { uri: databaseUrl };
+    return databaseUrl;
   } else {
     // Development: use local MySQL
     return {
