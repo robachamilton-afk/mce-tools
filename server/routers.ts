@@ -6,6 +6,7 @@ import { createProject, getProjectsByUser, getProjectById, getDb } from "./db";
 import { ollamaConfig } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { createProjectDbPool, createProjectDbConnection } from "./db-connection";
 import { uploadDocument } from "./document-service";
 import { processDocument } from "./document-processor-v2";
 import { demoRouter } from "./demo-router";
@@ -579,14 +580,8 @@ export const appRouter = router({
         const { provisionProjectDatabase, deleteProjectDatabase } = await import("./project-db-provisioner");
         
         // Parse DATABASE_URL to get connection details
-        const url = new URL(process.env.DATABASE_URL!);
-        const config = {
-          dbName: project.dbName,
-          dbHost: url.hostname,
-          dbPort: parseInt(url.port) || 3306,
-          dbUser: url.username,
-          dbPassword: url.password,
-        };
+        const { getProjectDbProvisionConfig } = await import("./db-connection");
+        const config = getProjectDbProvisionConfig(project.dbName);
         
         // Delete and recreate the project database with updated schema
         await deleteProjectDatabase(config);
@@ -607,14 +602,8 @@ export const appRouter = router({
         if (!db) throw new Error("Database not available");
         
         // Parse DATABASE_URL to get connection details
-        const url = new URL(process.env.DATABASE_URL!);
-        const config = {
-          dbName: project.dbName,
-          dbHost: url.hostname,
-          dbPort: parseInt(url.port) || 3306,
-          dbUser: url.username,
-          dbPassword: url.password,
-        };
+        const { getProjectDbProvisionConfig } = await import("./db-connection");
+        const config = getProjectDbProvisionConfig(project.dbName);
         
         // Delete the project database
         await deleteProjectDatabase(config);

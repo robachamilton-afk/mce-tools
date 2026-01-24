@@ -1199,3 +1199,4 @@
 - [x] Fix Red Flags count display on project dashboard (showing 0 instead of actual count)
 - [x] Create automated database initialization for production deployments
 - [x] Fix production database connection (respect DATABASE_URL env var)
+- [x] Fix all database references for production (project-db-provisioner, delete operations)

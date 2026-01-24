@@ -141,14 +141,8 @@ export async function createProject(
 
   // Provision the per-project database with schema
   const { provisionProjectDatabase } = await import("./project-db-provisioner");
-  // Use local MySQL credentials
-  const config = {
-    dbName,
-    dbHost: "localhost",
-    dbPort: 3306,
-    dbUser: "ingestion",
-    dbPassword: "ingestion_pass_2026",
-  };
+  const { getProjectDbProvisionConfig } = await import("./db-connection");
+  const config = getProjectDbProvisionConfig(dbName);
   await provisionProjectDatabase(config);
 
   // Initialize project database schema (creates tables if missing)

@@ -6,6 +6,7 @@
  */
 
 import mysql from 'mysql2/promise';
+import { createProjectDbPool } from './db-connection';
 import { invokeLLM } from './_core/llm';
 
 interface ConsolidationProgress {
@@ -74,11 +75,7 @@ export class ProjectConsolidator {
     // For a single document, there are no conflicts to detect
     // This runs when consolidating after multiple documents have been uploaded
     
-    const projectDb = mysql.createPool({
-      host: '127.0.0.1',
-      user: 'root',
-      database: this.projectDbName,
-    });
+    const projectDb = createProjectDbPool(this.projectDbName);
 
     try {
       // Get all facts grouped by normalized key
@@ -162,11 +159,7 @@ export class ProjectConsolidator {
   }
 
   private async generateNarratives(): Promise<void> {
-    const projectDb = mysql.createPool({
-      host: '127.0.0.1',
-      user: 'root',
-      database: this.projectDbName,
-    });
+    const projectDb = createProjectDbPool(this.projectDbName);
 
     try {
       // Get all facts grouped by section
@@ -260,11 +253,7 @@ export class ProjectConsolidator {
   }
 
   private async extractPerformanceParameters(): Promise<void> {
-    const projectDb = mysql.createPool({
-      host: '127.0.0.1',
-      user: 'root',
-      database: this.projectDbName,
-    });
+    const projectDb = createProjectDbPool(this.projectDbName);
 
     try {
       // Get narratives which already contain consolidated information
@@ -383,11 +372,7 @@ export class ProjectConsolidator {
   }
 
   private async extractFinancialData(): Promise<void> {
-    const projectDb = mysql.createPool({
-      host: '127.0.0.1',
-      user: 'root',
-      database: this.projectDbName,
-    });
+    const projectDb = createProjectDbPool(this.projectDbName);
 
     try {
       // Get all document text for extraction
@@ -461,11 +446,7 @@ export class ProjectConsolidator {
   }
 
   private async processWeatherFiles(): Promise<void> {
-    const projectDb = mysql.createPool({
-      host: '127.0.0.1',
-      user: 'root',
-      database: this.projectDbName,
-    });
+    const projectDb = createProjectDbPool(this.projectDbName);
 
     try {
       // Get uploaded weather files
@@ -540,11 +521,7 @@ export class ProjectConsolidator {
   }
 
   private async consolidateLocation(): Promise<void> {
-    const projectDb = mysql.createPool({
-      host: '127.0.0.1',
-      user: 'root',
-      database: this.projectDbName,
-    });
+    const projectDb = createProjectDbPool(this.projectDbName);
 
     try {
       const { LocationService } = await import('./location-service');

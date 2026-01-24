@@ -11,6 +11,7 @@
  */
 
 import mysql from 'mysql2/promise';
+import { createProjectDbPool } from './db-connection';
 import axios from 'axios';
 
 export interface ValidationTriggerCheck {
@@ -29,11 +30,7 @@ export class ValidationTrigger {
     projectId: number,
     projectDbName: string
   ): Promise<ValidationTriggerCheck> {
-    const projectDb = mysql.createPool({
-      host: '127.0.0.1',
-      user: 'root',
-      database: projectDbName,
-    });
+    const projectDb = createProjectDbPool(projectDbName);
 
     try {
       const missingData: string[] = [];
@@ -107,11 +104,7 @@ export class ValidationTrigger {
   ): Promise<{ validationId: string; status: string }> {
     console.log(`[Validation Trigger] Starting validation for project ${projectId}`);
 
-    const projectDb = mysql.createPool({
-      host: '127.0.0.1',
-      user: 'root',
-      database: projectDbName,
-    });
+    const projectDb = createProjectDbPool(projectDbName);
 
     try {
       // Fetch performance parameters
