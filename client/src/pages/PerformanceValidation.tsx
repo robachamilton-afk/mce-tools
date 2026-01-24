@@ -17,7 +17,7 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Zap, Sun, Gauge, ArrowLeft, CloudSun, FileText } from "lucide-react";
+import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Zap, Sun, Gauge, ArrowLeft, CloudSun, FileText, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { WeatherFileUpload } from "@/components/WeatherFileUpload";
@@ -75,6 +75,13 @@ export default function PerformanceValidation() {
     utils.performance.getByProject.invalidate({ projectDbName: projectDbName || "" });
     utils.weatherFiles.getByProject.invalidate({ projectDbName: projectDbName || "" });
   };
+  
+  // Run validation mutation
+  const runValidation = trpc.performance.runValidation.useMutation({
+    onSuccess: () => {
+      utils.performance.getByProject.invalidate({ projectDbName: projectDbName || "" });
+    },
+  });
 
   if (isLoading || !projectDbName) {
     return (
@@ -147,12 +154,15 @@ export default function PerformanceValidation() {
                   <p className="font-medium">
                     {hasPerfParams ? '✓ Performance Parameters Extracted' : 'Performance Parameters Required'}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {hasPerfParams 
-                      ? `DC Capacity: ${perfParamsArray[0].dc_capacity_mw || 'N/A'} MW`
-                      : 'Upload an IM or feasibility study to extract system specifications'
-                    }
-                  </p>
+                  {hasPerfParams ? (
+                    <p className="text-sm text-muted-foreground">
+                      DC: {perfParamsArray[0].dc_capacity_mw} MW, AC: {perfParamsArray[0].ac_capacity_mw} MW
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Upload an IM or feasibility study to extract system specifications
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -221,6 +231,46 @@ export default function PerformanceValidation() {
           projectDbName={projectDbName}
           onUploadComplete={handleWeatherUpload}
         />
+        
+        {/* Run Validation Button */}
+        {hasPerfParams && (
+          <Card className="border-blue-500/30 bg-blue-500/5">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Zap className="h-5 w-5 text-blue-500" />
+                Ready to Run Validation
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Performance parameters have been extracted. Click below to run an independent PVWatts-style validation calculation.
+              </p>
+              <Button
+                onClick={() => {
+                  if (projectDbName && projectId) {
+                    runValidation.mutate({
+                      projectId: parseInt(projectId),
+                      projectDbName
+                    });
+                  }
+                }}
+                disabled={runValidation.isPending}
+                className="gap-2"
+              >
+                <Play className="h-4 w-4" />
+                {runValidation.isPending ? 'Running Validation...' : 'Run Performance Validation'}
+              </Button>
+              {runValidation.error && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    {runValidation.error.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }

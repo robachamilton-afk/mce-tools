@@ -1162,3 +1162,12 @@
 - [x] Parse weather file header during upload to extract lat/lon/elevation
 - [x] Pass location from performance_parameters to MapView component
 - [x] Create section_narratives table in project database
+
+## 🐛 Performance Validation Page Fix (Current - Jan 24, 2026)
+
+- [ ] Add performance_validations table to project database schema
+- [ ] Create runValidation endpoint in router that uses performance-validator.ts
+- [ ] Integrate weather file data (GHI/DNI) into validation calculator
+- [ ] Add "Run Validation" button to existing Performance Validation page
+- [ ] Keep existing weather graphs and charts intact
+- [ ] Display validation results below the weather data section
