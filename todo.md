@@ -910,6 +910,7 @@
 ## New Issues Found
 - [x] Show raw facts in narrative sections (Project Overview, Financial Structure, Technical Design) before narratives are generated
 - [x] Implement narrative generation in consolidation logic
+- [x] Fix fact key mapping - use section names (Project_Overview, Technical_Design, etc.) instead of generic keys
 - [ ] Implement reconciliation, performance extraction, and financial extraction in consolidation (stubs remain)
 - [ ] Add progress modal/indicator for consolidation process so user can see what's happening
 - [x] Complete all UI fixes: weather file status, missing data guidance, back navigation links, Processing Status spinner

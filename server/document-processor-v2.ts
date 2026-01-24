@@ -81,7 +81,7 @@ export async function processDocument(
       
       llmFacts = intelligentResult.facts.map((fact: any) => ({
         category: fact.section || 'other',
-        key: fact.key,
+        key: fact.section || 'Other',  // Use section as key for proper categorization
         value: fact.statement || fact.value,
         confidence: fact.confidence || 0.5,
         source: fact.extraction_method || '',
@@ -151,7 +151,7 @@ function extractDeterministicFacts(text: string, documentType: string): Extracte
   while ((match = capacityPattern.exec(text)) !== null) {
     facts.push({
       category: 'specification',
-      key: 'capacity',
+      key: 'Technical_Design',  // Use section key for proper categorization
       value: `${match[1]} ${match[2]}`,
       confidence: 0.95,
       source: match[0],
@@ -166,7 +166,7 @@ function extractDeterministicFacts(text: string, documentType: string): Extracte
     dateMatches.slice(0, 10).forEach((date) => { // Limit to first 10 dates
       facts.push({
         category: 'planning',
-        key: 'date',
+        key: 'Project_Timeline',  // Use section key for proper categorization
         value: date,
         confidence: 0.85,
         source: date,
@@ -180,7 +180,7 @@ function extractDeterministicFacts(text: string, documentType: string): Extracte
   while ((match = financialPattern.exec(text)) !== null) {
     facts.push({
       category: 'financial',
-      key: 'amount',
+      key: 'Financial_Structure',  // Use section key for proper categorization
       value: `${match[1]}${match[2]}${match[3] || ''}`,
       confidence: 0.9,
       source: match[0],
@@ -193,7 +193,7 @@ function extractDeterministicFacts(text: string, documentType: string): Extracte
   while ((match = voltagePattern.exec(text)) !== null) {
     facts.push({
       category: 'technical',
-      key: 'grid_voltage',
+      key: 'Grid_Infrastructure',  // Use section key for proper categorization
       value: `${match[1]} ${match[2]}`,
       confidence: 0.9,
       source: match[0],
@@ -208,7 +208,7 @@ function extractDeterministicFacts(text: string, documentType: string): Extracte
     if (regex.test(text)) {
       facts.push({
         category: 'specification',
-        key: 'technology',
+        key: 'Technical_Design',  // Use section key for proper categorization
         value: keyword,
         confidence: 0.8,
         source: keyword,
