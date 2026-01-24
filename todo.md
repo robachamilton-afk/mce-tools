@@ -987,3 +987,6 @@
   * Blocked by: weather_files record creation bug (P0 from audit)
   * Blocked by: LLM quota exhausted (can't test document-based extraction)
   * Architecture complete and ready for testing once blockers resolved
+
+## Bug Fixes
+- [x] Fix TypeError in ProjectDetailDashboard: latitude/longitude stored as strings, need parseFloat() before calling toFixed()

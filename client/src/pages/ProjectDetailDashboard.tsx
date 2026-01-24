@@ -198,11 +198,11 @@ export default function ProjectDetailDashboard() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-slate-400">Latitude:</span>
-                      <span className="ml-2 text-white">{(perfParams[0] as any).latitude?.toFixed(4) || "N/A"}</span>
+                      <span className="ml-2 text-white">{(perfParams[0] as any).latitude ? parseFloat((perfParams[0] as any).latitude).toFixed(4) : "N/A"}</span>
                     </div>
                     <div>
                       <span className="text-slate-400">Longitude:</span>
-                      <span className="ml-2 text-white">{(perfParams[0] as any).longitude?.toFixed(4) || "N/A"}</span>
+                      <span className="ml-2 text-white">{(perfParams[0] as any).longitude ? parseFloat((perfParams[0] as any).longitude).toFixed(4) : "N/A"}</span>
                     </div>
                     {(perfParams[0] as any).site_name && (
                       <div className="col-span-2">
