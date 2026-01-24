@@ -110,7 +110,7 @@ export async function processDocument(
     const processingTime = Date.now() - startTime;
     
     console.log(`[Document Processor] Processing completed in ${(processingTime / 1000).toFixed(2)}s`);
-    if (onProgress) await onProgress('completed', 100);
+    // Note: Do NOT mark as 100% here - additional processing happens in router callback
     
     return {
       documentId,

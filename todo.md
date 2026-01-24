@@ -886,3 +886,14 @@
 - [ ] Fix conflict detection - "Insight A" repeating incorrectly for unrelated conflicts
 - [ ] Fix validation trigger stuck at 99% "Check validation trigger"
 - [ ] Test all fixes with document upload
+
+## Weather File Upload & Progress Bar Fixes (Current - Jan 24, 2026)
+- [ ] Fix "data truncated" error when uploading weather files via regular upload
+- [ ] Check database schema for documentType column size (needs to fit "WEATHER_FILE")
+- [ ] Make weather file uploads from Performance page visible in Documents list
+- [ ] Unify weather file upload endpoints (regular upload vs Performance page)
+- [ ] Fix progress bar showing 100% while extraction continues (5-10 min delay)
+- [ ] Adjust progress percentage calculations to reflect actual completion
+- [ ] Ensure progress updates only reach 100% when all extraction steps complete
+- [ ] Test weather file upload via both pathways (regular upload + Performance page)
+- [ ] Verify weather files appear in Documents list with correct type

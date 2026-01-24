@@ -174,6 +174,14 @@ export const appRouter = router({
           }
         };
         
+        // Skip extraction for weather files - they're data files, not documents
+        if (finalDocumentType === 'WEATHER_FILE') {
+          console.log(`[Document Processor] Skipping extraction for weather file: ${document.fileName}`);
+          await updateProgress('completed', 100);
+          console.log(`Document uploaded: ${document.id}, marked as completed (weather file)`);
+          return { ...document, documentId: document.id };
+        }
+        
         processDocument(projectIdNum, document.id, document.filePath, finalDocumentType as any, 'llama3.2:latest', undefined, updateProgress)
           .then(async (result) => {
             // Save extracted facts to database
@@ -516,6 +524,10 @@ export const appRouter = router({
                 } catch (triggerError) {
                   console.error(`[Document Processor] Validation trigger check failed:`, triggerError);
                 }
+                
+                // Mark as 100% complete ONLY after all processing is done
+                await updateProgress('completed', 100);
+                console.log(`[Document Processor] All processing completed for document ${document.id}`);
               }
             }
           })
@@ -1353,7 +1365,24 @@ Synthesized narrative:`;
           else if (ext === 'epw') originalFormat = 'epw';
           else if (ext === 'tm2' || ext === 'tm3') originalFormat = 'tmy3';
           
-          // Save to database (will be processed by Solar Analyzer when validation runs)
+          // Create document record so it appears in Documents list
+          await projectDb.execute(
+            `INSERT INTO documents (
+              id, fileName, filePath, fileSizeBytes, fileHash, documentType,
+              uploadDate, status, createdAt, updatedAt
+            ) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, NOW(), NOW())`,
+            [
+              fileId,
+              input.fileName,
+              fileUrl,
+              fileSizeBytes,
+              fileId, // Use fileId as hash for now
+              'WEATHER_FILE',
+              'Processed' // Weather files don't need extraction
+            ]
+          );
+          
+          // Save to weather_files table (will be processed by Solar Analyzer when validation runs)
           await projectDb.execute(
             `INSERT INTO weather_files (
               id, project_id, file_key, file_url, file_name, file_size_bytes,
