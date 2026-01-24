@@ -1197,3 +1197,4 @@
 - [x] Increase file upload limit from 100MB to 200MB
 - [x] Make Red Flags card clickable on project dashboard
 - [x] Fix Red Flags count display on project dashboard (showing 0 instead of actual count)
+- [x] Create automated database initialization for production deployments

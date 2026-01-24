@@ -143,6 +143,11 @@ export async function createProject(
   };
   await provisionProjectDatabase(config);
 
+  // Initialize project database schema (creates tables if missing)
+  const { initializeProjectDatabase } = await import("./db-init");
+  await initializeProjectDatabase(dbName);
+  console.log(`[Projects] ✓ Database ${dbName} initialized`);
+
   return result;
 }
 
