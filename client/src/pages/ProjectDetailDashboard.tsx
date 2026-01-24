@@ -76,12 +76,14 @@ export default function ProjectDetailDashboard() {
   const completedCount = processingJobs?.filter((j: any) => j.status === 'completed').length || 0;
   const failedCount = processingJobs?.filter((j: any) => j.status === 'failed').length || 0;
 
-  // Red flags placeholder (TODO: implement red flags system)
+  // Calculate red flags from facts (Risks_And_Issues section)
+  const redFlagsData = facts?.filter((f: any) => f.key === 'Risks_And_Issues') || [];
+
   const redFlags = {
-    critical: 0,
-    high: 0,
-    medium: 0,
-    low: 0,
+    critical: redFlagsData.filter((f: any) => f.severity?.toLowerCase() === 'critical').length,
+    high: redFlagsData.filter((f: any) => f.severity?.toLowerCase() === 'high').length,
+    medium: redFlagsData.filter((f: any) => f.severity?.toLowerCase() === 'medium').length,
+    low: redFlagsData.filter((f: any) => f.severity?.toLowerCase() === 'low').length,
   };
 
   // Data completeness
@@ -249,7 +251,10 @@ export default function ProjectDetailDashboard() {
               </Card>
 
               {/* Red Flags */}
-              <Card className="bg-slate-900 border-slate-700 p-4">
+              <Card 
+                className="bg-slate-900 border-slate-700 p-4 cursor-pointer hover:bg-slate-800/50 transition-colors"
+                onClick={() => navigate(`/red-flags?projectId=${projectId}`)}
+              >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-red-500/20 rounded-lg">
                     <AlertTriangle className="h-5 w-5 text-red-400" />

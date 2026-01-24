@@ -1194,3 +1194,5 @@
 - [x] Remove duplicate irradiance graph from Performance Validation page (bottom one)
 - [x] Create Red Flag dashboard
 - [x] Fix confidence calculation bug (showing 2000% instead of proper percentage)
+- [x] Increase file upload limit from 100MB to 200MB
+- [x] Make Red Flags card clickable on project dashboard
