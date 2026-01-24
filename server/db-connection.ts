@@ -37,8 +37,13 @@ export function getDbConfig(databaseName?: string) {
       user: config.user,
       password: config.password,
       database: databaseName || config.database,
-      // Add SSL for cloud databases
-      ...(isCloudDb && { ssl: { rejectUnauthorized: true } }),
+      // Add SSL for cloud databases (TiDB requires minVersion)
+      ...(isCloudDb && { 
+        ssl: { 
+          minVersion: 'TLSv1.2',
+          rejectUnauthorized: true 
+        } 
+      }),
     };
   } else {
     // Development: use local MySQL
@@ -123,8 +128,13 @@ export function getProjectDbProvisionConfig(dbName: string) {
       dbPort: config.port,
       dbUser: config.user,
       dbPassword: config.password,
-      // Add SSL for cloud databases
-      ...(isCloudDb && { ssl: { rejectUnauthorized: true } }),
+      // Add SSL for cloud databases (TiDB requires minVersion)
+      ...(isCloudDb && { 
+        ssl: { 
+          minVersion: 'TLSv1.2',
+          rejectUnauthorized: true 
+        } 
+      }),
     };
   } else {
     return {

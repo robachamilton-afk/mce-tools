@@ -1231,5 +1231,5 @@
 
 ## Bug Fixes - Post Refactoring (Jan 24, 2026)
 - [x] Fix factId error during project creation (foreign key data type mismatch: CHAR vs VARCHAR)
-- [ ] Fix document upload SSL connection error (SSL auto-detection added but still failing)
-- [ ] Debug why SSL configuration is not being applied to mysql2 connections
+- [x] Fix document upload SSL connection error (added minVersion: 'TLSv1.2' for TiDB compatibility)
+- [x] Use correct SSL configuration format: { minVersion: 'TLSv1.2', rejectUnauthorized: true }
