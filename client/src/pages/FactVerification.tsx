@@ -69,6 +69,12 @@ export default function FactVerification() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [narratives, setNarratives] = useState<Record<string, string>>({});
   const [showIndividualInsights, setShowIndividualInsights] = useState<Set<string>>(new Set());
+  const [consolidationProgress, setConsolidationProgress] = useState<{
+    isOpen: boolean;
+    stage: string;
+    message: string;
+    progress: number;
+  }>({ isOpen: false, stage: '', message: '', progress: 0 });
 
   // Fetch project details to get dbName
   const { data: project, isLoading: isLoadingProject } = trpc.projects.get.useQuery(
@@ -98,11 +104,59 @@ export default function FactVerification() {
   const isLoading = isLoadingProject || isLoadingFacts;
 
   const consolidateMutation = trpc.projects.consolidate.useMutation({
-    onSuccess: () => {
-      toast.success("Consolidation complete! Narratives and analysis updated.");
-      refetch();
+    onMutate: () => {
+      // Open progress modal when consolidation starts
+      setConsolidationProgress({
+        isOpen: true,
+        stage: 'starting',
+        message: 'Initializing consolidation...',
+        progress: 0
+      });
+      
+      // Simulate progress updates (since we can't stream from tRPC mutation)
+      const stages = [
+        { stage: 'reconciling', message: 'Reconciling insights from multiple documents...', progress: 15 },
+        { stage: 'narratives', message: 'Generating section narratives...', progress: 40 },
+        { stage: 'performance', message: 'Extracting performance parameters...', progress: 60 },
+        { stage: 'financial', message: 'Extracting financial data...', progress: 75 },
+        { stage: 'weather', message: 'Processing weather files...', progress: 90 },
+      ];
+      
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i < stages.length) {
+          setConsolidationProgress(prev => ({
+            ...prev,
+            ...stages[i]
+          }));
+          i++;
+        } else {
+          clearInterval(interval);
+        }
+      }, 3000);
+      
+      return { interval };
     },
-    onError: (error) => {
+    onSuccess: (_, __, context) => {
+      if (context?.interval) clearInterval(context.interval);
+      setConsolidationProgress({
+        isOpen: true,
+        stage: 'complete',
+        message: 'Consolidation complete!',
+        progress: 100
+      });
+      setTimeout(() => {
+        setConsolidationProgress(prev => ({ ...prev, isOpen: false }));
+        toast.success("Consolidation complete! Narratives and analysis updated.");
+        refetch();
+      }, 1500);
+    },
+    onError: (error, _, context) => {
+      if (context?.interval) clearInterval(context.interval);
+      setConsolidationProgress(prev => ({
+        ...prev,
+        isOpen: false
+      }));
       toast.error(`Consolidation failed: ${error.message}`);
     },
   });
@@ -260,6 +314,58 @@ export default function FactVerification() {
 
   return (
     <div className="min-h-screen bg-slate-950">
+      {/* Consolidation Progress Modal */}
+      <Dialog open={consolidationProgress.isOpen} onOpenChange={() => {}}>
+        <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              {consolidationProgress.stage === 'complete' ? (
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              ) : (
+                <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+              )}
+              Processing Project Data
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {consolidationProgress.message}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-500 ease-out"
+                style={{ width: `${consolidationProgress.progress}%` }}
+              />
+            </div>
+            <p className="text-sm text-slate-500 mt-2 text-center">
+              {consolidationProgress.progress}% complete
+            </p>
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className={`flex items-center gap-2 ${consolidationProgress.progress >= 15 ? 'text-green-400' : 'text-slate-500'}`}>
+              {consolidationProgress.progress >= 15 ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border border-slate-600" />}
+              Reconciling insights
+            </div>
+            <div className={`flex items-center gap-2 ${consolidationProgress.progress >= 40 ? 'text-green-400' : 'text-slate-500'}`}>
+              {consolidationProgress.progress >= 40 ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border border-slate-600" />}
+              Generating narratives
+            </div>
+            <div className={`flex items-center gap-2 ${consolidationProgress.progress >= 60 ? 'text-green-400' : 'text-slate-500'}`}>
+              {consolidationProgress.progress >= 60 ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border border-slate-600" />}
+              Extracting performance parameters
+            </div>
+            <div className={`flex items-center gap-2 ${consolidationProgress.progress >= 75 ? 'text-green-400' : 'text-slate-500'}`}>
+              {consolidationProgress.progress >= 75 ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border border-slate-600" />}
+              Extracting financial data
+            </div>
+            <div className={`flex items-center gap-2 ${consolidationProgress.progress >= 90 ? 'text-green-400' : 'text-slate-500'}`}>
+              {consolidationProgress.progress >= 90 ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border border-slate-600" />}
+              Processing weather files
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/50">
         <div className="container mx-auto px-6 py-4">

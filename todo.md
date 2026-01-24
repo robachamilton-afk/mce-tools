@@ -914,3 +914,11 @@
 - [ ] Implement reconciliation, performance extraction, and financial extraction in consolidation (stubs remain)
 - [ ] Add progress modal/indicator for consolidation process so user can see what's happening
 - [x] Complete all UI fixes: weather file status, missing data guidance, back navigation links, Processing Status spinner
+
+## Session 4 - New Requirements
+- [x] Extend narrative generation to ALL fact sections (dynamically processes all sections with facts)
+- [x] Verify conflict detection is actually running (implemented in consolidator - only compares facts from different documents)
+- [x] Implement performance extraction with minimum model requirements (location, capacity, config SAT/fixed, weather file)
+- [x] Add weather file parsing and monthly irradiance extraction (parseTMYFile function added)
+- [x] Implement financial data extraction in consolidator
+- [x] Add consolidation progress modal to show real-time progress (simulated stages with progress bar)

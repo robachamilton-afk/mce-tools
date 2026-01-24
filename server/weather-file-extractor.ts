@@ -254,3 +254,210 @@ ${documentText.substring(0, 50000)}`;
     };
   }
 }
+
+
+/**
+ * Monthly irradiance data structure
+ */
+export interface MonthlyIrradiance {
+  month: number;
+  monthName: string;
+  ghi_kwh_m2: number;
+  dni_kwh_m2: number;
+  dhi_kwh_m2: number;
+  temperature_avg_c: number;
+}
+
+export interface ParsedWeatherData {
+  location: {
+    latitude: number;
+    longitude: number;
+    elevation_m?: number;
+    timezone?: string;
+  };
+  monthlyData: MonthlyIrradiance[];
+  annualSummary: {
+    ghi_total_kwh_m2: number;
+    dni_total_kwh_m2: number;
+    dhi_total_kwh_m2: number;
+    temperature_avg_c: number;
+  };
+  dataSource?: string;
+  dataYear?: number;
+}
+
+/**
+ * Parse TMY CSV file and extract monthly irradiance data
+ * Supports PVGIS TMY format and generic hourly weather data
+ */
+export function parseWeatherFile(csvContent: string, fileName: string): ParsedWeatherData | null {
+  try {
+    const lines = csvContent.split('\\n').filter(line => line.trim());
+    
+    if (lines.length < 10) {
+      console.log('[Weather Parser] File too short to be valid weather data');
+      return null;
+    }
+
+    // Try to detect format and parse header
+    let latitude = 0, longitude = 0, elevation = 0;
+    let dataStartLine = 0;
+    let ghiCol = -1, dniCol = -1, dhiCol = -1, tempCol = -1;
+    
+    // Check for PVGIS format (has metadata header)
+    for (let i = 0; i < Math.min(20, lines.length); i++) {
+      const line = lines[i].toLowerCase();
+      
+      // PVGIS metadata
+      if (line.includes('latitude')) {
+        const match = lines[i].match(/latitude[:\\s,]+([\\-\\d.]+)/i);
+        if (match) latitude = parseFloat(match[1]);
+      }
+      if (line.includes('longitude')) {
+        const match = lines[i].match(/longitude[:\\s,]+([\\-\\d.]+)/i);
+        if (match) longitude = parseFloat(match[1]);
+      }
+      if (line.includes('elevation')) {
+        const match = lines[i].match(/elevation[:\\s,]+([\\-\\d.]+)/i);
+        if (match) elevation = parseFloat(match[1]);
+      }
+      
+      // Find header row
+      if (line.includes('ghi') || line.includes('global') || line.includes('g(h)')) {
+        dataStartLine = i + 1;
+        const cols = lines[i].split(',').map(c => c.toLowerCase().trim());
+        
+        ghiCol = cols.findIndex(c => c.includes('ghi') || c.includes('g(h)') || c === 'global');
+        dniCol = cols.findIndex(c => c.includes('dni') || c.includes('bn(h)') || c === 'direct');
+        dhiCol = cols.findIndex(c => c.includes('dhi') || c.includes('d(h)') || c === 'diffuse');
+        tempCol = cols.findIndex(c => c.includes('temp') || c.includes('t2m') || c === 'tamb');
+        
+        break;
+      }
+    }
+
+    // If no header found, try generic format (assume columns)
+    if (ghiCol === -1) {
+      // Try to infer from filename or first data row
+      const firstDataRow = lines[1]?.split(',');
+      if (firstDataRow && firstDataRow.length >= 4) {
+        // Assume: date, GHI, DNI, DHI, Temp format
+        ghiCol = 1;
+        dniCol = 2;
+        dhiCol = 3;
+        tempCol = 4;
+        dataStartLine = 1;
+      }
+    }
+
+    if (ghiCol === -1) {
+      console.log('[Weather Parser] Could not identify GHI column');
+      return null;
+    }
+
+    // Parse hourly data and aggregate by month
+    const monthlyData: { [month: number]: { ghi: number[], dni: number[], dhi: number[], temp: number[] } } = {};
+    for (let m = 1; m <= 12; m++) {
+      monthlyData[m] = { ghi: [], dni: [], dhi: [], temp: [] };
+    }
+
+    for (let i = dataStartLine; i < lines.length; i++) {
+      const cols = lines[i].split(',');
+      if (cols.length < Math.max(ghiCol, dniCol, dhiCol, tempCol) + 1) continue;
+
+      // Try to extract month from date column or row index
+      let month = 1;
+      const dateStr = cols[0];
+      
+      // Try various date formats
+      const dateMatch = dateStr.match(/(\\d{4})[\\-\\/](\\d{1,2})[\\-\\/](\\d{1,2})/) ||
+                        dateStr.match(/(\\d{1,2})[\\-\\/](\\d{1,2})[\\-\\/](\\d{4})/) ||
+                        dateStr.match(/^(\\d{1,2})/);
+      
+      if (dateMatch) {
+        // Determine which group is the month based on format
+        if (dateMatch[0].length >= 8) {
+          // Full date format
+          const parts = dateMatch[0].split(/[\\-\\/]/);
+          if (parts[0].length === 4) {
+            month = parseInt(parts[1]); // YYYY-MM-DD
+          } else {
+            month = parseInt(parts[1]); // DD-MM-YYYY or MM-DD-YYYY
+          }
+        } else {
+          month = parseInt(dateMatch[1]);
+        }
+      } else {
+        // Estimate month from row position (8760 hours / 12 months)
+        const hourOfYear = i - dataStartLine;
+        month = Math.floor(hourOfYear / 730) + 1;
+      }
+
+      if (month < 1 || month > 12) month = 1;
+
+      // Parse values
+      const ghi = parseFloat(cols[ghiCol]) || 0;
+      const dni = dniCol >= 0 ? parseFloat(cols[dniCol]) || 0 : 0;
+      const dhi = dhiCol >= 0 ? parseFloat(cols[dhiCol]) || 0 : 0;
+      const temp = tempCol >= 0 ? parseFloat(cols[tempCol]) || 0 : 0;
+
+      if (ghi >= 0 && ghi < 2000) { // Sanity check
+        monthlyData[month].ghi.push(ghi);
+        monthlyData[month].dni.push(dni);
+        monthlyData[month].dhi.push(dhi);
+        monthlyData[month].temp.push(temp);
+      }
+    }
+
+    // Calculate monthly totals (convert hourly W/m² to monthly kWh/m²)
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const result: MonthlyIrradiance[] = [];
+    
+    let totalGhi = 0, totalDni = 0, totalDhi = 0, tempSum = 0, tempCount = 0;
+
+    for (let m = 1; m <= 12; m++) {
+      const data = monthlyData[m];
+      if (data.ghi.length === 0) continue;
+
+      // Sum hourly values and convert to kWh/m² (divide by 1000)
+      const ghiSum = data.ghi.reduce((a, b) => a + b, 0) / 1000;
+      const dniSum = data.dni.reduce((a, b) => a + b, 0) / 1000;
+      const dhiSum = data.dhi.reduce((a, b) => a + b, 0) / 1000;
+      const tempAvg = data.temp.length > 0 ? data.temp.reduce((a, b) => a + b, 0) / data.temp.length : 0;
+
+      result.push({
+        month: m,
+        monthName: monthNames[m - 1],
+        ghi_kwh_m2: Math.round(ghiSum * 10) / 10,
+        dni_kwh_m2: Math.round(dniSum * 10) / 10,
+        dhi_kwh_m2: Math.round(dhiSum * 10) / 10,
+        temperature_avg_c: Math.round(tempAvg * 10) / 10
+      });
+
+      totalGhi += ghiSum;
+      totalDni += dniSum;
+      totalDhi += dhiSum;
+      tempSum += tempAvg;
+      tempCount++;
+    }
+
+    return {
+      location: {
+        latitude,
+        longitude,
+        elevation_m: elevation || undefined
+      },
+      monthlyData: result,
+      annualSummary: {
+        ghi_total_kwh_m2: Math.round(totalGhi),
+        dni_total_kwh_m2: Math.round(totalDni),
+        dhi_total_kwh_m2: Math.round(totalDhi),
+        temperature_avg_c: tempCount > 0 ? Math.round(tempSum / tempCount * 10) / 10 : 0
+      },
+      dataSource: fileName
+    };
+  } catch (error) {
+    console.error('[Weather Parser] Error parsing weather file:', error);
+    return null;
+  }
+}
