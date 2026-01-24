@@ -91,7 +91,7 @@ CREATE TABLE redFlags (
   title VARCHAR(255) NOT NULL,
   description LONGTEXT NOT NULL,
   severity ENUM('High', 'Medium', 'Low') NOT NULL,
-  triggerFactId CHAR(36),
+  triggerFactId VARCHAR(36),
   evidenceGaps JSON,
   downstreamConsequences TEXT,
   mitigated BOOLEAN DEFAULT FALSE,
@@ -107,7 +107,7 @@ CREATE TABLE redFlags (
 -- Fact verification queue
 CREATE TABLE factVerificationQueue (
   id CHAR(36) PRIMARY KEY,
-  factId CHAR(36) NOT NULL UNIQUE,
+  factId VARCHAR(36) NOT NULL UNIQUE,
   status ENUM('Pending', 'Approved', 'Rejected', 'Needs_Review') DEFAULT 'Pending',
   assignedToUserId INT,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

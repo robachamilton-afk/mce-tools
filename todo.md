@@ -1228,3 +1228,7 @@
 - [x] Update all frontend calls to pass projectId instead of projectDbName (7 files updated)
 - [x] Update validation-trigger.ts to use table-prefix architecture
 - [x] Fix all TypeScript compilation errors from refactoring
+
+## Bug Fixes - Post Refactoring (Jan 24, 2026)
+- [x] Fix factId error during project creation (foreign key data type mismatch: CHAR vs VARCHAR)
+- [ ] Fix document upload SSL connection error (requires further investigation)
