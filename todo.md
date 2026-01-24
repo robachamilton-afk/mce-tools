@@ -990,3 +990,153 @@
 
 ## Bug Fixes
 - [x] Fix TypeError in ProjectDetailDashboard: latitude/longitude stored as strings, need parseFloat() before calling toFixed()
+
+## Critical Bug: Insight Parsing Broken
+- [ ] Investigate why feasibility study processed too quickly with missing insights
+- [ ] Debug why weather file upload stuck at 10%
+- [ ] Identify what code changes broke the extraction workflow
+- [ ] Fix the broken insight extraction logic
+- [ ] Test with feasibility study document to verify all insights are extracted
+
+## LLM API Quota Issue Investigation
+- [ ] Check LLM configuration in server/_core/llm.ts
+- [ ] Verify BUILT_IN_FORGE_API_KEY and BUILT_IN_FORGE_API_URL are correct
+- [ ] Test LLM API call directly to verify credentials work
+- [ ] Investigate why API returns quota exhausted despite 12K credits remaining
+
+
+---
+
+# 🗺️ Feature Roadmap
+
+## 🔴 Immediate Priority Features
+
+### Red Flags Detection System
+- [ ] Design risk categories (Technical, Financial, Regulatory, Environmental)
+- [ ] Build LLM prompt for risk identification from consolidated insights
+- [ ] Create `redFlags` table schema with severity levels (Critical/High/Medium/Low)
+- [ ] Implement risk detection during consolidation phase
+- [ ] Build Red Flags UI showing risk count by severity
+- [ ] Add detailed risk explanations with source document citations
+- [ ] Implement risk filtering and sorting in UI
+
+### Performance Model Generation
+- [ ] Design performance model architecture (PVWatts algorithm)
+- [ ] Extract required inputs: location, capacity, module specs, inverter specs, system losses
+- [ ] Integrate weather file data (GHI, DNI, DHI, temperature)
+- [ ] Calculate expected energy production (monthly/annual)
+- [ ] Calculate capacity factor and specific yield
+- [ ] Compare against developer's claimed production figures
+- [ ] Flag significant deviations (>5-10%) as red flags
+- [ ] Build performance validation UI with charts and comparisons
+- [ ] Add sensitivity analysis (weather year variation, degradation)
+
+### Financial Analysis & Validation
+- [ ] Extract financial data: CAPEX, OPEX, tariff rates, debt terms, equity returns
+- [ ] Build financial model calculator (IRR, NPV, LCOE, DSCR)
+- [ ] Create industry benchmark database for comparison
+- [ ] Identify optimistic assumptions or missing cost categories
+- [ ] Generate financial summary narrative
+- [ ] Build financial validation UI with key metrics dashboard
+- [ ] Add waterfall charts for cost breakdown
+- [ ] Implement sensitivity analysis for financial assumptions
+
+## 🟡 Secondary Features
+
+### Conflict Resolution Workflow
+- [ ] Detect conflicts when multiple documents provide different values
+- [ ] Create `conflicts` table to track unresolved discrepancies
+- [ ] Build conflict resolution UI showing side-by-side comparison
+- [ ] Allow user to select correct value or mark "requires clarification"
+- [ ] Track resolution history and audit trail
+- [ ] Auto-resolve conflicts when one source is clearly more authoritative
+- [ ] Generate conflict resolution report
+
+### Document Comparison View
+- [ ] Build side-by-side document comparison UI
+- [ ] Highlight parameter changes between document versions
+- [ ] Track assumption evolution: Feasibility → DD → FID
+- [ ] Create timeline view of project data changes
+- [ ] Add diff visualization for key metrics
+- [ ] Generate change summary report
+
+### Export & Reporting
+- [ ] Design PDF technical summary report template
+- [ ] Implement PDF generation with charts and tables
+- [ ] Add Excel export for insights and financial data
+- [ ] Create PowerPoint slide deck generator with key findings
+- [ ] Build customizable report templates
+- [ ] Add API endpoint for structured data export (JSON/CSV)
+- [ ] Implement scheduled report generation
+
+### Multi-Project Portfolio View
+- [ ] Design portfolio dashboard UI
+- [ ] Build cross-project comparison table
+- [ ] Add outlier detection (high CAPEX, low CF, etc.)
+- [ ] Implement portfolio-level risk aggregation
+- [ ] Add industry benchmark comparisons
+- [ ] Create portfolio summary charts (capacity by region, technology mix, etc.)
+- [ ] Build portfolio export and reporting
+
+## 🟢 Advanced Features
+
+### Automated Q&A System
+- [ ] Design conversational interface for project queries
+- [ ] Implement natural language query processing
+- [ ] Build LLM-based answer synthesis with source citations
+- [ ] Add conversational follow-up question handling
+- [ ] Create query history and saved queries
+- [ ] Implement multi-turn conversation context
+- [ ] Add suggested questions based on project data
+
+### Template-Based Extraction
+- [ ] Learn document structures from user feedback
+- [ ] Build template library for common document types (IMs, feasibility studies, etc.)
+- [ ] Pre-populate expected sections for known document types
+- [ ] Suggest missing sections or data points
+- [ ] Allow users to create custom extraction templates
+- [ ] Implement template matching algorithm
+- [ ] Add template versioning and sharing
+
+### Integration with External Data Sources
+- [ ] Integrate real-time weather APIs for location validation
+- [ ] Connect to regulatory databases for permitting status checks
+- [ ] Add equipment specification verification against manufacturer datasheets
+- [ ] Integrate land ownership and title records
+- [ ] Add electricity market data (spot prices, forecasts)
+- [ ] Connect to project financing databases
+- [ ] Implement automated data refresh and updates
+
+## 🔵 Future Enhancements
+
+### Machine Learning Improvements
+- [ ] Train custom NER model for renewable energy domain
+- [ ] Implement active learning from user corrections
+- [ ] Add confidence scoring for extracted facts
+- [ ] Build anomaly detection for unusual parameter values
+- [ ] Implement clustering for similar projects
+
+### Collaboration Features
+- [ ] Add user roles and permissions (viewer, analyst, admin)
+- [ ] Implement commenting and annotations on insights
+- [ ] Add task assignment for conflict resolution
+- [ ] Build approval workflow for validated data
+- [ ] Add real-time collaboration (multiple users editing)
+
+### Advanced Analytics
+- [ ] Build predictive models for project success
+- [ ] Add scenario modeling and "what-if" analysis
+- [ ] Implement Monte Carlo simulation for risk assessment
+- [ ] Create project scoring and ranking system
+- [ ] Add market analysis and competitive intelligence
+
+---
+
+
+## 🔧 Custom OpenAI API Key Implementation
+- [x] Add OPENAI_API_KEY to environment configuration
+- [x] Update LLM integration to detect and use custom API key
+- [x] Add fallback logic: custom key → Manus built-in
+- [x] Update API endpoint for OpenAI vs Manus Forge
+- [x] Test document processing with OpenAI API key
+- [x] Verify all extraction workflows work with new provider
