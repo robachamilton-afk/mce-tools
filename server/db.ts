@@ -6,14 +6,22 @@ import { ENV } from './_core/env';
 
 let _db: any = null;
 
-// Force DATABASE_URL to use local MySQL (override Manus TiDB Serverless)
-const localMySQLUrl = "mysql://root@127.0.0.1:3306/ingestion_engine_main";
-process.env.DATABASE_URL = localMySQLUrl;
+// Get database URL from environment or use local default
+const getDatabaseUrl = () => {
+  // In production, use the provided DATABASE_URL
+  if (process.env.NODE_ENV === 'production' && process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  }
+  // In development, use local MySQL
+  return "mysql://root@127.0.0.1:3306/ingestion_engine_main";
+};
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db) {
-    const pool = mysql.createPool(localMySQLUrl);
+    const dbUrl = getDatabaseUrl();
+    console.log(`[Database] Connecting to: ${dbUrl.replace(/:\/\/.*@/, '://***@')}`);
+    const pool = mysql.createPool(dbUrl);
     
     // Test the connection and verify database
     try {
