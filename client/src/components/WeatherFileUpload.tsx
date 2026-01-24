@@ -6,11 +6,10 @@ import { trpc } from '../lib/trpc';
 
 interface WeatherFileUploadProps {
   projectId: number;
-  projectDbName: string;
   onUploadComplete?: () => void;
 }
 
-export function WeatherFileUpload({ projectId, projectDbName, onUploadComplete }: WeatherFileUploadProps) {
+export function WeatherFileUpload({ projectId, onUploadComplete }: WeatherFileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -60,7 +59,6 @@ export function WeatherFileUpload({ projectId, projectDbName, onUploadComplete }
 
         try {
           const result = await uploadMutation.mutateAsync({
-            projectDbName,
             projectId,
             fileName: selectedFile.name,
             fileContent: base64Data,

@@ -24,41 +24,41 @@ import { MonthlyIrradianceChart } from "@/components/MonthlyIrradianceChart";
 
 export default function PerformanceValidation() {
   const params = useParams();
-  const projectId = params.projectId as string;
+  const projectIdParam = params.projectId as string;
   const [, navigate] = useLocation();
 
-  // Get project to extract dbName
+  // Get project to extract ID
   const { data: projects } = trpc.projects.list.useQuery();
-  const project = projects?.find((p: any) => p.id.toString() === projectId);
-  const projectDbName = project?.dbName;
+  const project = projects?.find((p: any) => p.id.toString() === projectIdParam);
+  const projectId = project?.id;
 
   // Fetch performance validations
   const { data: validations, isLoading } = trpc.performance.getByProject.useQuery(
-    { projectDbName: projectDbName || "" },
-    { enabled: !!projectDbName }
+    { projectId: projectId || "" },
+    { enabled: !!projectId }
   );
 
   // Fetch weather files for this project
   const { data: weatherFiles } = trpc.weatherFiles.getByProject.useQuery(
-    { projectDbName: projectDbName || "" },
-    { enabled: !!projectDbName }
+    { projectId: projectId || "" },
+    { enabled: !!projectId }
   );
 
   // Fetch weather data (uploaded or free fallback)
   // TODO: Extract location from project data - for now using hardcoded test location
   const { data: weatherData } = trpc.weatherFiles.getWeatherData.useQuery(
     { 
-      projectDbName: projectDbName || "",
+      projectId: projectId || "",
       latitude: 19.638,  // TODO: Get from project location
       longitude: 56.884, // TODO: Get from project location
     },
-    { enabled: !!projectDbName }
+    { enabled: !!projectId }
   );
 
   // Fetch performance parameters to check what data is available
   const { data: perfParams } = trpc.performanceParams.getByProject.useQuery(
-    { projectDbName: projectDbName || "" },
-    { enabled: !!projectDbName }
+    { projectId: projectId || "" },
+    { enabled: !!projectId }
   );
 
   const latestValidation = validations?.[0];
@@ -71,18 +71,18 @@ export default function PerformanceValidation() {
   // Refetch validations when weather file is uploaded
   const utils = trpc.useUtils();
   const handleWeatherUpload = () => {
-    utils.performance.getByProject.invalidate({ projectDbName: projectDbName || "" });
-    utils.weatherFiles.getByProject.invalidate({ projectDbName: projectDbName || "" });
+    utils.performance.getByProject.invalidate({ projectId: projectId || "" });
+    utils.weatherFiles.getByProject.invalidate({ projectId: projectId || "" });
   };
   
   // Run validation mutation
   const runValidation = trpc.performance.runValidation.useMutation({
     onSuccess: () => {
-      utils.performance.getByProject.invalidate({ projectDbName: projectDbName || "" });
+      utils.performance.getByProject.invalidate({ projectId: projectId || "" });
     },
   });
 
-  if (isLoading || !projectDbName) {
+  if (isLoading || !projectId) {
     return (
       <div className="container py-8 space-y-6">
         <Skeleton className="h-12 w-64" />
@@ -132,10 +132,9 @@ export default function PerformanceValidation() {
               </p>
               <Button
                 onClick={() => {
-                  if (projectDbName && projectId) {
+                  if (projectId) {
                     runValidation.mutate({
-                      projectId: parseInt(projectId),
-                      projectDbName
+                      projectId
                     });
                   }
                 }}
@@ -266,8 +265,7 @@ export default function PerformanceValidation() {
         
         {/* Weather file upload */}
         <WeatherFileUpload
-          projectId={parseInt(projectId)}
-          projectDbName={projectDbName}
+          projectId={projectId}
           onUploadComplete={handleWeatherUpload}
         />
       </div>
@@ -315,10 +313,9 @@ export default function PerformanceValidation() {
           </Button>
           <Button
             onClick={() => {
-              if (projectDbName && projectId) {
+              if (projectId) {
                 runValidation.mutate({
-                  projectId: parseInt(projectId),
-                  projectDbName
+                  projectId
                 });
               }
             }}

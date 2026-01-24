@@ -10,24 +10,24 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function PerformanceParameters() {
   const params = useParams();
-  const projectId = params.projectId;
+  const projectIdParam = params.projectId;
   const [, navigate] = useLocation();
 
-  // Fetch project to get dbName
+  // Fetch project to get ID
   const { data: projects } = trpc.projects.list.useQuery();
-  const project = projects?.find((p: any) => p.id === parseInt(projectId || '0'));
-  const projectDbName = project?.dbName;
+  const project = projects?.find((p: any) => p.id === parseInt(projectIdParam || '0'));
+  const projectId = project?.id;
 
   // Fetch performance parameters
   const { data: parameters, isLoading } = trpc.performanceParams.getByProject.useQuery(
-    { projectDbName: projectDbName || '' },
-    { enabled: !!projectDbName }
+    { projectId: projectId || 0 },
+    { enabled: !!projectId }
   );
 
   const paramsArray = Array.isArray(parameters) ? parameters : [];
   const latestParams: any = paramsArray.length > 0 ? paramsArray[0] : null;
 
-  if (isLoading || !projectDbName) {
+  if (isLoading || !projectId) {
     return (
       <div className="container py-8">
         <div className="mb-6">

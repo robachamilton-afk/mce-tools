@@ -11,24 +11,24 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 
 export function FinancialData() {
   const params = useParams();
-  const projectId = params.projectId;
+  const projectIdParam = params.projectId;
   const [, navigate] = useLocation();
 
   // Fetch project to get dbName
   const { data: projects } = trpc.projects.list.useQuery();
-  const project = projects?.find((p: any) => p.id === parseInt(projectId || '0'));
-  const projectDbName = project?.dbName;
+  const project = projects?.find((p: any) => p.id === parseInt(projectIdParam || '0'));
+  const projectId = project?.id;
 
   // Fetch financial data
   const { data: financialData, isLoading } = trpc.financial.getByProject.useQuery(
-    { projectDbName: projectDbName || '' },
-    { enabled: !!projectDbName }
+    { projectId: projectId || 0 },
+    { enabled: !!projectId }
   );
 
   const dataArray = Array.isArray(financialData) ? financialData : [];
   const latestData: any = dataArray.length > 0 ? dataArray[0] : null;
 
-  if (isLoading || !projectDbName) {
+  if (isLoading || !projectId) {
     return (
       <div className="container py-8">
         <div className="mb-6">

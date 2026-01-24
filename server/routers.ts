@@ -130,15 +130,10 @@ export const appRouter = router({
         // Start processing asynchronously and save facts
         const projectIdNum = parseInt(input.projectId);
         
-        // Create processing job record
-        const db = await getDb();
-        const [projectRows]: any = await db.execute(
-          sql`SELECT dbName FROM projects WHERE id = ${projectIdNum}`
-        );
-        const projectDbName = projectRows[0]?.dbName;
+        // Create processing job record using project ID (table-prefix architecture)
+        const projectDb = createProjectDbPool(`proj_${projectIdNum}`);
         
-        if (projectDbName) {
-          const projectDb = createProjectDbPool(projectDbName);
+        try {
           
           // Insert initial processing job
           await projectDb.execute(
@@ -146,14 +141,14 @@ export const appRouter = router({
              VALUES (?, 'processing', 'queued', 0, NOW())`,
             [document.id]
           );
-          
+        } finally {
           await projectDb.end();
         }
         
         // Progress callback to update job status
         const updateProgress = async (stage: string, progress: number) => {
-          if (projectDbName) {
-            const projectDb = createProjectDbPool(projectDbName);
+          const projectDb = createProjectDbPool(`proj_${projectIdNum}`);
+          try {
             
             const status = progress >= 100 ? 'completed' : 'processing';
             const completedAt = progress >= 100 ? ', completed_at = NOW()' : '';
@@ -162,7 +157,7 @@ export const appRouter = router({
               `UPDATE processing_jobs SET stage = ?, progress_percent = ?, status = ? ${completedAt} WHERE document_id = ?`,
               [stage, progress, status, document.id]
             );
-            
+          } finally {
             await projectDb.end();
           }
         };
@@ -170,11 +165,12 @@ export const appRouter = router({
         // Skip extraction for weather files - they're data files, not documents
         if (finalDocumentType === 'WEATHER_FILE') {
           console.log(`[Document Processor] Skipping extraction for weather file: ${document.fileName}`);
-          console.log(`[Document Processor] projectDbName: ${projectDbName}, projectIdNum: ${projectIdNum}`);
+          console.log(`[Document Processor] projectIdNum: ${projectIdNum}`);
           
           // Also create a weather_files record so it shows up in Performance Validation
-          if (projectDbName) {
+          try {
             console.log(`[Document Processor] Creating weather_files record for ${document.fileName}...`);
+            const weatherProjectDb = createProjectDbPool(`proj_${projectIdNum}`);
             try {
               const { v4: uuidv4 } = await import('uuid');
               const weatherFileId = uuidv4();
@@ -217,8 +213,6 @@ export const appRouter = router({
               } catch (parseErr) {
                 console.error('[Document Processor] Failed to parse weather file header:', parseErr);
               }
-              
-              const weatherProjectDb = createProjectDbPool(projectDbName);
               
               // Build INSERT with optional location fields
               const fields = [
@@ -268,10 +262,13 @@ export const appRouter = router({
               );
               
               console.log(`[Document Processor] Created weather_files record: ${weatherFileId}`);
-              await weatherProjectDb.end();
             } catch (weatherErr) {
               console.error('[Document Processor] Failed to create weather_files record:', weatherErr);
+            } finally {
+              await weatherProjectDb.end();
             }
+          } catch (outerErr) {
+            console.error('[Document Processor] Failed to process weather file:', outerErr);
           }
           
           await updateProgress('completed', 100);
@@ -283,14 +280,8 @@ export const appRouter = router({
           .then(async (result) => {
             // Save extracted facts to database
             if (result.facts.length > 0) {
-              const db = await getDb();
-              const [projectRows]: any = await db.execute(
-                sql`SELECT dbName FROM projects WHERE id = ${projectIdNum}`
-              );
-              const projectDbName = projectRows[0]?.dbName;
-              
-              if (projectDbName) {
-                const projectDb = createProjectDbPool(projectDbName);
+              const projectDb = createProjectDbPool(`proj_${projectIdNum}`);
+              try {
                 
                 // Phase 1: Simple insert - no reconciliation during upload
                 // Use simple fact inserter for fast processing
@@ -349,7 +340,6 @@ export const appRouter = router({
                   // Don't fail the whole process if location extraction fails
                 }
                 
-                await projectDb.end();
                 console.log(`[Document Processor] Phase 1 complete: ${result.facts.length} facts extracted and stored`);
                 
                 // Mark as 100% complete - Phase 2 (consolidation) will be triggered manually
@@ -358,6 +348,8 @@ export const appRouter = router({
                 
                 // Skip narrative generation, performance extraction, financial extraction, weather extraction
                 // These will happen in Phase 2 when user clicks "Process & Consolidate"
+              } finally {
+                await projectDb.end();
               }
             }
           })
@@ -365,14 +357,14 @@ export const appRouter = router({
             console.error(`Failed to process document ${document.id}:`, err);
             
             // Update job status to failed
-            if (projectDbName) {
-              const projectDb = createProjectDbPool(projectDbName);
+            const projectDb = createProjectDbPool(`proj_${projectIdNum}`);
+            try {
               
               await projectDb.execute(
                 `UPDATE processing_jobs SET status = 'failed', error_message = ?, completed_at = NOW() WHERE document_id = ?`,
                 [err.message || 'Unknown error', document.id]
               );
-              
+            } finally {
               await projectDb.end();
             }
           });
@@ -388,15 +380,14 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
-        // Get project dbName
-        const [projects] = await db.execute(`SELECT dbName FROM projects WHERE id = ${parseInt(input.projectId)}`) as any;
+        // Verify project exists
+        const [projects] = await db.execute(`SELECT id FROM projects WHERE id = ${parseInt(input.projectId)}`) as any;
         if (!projects || projects.length === 0) {
           throw new Error(`Project ${input.projectId} not found`);
         }
-        const projectDbName = projects[0].dbName;
         
-        // Query documents from project database
-        const connection = await createProjectDbConnection(projectDbName);
+        // Query documents from project database using table-prefix architecture
+        const connection = await createProjectDbConnection(`proj_${parseInt(input.projectId)}`);
         
         try {
           const [rows] = await connection.execute(
@@ -428,15 +419,14 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
-        // Get project dbName
-        const [projects] = await db.execute(`SELECT dbName FROM projects WHERE id = ${parseInt(input.projectId)}`) as any;
+        // Verify project exists
+        const [projects] = await db.execute(`SELECT id FROM projects WHERE id = ${parseInt(input.projectId)}`) as any;
         if (!projects || projects.length === 0) {
           throw new Error(`Project ${input.projectId} not found`);
         }
-        const projectDbName = projects[0].dbName;
         
-        // Update document type in project database
-        const connection = await createProjectDbConnection(projectDbName);
+        // Update document type in project database using table-prefix architecture
+        const connection = await createProjectDbConnection(`proj_${parseInt(input.projectId)}`);
         
         try {
           await connection.execute(
@@ -490,9 +480,9 @@ export const appRouter = router({
         return { success: true, message: "Document deleted successfully" };
       }),
     getProgress: protectedProcedure
-      .input(z.object({ projectDbName: z.string(), documentId: z.string() }))
+      .input(z.object({ projectId: z.number(), documentId: z.string() }))
       .query(async ({ input }) => {
-        const db = createProjectDbPool(input.projectDbName);
+        const db = createProjectDbPool(`proj_${input.projectId}`);
         
         const [rows] = await db.execute(
           `SELECT status, stage, progress_percent, error_message, started_at, completed_at 
@@ -761,9 +751,9 @@ Synthesized narrative:`;
 
   conflicts: router({
     list: protectedProcedure
-      .input(z.object({ projectDbName: z.string() }))
+      .input(z.object({ projectId: z.number() }))
       .query(async ({ input }) => {
-        const projectDb = await createProjectDbConnection(input.projectDbName);
+        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
 
         try {
           const [conflicts] = await projectDb.execute(`
@@ -792,13 +782,13 @@ Synthesized narrative:`;
 
     resolve: protectedProcedure
       .input(z.object({
-        projectDbName: z.string(),
+        projectId: z.number(),
         conflictId: z.string(),
         resolution: z.enum(['accept_a', 'accept_b', 'merge', 'ignore']),
         mergedValue: z.string().optional(), // For merge resolution
       }))
       .mutation(async ({ input }) => {
-        const projectDb = await createProjectDbConnection(input.projectDbName);
+        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
 
         try {
           // Get conflict details
@@ -881,14 +871,13 @@ Synthesized narrative:`;
     // Run performance validation calculation
     runValidation: protectedProcedure
       .input(z.object({ 
-        projectId: z.number(),
-        projectDbName: z.string() 
+        projectId: z.number()
       }))
       .mutation(async ({ input }) => {
         const { runPerformanceValidation } = await import('./performance-validator');
         
-        console.log('[Validation] Connecting to database:', input.projectDbName);
-        const projectDb = await createProjectDbConnection(input.projectDbName);
+        console.log('[Validation] Connecting to database:', input.projectId);
+        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
         console.log('[Validation] Connected to database');
 
         try {
@@ -978,9 +967,9 @@ Synthesized narrative:`;
     
     // Get all performance validations for a project
     getByProject: protectedProcedure
-      .input(z.object({ projectDbName: z.string() }))
+      .input(z.object({ projectId: z.number() }))
       .query(async ({ input }) => {
-        const projectDb = await createProjectDbConnection(input.projectDbName);
+        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
 
         try {
           const [rows] = await projectDb.execute(
@@ -996,9 +985,9 @@ Synthesized narrative:`;
 
     // Get single performance validation by ID
     getById: protectedProcedure
-      .input(z.object({ projectDbName: z.string(), validationId: z.string() }))
+      .input(z.object({ projectId: z.number(), validationId: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = await createProjectDbConnection(input.projectDbName);
+        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1016,7 +1005,7 @@ Synthesized narrative:`;
     // Create new performance validation (will be called by Solar Analyzer integration)
     create: protectedProcedure
       .input(z.object({
-        projectDbName: z.string(),
+        projectId: z.number(),
         calculationId: z.string(),
         annualGenerationGwh: z.string().optional(),
         capacityFactorPercent: z.string().optional(),
@@ -1046,7 +1035,7 @@ Synthesized narrative:`;
         warnings: z.string().optional(), // JSON string
       }))
       .mutation(async ({ input }) => {
-        const projectDb = await createProjectDbConnection(input.projectDbName);
+        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
 
         try {
           const validationId = `pv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -1054,8 +1043,8 @@ Synthesized narrative:`;
           // Get project_id from project database name
           const mainDb = await getDb();
           const [projectRows] = await mainDb.execute(
-            "SELECT id FROM projects WHERE dbName = ?",
-            [input.projectDbName]
+            "SELECT id FROM projects WHERE id = ?",
+            [input.projectId]
           ) as any;
           const projectId = projectRows[0]?.id;
           
@@ -1114,9 +1103,9 @@ Synthesized narrative:`;
   // Performance parameters router
   performanceParams: router({
     getByProject: protectedProcedure
-      .input(z.object({ projectDbName: z.string() }))
+      .input(z.object({ projectId: z.number() }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(input.projectDbName);
+        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1131,9 +1120,9 @@ Synthesized narrative:`;
       }),
     
     getById: protectedProcedure
-      .input(z.object({ projectDbName: z.string(), id: z.string() }))
+      .input(z.object({ projectId: z.number(), id: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(input.projectDbName);
+        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1152,9 +1141,9 @@ Synthesized narrative:`;
   // Financial data router
   financial: router({
     getByProject: protectedProcedure
-      .input(z.object({ projectDbName: z.string() }))
+      .input(z.object({ projectId: z.number() }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(input.projectDbName);
+        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1169,9 +1158,9 @@ Synthesized narrative:`;
       }),
     
     getById: protectedProcedure
-      .input(z.object({ projectDbName: z.string(), id: z.string() }))
+      .input(z.object({ projectId: z.number(), id: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(input.projectDbName);
+        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1190,9 +1179,9 @@ Synthesized narrative:`;
   // Weather files router
   weatherFiles: router({
     getByProject: protectedProcedure
-      .input(z.object({ projectDbName: z.string() }))
+      .input(z.object({ projectId: z.number() }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(input.projectDbName);
+        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1208,14 +1197,13 @@ Synthesized narrative:`;
     
     upload: protectedProcedure
       .input(z.object({
-        projectDbName: z.string(),
         projectId: z.number(),
         fileName: z.string(),
         fileContent: z.string(), // Base64 encoded
         sourceDocumentId: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const projectDb = createProjectDbPool(input.projectDbName);
+        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
 
         try {
           // Decode base64 content
@@ -1288,7 +1276,7 @@ Synthesized narrative:`;
           // Auto-trigger validation if ready
           const { ValidationTrigger } = await import('./validation-trigger');
           const trigger = new ValidationTrigger();
-          const triggerResult = await trigger.autoTriggerIfReady(input.projectId, input.projectDbName);
+          const triggerResult = await trigger.autoTriggerIfReady(input.projectId);
           
           return {
             id: fileId,
@@ -1304,12 +1292,12 @@ Synthesized narrative:`;
     // Get weather data (uploaded or free fallback)
     getWeatherData: protectedProcedure
       .input(z.object({
-        projectDbName: z.string(),
+        projectId: z.number(),
         latitude: z.number().optional(),
         longitude: z.number().optional(),
       }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(input.projectDbName);
+        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
 
         try {
           // Check for uploaded weather file with processed data

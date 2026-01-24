@@ -33,16 +33,16 @@ interface Conflict {
 export default function Conflicts() {
   const [, navigate] = useLocation();
   const params = new URLSearchParams(window.location.search);
-  const projectId = params.get("projectId");
-  const projectDbName = params.get("projectDbName");
+  const projectIdParam = params.get("projectId");
+  const projectId = projectIdParam ? parseInt(projectIdParam) : undefined;
 
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [selectedConflict, setSelectedConflict] = useState<Conflict | null>(null);
   const [mergedValue, setMergedValue] = useState("");
 
   const { data: conflicts, isLoading, refetch } = trpc.conflicts.list.useQuery(
-    { projectDbName: projectDbName || "" },
-    { enabled: !!projectDbName }
+    { projectId: projectId || 0 },
+    { enabled: !!projectId }
   );
 
   const resolveMutation = trpc.conflicts.resolve.useMutation({
@@ -57,11 +57,11 @@ export default function Conflicts() {
   });
 
   const handleAcceptA = (conflict: Conflict) => {
-    if (!projectDbName) return;
+    if (!projectId) return;
     
     if (confirm("Keep Insight A and delete Insight B?")) {
       resolveMutation.mutate({
-        projectDbName,
+        projectId,
         conflictId: conflict.id,
         resolution: "accept_a",
       });
@@ -69,11 +69,11 @@ export default function Conflicts() {
   };
 
   const handleAcceptB = (conflict: Conflict) => {
-    if (!projectDbName) return;
+    if (!projectId) return;
     
     if (confirm("Keep Insight B and delete Insight A?")) {
       resolveMutation.mutate({
-        projectDbName,
+        projectId,
         conflictId: conflict.id,
         resolution: "accept_b",
       });
@@ -87,11 +87,11 @@ export default function Conflicts() {
   };
 
   const handleIgnore = (conflict: Conflict) => {
-    if (!projectDbName) return;
+    if (!projectId) return;
     
     if (confirm("Mark this conflict as ignored? Both insights will remain.")) {
       resolveMutation.mutate({
-        projectDbName,
+        projectId,
         conflictId: conflict.id,
         resolution: "ignore",
       });
@@ -99,10 +99,10 @@ export default function Conflicts() {
   };
 
   const submitMerge = () => {
-    if (!selectedConflict || !projectDbName) return;
+    if (!selectedConflict || !projectId) return;
     
     resolveMutation.mutate({
-      projectDbName,
+      projectId,
       conflictId: selectedConflict.id,
       resolution: "merge",
       mergedValue,

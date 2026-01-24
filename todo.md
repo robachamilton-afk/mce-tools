@@ -1218,3 +1218,13 @@
 - [ ] Build data export functionality (GDPR compliance)
 - [ ] Create deletion verification API endpoint
 - [ ] Generate compliance certificates for deletions
+
+## Bug Fixes
+- [x] Fix TiDB SSL connection errors during project creation
+- [x] Fix TiDB SSL connection errors during document upload
+- [x] Ensure all database connections respect dev/prod environment and use SSL in production
+- [x] Complete refactoring: Remove all projectDbName references and replace with projectId (35+ backend endpoints)
+- [x] Update all tRPC endpoints to use projectId instead of projectDbName
+- [x] Update all frontend calls to pass projectId instead of projectDbName (7 files updated)
+- [x] Update validation-trigger.ts to use table-prefix architecture
+- [x] Fix all TypeScript compilation errors from refactoring

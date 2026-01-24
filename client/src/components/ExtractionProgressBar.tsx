@@ -6,7 +6,7 @@ import { trpc } from '../lib/trpc';
 
 interface ExtractionProgressBarProps {
   documentId: string;
-  projectDbName: string;
+  projectId: number;
   onComplete?: () => void;
 }
 
@@ -29,7 +29,7 @@ const STAGES: ProgressStage[] = [
   { name: 'checking_validation_trigger', label: 'Finalizing', icon: <CheckCircle className="w-4 h-4" />, minProgress: 98, maxProgress: 100 },
 ];
 
-export function ExtractionProgressBar({ documentId, projectDbName, onComplete }: ExtractionProgressBarProps) {
+export function ExtractionProgressBar({ documentId, projectId, onComplete }: ExtractionProgressBarProps) {
   const [currentStage, setCurrentStage] = useState<string>('queued');
   const [progress, setProgress] = useState<number>(0);
   const [status, setStatus] = useState<string>('processing');
@@ -39,10 +39,10 @@ export function ExtractionProgressBar({ documentId, projectDbName, onComplete }:
 
   // Poll progress every 500ms
   const { data: progressData } = trpc.documents.getProgress.useQuery(
-    { projectDbName, documentId },
+    { projectId, documentId },
     {
       refetchInterval: status === 'processing' ? 500 : false,
-      enabled: !!projectDbName && !!documentId,
+      enabled: !!projectId && !!documentId,
     }
   );
 

@@ -459,11 +459,11 @@ export default function DocumentUpload() {
                         )}
                         
                         {/* Extraction progress */}
-                        {file.status === "extracting" && file.documentId && project?.dbName && (
+                        {file.status === "extracting" && file.documentId && project?.id && (
                           <div className="mt-3">
                             <ExtractionProgressBar
                               documentId={file.documentId}
-                              projectDbName={project.dbName}
+                              projectId={project.id}
                               onComplete={() => {
                                 setUploadedFiles(prev => prev.map(f => 
                                   f.id === file.id ? { ...f, status: 'completed' } : f

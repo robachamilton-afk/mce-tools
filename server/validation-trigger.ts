@@ -27,10 +27,9 @@ export class ValidationTrigger {
    * Check if project has all data needed for validation
    */
   async checkValidationReadiness(
-    projectId: number,
-    projectDbName: string
+    projectId: number
   ): Promise<ValidationTriggerCheck> {
-    const projectDb = createProjectDbPool(projectDbName);
+    const projectDb = createProjectDbPool(`proj_${projectId}`);
 
     try {
       const missingData: string[] = [];
@@ -98,13 +97,12 @@ export class ValidationTrigger {
    */
   async triggerValidation(
     projectId: number,
-    projectDbName: string,
     performanceParamsId: string,
     weatherFileId: string
   ): Promise<{ validationId: string; status: string }> {
     console.log(`[Validation Trigger] Starting validation for project ${projectId}`);
 
-    const projectDb = createProjectDbPool(projectDbName);
+    const projectDb = createProjectDbPool(`proj_${projectId}`);
 
     try {
       // Fetch performance parameters
@@ -175,12 +173,11 @@ export class ValidationTrigger {
    * Auto-trigger validation after document processing
    */
   async autoTriggerIfReady(
-    projectId: number,
-    projectDbName: string
+    projectId: number
   ): Promise<{ triggered: boolean; validationId?: string; reason: string }> {
     try {
       // Check if validation is ready
-      const check = await this.checkValidationReadiness(projectId, projectDbName);
+      const check = await this.checkValidationReadiness(projectId);
 
       if (!check.canTrigger) {
         console.log(`[Validation Trigger] Not ready: ${check.reason}`);
@@ -191,11 +188,7 @@ export class ValidationTrigger {
       }
 
       // Check if validation already exists
-      const projectDb = mysql.createPool({
-        host: '127.0.0.1',
-        user: 'root',
-        database: projectDbName,
-      });
+      const projectDb = createProjectDbPool(`proj_${projectId}`);
 
       const [existingValidations] = await projectDb.execute<any[]>(
         `SELECT id FROM performance_validations WHERE project_id = ? LIMIT 1`,
@@ -215,7 +208,6 @@ export class ValidationTrigger {
       // Trigger validation
       const result = await this.triggerValidation(
         projectId,
-        projectDbName,
         check.performanceParamsId!,
         check.weatherFileId!
       );

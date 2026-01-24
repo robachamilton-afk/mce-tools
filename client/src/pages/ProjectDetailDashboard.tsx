@@ -62,7 +62,7 @@ export default function ProjectDetailDashboard() {
 
   // Fetch performance parameters for location
   const { data: perfParams } = trpc.performanceParams.getByProject.useQuery(
-    { projectDbName: project?.dbName || "" },
+    { projectId: project?.id || "" },
     { enabled: !!project?.dbName }
   );
 
