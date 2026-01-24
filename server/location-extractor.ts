@@ -75,7 +75,7 @@ ${documentText.substring(0, 10000)}`;
                 site_name: { type: ["string", "null"] },
                 address: { type: ["string", "null"] }
               },
-              required: [],
+              required: ["latitude", "longitude", "city", "country", "site_name", "address"],
               additionalProperties: false
             }
           }
