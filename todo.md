@@ -936,3 +936,11 @@
 - [x] Update routing: clicking project card → /project-dashboard?projectId=X
 - [x] Add back navigation to Projects list
 - [ ] Test dashboard with real project data
+
+## Session 5 Fixes (Jan 24, 2026)
+- [x] Audit all dashboard quick action links and fix 404 errors
+- [x] Fix performance params page 404 error (changed query params to path params)
+- [x] Verify all routes match between dashboard links and App.tsx routing
+- [x] Create monthly irradiance chart component (bar chart showing GHI/DNI by month)
+- [x] Integrate irradiance chart into Performance page
+- [x] Display parsed TMY weather data in chart format

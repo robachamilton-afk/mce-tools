@@ -21,6 +21,7 @@ import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Zap, Sun, Gauge,
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { WeatherFileUpload } from "@/components/WeatherFileUpload";
+import { MonthlyIrradianceChart } from "@/components/MonthlyIrradianceChart";
 
 export default function PerformanceValidation() {
   const params = useParams();
@@ -152,6 +153,11 @@ export default function PerformanceValidation() {
             No performance validation results available yet. Upload the required data above, then click "Process & Consolidate" on the Insights page to run validation.
           </AlertDescription>
         </Alert>
+        
+        {/* Monthly Irradiance Chart */}
+        {hasWeatherFile && weatherFilesArray[0].monthly_irradiance && (
+          <MonthlyIrradianceChart data={weatherFilesArray[0].monthly_irradiance} />
+        )}
         
         {/* Weather file upload */}
         <WeatherFileUpload

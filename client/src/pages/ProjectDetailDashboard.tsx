@@ -369,7 +369,7 @@ export default function ProjectDetailDashboard() {
               
               <div className="grid grid-cols-1 gap-2">
                 <Button
-                  onClick={() => navigate(`/upload?projectId=${projectId}`)}
+                  onClick={() => navigate(`/project/${projectId}/upload`)}
                   variant="outline"
                   className="justify-start border-slate-700 hover:bg-slate-800 hover:border-blue-500/50"
                 >
@@ -387,7 +387,7 @@ export default function ProjectDetailDashboard() {
                 </Button>
                 
                 <Button
-                  onClick={() => navigate(`/performance?projectId=${projectId}`)}
+                  onClick={() => navigate(`/project/${projectId}/performance`)}
                   variant="outline"
                   className="justify-start border-slate-700 hover:bg-slate-800 hover:border-green-500/50"
                 >
@@ -396,7 +396,7 @@ export default function ProjectDetailDashboard() {
                 </Button>
                 
                 <Button
-                  onClick={() => navigate(`/performance-params?projectId=${projectId}`)}
+                  onClick={() => navigate(`/project/${projectId}/performance-params`)}
                   variant="outline"
                   className="justify-start border-slate-700 hover:bg-slate-800 hover:border-cyan-500/50"
                 >
@@ -405,7 +405,7 @@ export default function ProjectDetailDashboard() {
                 </Button>
                 
                 <Button
-                  onClick={() => navigate(`/financial?projectId=${projectId}`)}
+                  onClick={() => navigate(`/project/${projectId}/financial`)}
                   variant="outline"
                   className="justify-start border-slate-700 hover:bg-slate-800 hover:border-yellow-500/50"
                 >
@@ -414,7 +414,7 @@ export default function ProjectDetailDashboard() {
                 </Button>
                 
                 <Button
-                  onClick={() => navigate(`/documents?projectId=${projectId}`)}
+                  onClick={() => navigate(`/project/${projectId}/documents`)}
                   variant="outline"
                   className="justify-start border-slate-700 hover:bg-slate-800 hover:border-orange-500/50"
                 >
