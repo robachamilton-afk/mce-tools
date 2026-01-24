@@ -177,9 +177,11 @@ export const appRouter = router({
         // Skip extraction for weather files - they're data files, not documents
         if (finalDocumentType === 'WEATHER_FILE') {
           console.log(`[Document Processor] Skipping extraction for weather file: ${document.fileName}`);
+          console.log(`[Document Processor] projectDbName: ${projectDbName}, projectIdNum: ${projectIdNum}`);
           
           // Also create a weather_files record so it shows up in Performance Validation
           if (projectDbName) {
+            console.log(`[Document Processor] Creating weather_files record for ${document.fileName}...`);
             try {
               const { v4: uuidv4 } = await import('uuid');
               const weatherFileId = uuidv4();

@@ -444,15 +444,25 @@ export class ProjectConsolidator {
 
       for (const weatherFile of weatherFiles) {
         try {
-          // Download and parse the weather file
-          const axios = (await import('axios')).default;
-          const response = await axios.get(weatherFile.file_url, {
-            timeout: 30000,
-            responseType: 'text'
-          });
+          // Read weather file from filesystem (for local files) or download (for URLs)
+          let fileContent: string;
+          
+          if (weatherFile.file_url.startsWith('http://') || weatherFile.file_url.startsWith('https://')) {
+            // Download from URL
+            const axios = (await import('axios')).default;
+            const response = await axios.get(weatherFile.file_url, {
+              timeout: 30000,
+              responseType: 'text'
+            });
+            fileContent = response.data;
+          } else {
+            // Read from local filesystem
+            const fs = await import('fs/promises');
+            fileContent = await fs.readFile(weatherFile.file_url, 'utf-8');
+          }
 
           const { parseWeatherFile } = await import('./weather-file-extractor');
-          const parsedData = parseWeatherFile(response.data, weatherFile.file_name);
+          const parsedData = parseWeatherFile(fileContent, weatherFile.file_name);
 
           if (parsedData && parsedData.monthlyData.length > 0) {
             // Store monthly irradiance data as JSON in the weather_files table

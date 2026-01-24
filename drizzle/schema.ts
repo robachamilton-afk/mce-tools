@@ -361,3 +361,19 @@ export const ollamaConfig = mysqlTable("ollamaConfig", {
 
 export type OllamaConfig = typeof ollamaConfig.$inferSelect;
 export type InsertOllamaConfig = typeof ollamaConfig.$inferInsert;
+
+/**
+ * Section narratives - stores generated narrative summaries for fact sections
+ * Stored in main database, linked to projects via project_db_name
+ */
+export const sectionNarratives = mysqlTable("section_narratives", {
+  id: int("id").autoincrement().primaryKey(),
+  projectDbName: varchar("project_db_name", { length: 255 }).notNull(),
+  sectionName: varchar("section_name", { length: 255 }).notNull(),
+  narrativeText: text("narrative_text").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+export type SectionNarrative = typeof sectionNarratives.$inferSelect;
+export type InsertSectionNarrative = typeof sectionNarratives.$inferInsert;
