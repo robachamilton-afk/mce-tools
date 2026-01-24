@@ -869,3 +869,20 @@
 - [x] Restart dev server and verify it starts without EMFILE errors (HTTP 200 response)
 - [x] Test hot reload functionality with polling mode (server running successfully)
 - [x] Document polling mode trade-offs (slower HMR but more reliable)
+
+## tRPC API Error Fix - HTML Instead of JSON (Current - Jan 24, 2026)
+- [ ] Check server logs for errors on /projects page load
+- [ ] Identify which tRPC endpoint is returning HTML
+- [ ] Check if server is crashing or returning error pages
+- [ ] Fix the API endpoint or route configuration
+- [ ] Test /projects page to verify fix
+
+## Extraction Pipeline Bug Fixes (Current - Jan 24, 2026)
+- [x] Fix performance/financial extractor crashes (undefined error accessing response.choices[0])
+- [x] Add WEATHER_FILE document type to classification system
+- [x] Update document type detector to recognize weather files (TMY, EPW, CSV with irradiance data)
+- [ ] Skip fact extraction for WEATHER_FILE documents (process as weather data only)
+- [ ] Fix progress bar showing 100% while extraction continues (5-10 min delay)
+- [ ] Fix conflict detection - "Insight A" repeating incorrectly for unrelated conflicts
+- [ ] Fix validation trigger stuck at 99% "Check validation trigger"
+- [ ] Test all fixes with document upload

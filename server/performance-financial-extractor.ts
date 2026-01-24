@@ -195,6 +195,11 @@ ${documentText.substring(0, 15000)}`;
         }
       });
 
+      if (!response.choices || response.choices.length === 0) {
+        console.log(`[Performance Extractor] No choices returned from LLM`);
+        return null;
+      }
+      
       const content = response.choices[0].message.content;
       if (!content || typeof content !== 'string') {
         console.log(`[Performance Extractor] No content returned from LLM`);
@@ -311,6 +316,11 @@ ${documentText.substring(0, 15000)}`;
         }
       });
 
+      if (!response.choices || response.choices.length === 0) {
+        console.log(`[Financial Extractor] No choices returned from LLM`);
+        return null;
+      }
+      
       const content = response.choices[0].message.content;
       if (!content || typeof content !== 'string') {
         console.log(`[Financial Extractor] No content returned from LLM`);

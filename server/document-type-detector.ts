@@ -6,7 +6,7 @@
 import { invokeLLM } from './_core/llm';
 import { extractTextFromDocument } from './document-extractor';
 
-export type DocumentType = 'IM' | 'DD_PACK' | 'CONTRACT' | 'GRID_STUDY' | 'CONCEPT_DESIGN' | 'OTHER';
+export type DocumentType = 'IM' | 'DD_PACK' | 'CONTRACT' | 'GRID_STUDY' | 'CONCEPT_DESIGN' | 'WEATHER_FILE' | 'OTHER';
 
 /**
  * Detect document type using AI
@@ -38,6 +38,7 @@ export async function detectDocumentType(filePath: string, fileName: string): Pr
 - GRID_STUDY: Grid connection studies (grid impact assessment, connection agreement, network studies)
 - PLANNING: Planning and permitting documents (development applications, environmental approvals, permits)
 - CONCEPT_DESIGN: Concept designs and layouts (site plans, electrical diagrams, preliminary designs)
+- WEATHER_FILE: Weather data files (TMY, EPW, CSV with solar irradiance data, PVGIS data)
 - OTHER: Any other document type
 
 **Document to classify:**
@@ -47,7 +48,7 @@ ${textSample ? `\nFirst page content:\n${textSample}` : ''}
 **Instructions:**
 1. Analyze the filename and content carefully
 2. Look for key indicators like document titles, section headings, terminology
-3. Return ONLY the category code (IM, DD_PACK, CONTRACT, GRID_STUDY, PLANNING, CONCEPT_DESIGN, or OTHER)
+3. Return ONLY the category code (IM, DD_PACK, CONTRACT, GRID_STUDY, PLANNING, CONCEPT_DESIGN, WEATHER_FILE, or OTHER)
 4. Do not include any explanation or additional text
 
 Category:`;
@@ -63,7 +64,15 @@ Category:`;
     const detectedType = (typeof content === 'string' ? content : '').trim().toUpperCase();
 
     // Validate response
-    const validTypes: DocumentType[] = ['IM', 'DD_PACK', 'CONTRACT', 'GRID_STUDY', 'CONCEPT_DESIGN', 'OTHER'];
+    const validTypes: DocumentType[] = [
+      'IM',
+      'DD_PACK',
+      'CONTRACT',
+      'GRID_STUDY',
+      'CONCEPT_DESIGN',
+      'WEATHER_FILE',
+      'OTHER'
+    ];
     
     if (validTypes.includes(detectedType as DocumentType)) {
       console.log(`[Document Type Detector] Detected type: ${detectedType}`);
@@ -89,6 +98,7 @@ export function getDocumentTypeLabel(type: DocumentType): string {
     'CONTRACT': 'Contract',
     'GRID_STUDY': 'Grid Study',
     'CONCEPT_DESIGN': 'Concept Design',
+    'WEATHER_FILE': 'Weather File',
     'OTHER': 'Other'
   };
   return labels[type] || 'Other';
