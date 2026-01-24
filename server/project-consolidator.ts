@@ -280,13 +280,13 @@ export class ProjectConsolidator {
       // Build a summary from narratives (they already contain extracted facts)
       const narrativeSummary = narratives.map((n: any) => `${n.section}:\n${n.narrative}`).join('\n\n');
 
-      // Get first completed document for metadata
+      // Get first non-weather document for metadata
       const [documents]: any = await projectDb.execute(
-        `SELECT id, fileName, documentType FROM documents WHERE status = 'completed' LIMIT 1`
+        `SELECT id, fileName, documentType FROM documents WHERE documentType != 'WEATHER_FILE' LIMIT 1`
       );
 
       if (!documents || documents.length === 0) {
-        console.log('[Consolidator] No completed documents found');
+        console.log('[Consolidator] No documents found for performance extraction');
         return;
       }
 
@@ -329,9 +329,26 @@ export class ProjectConsolidator {
           }
         }
 
-        await projectDb.execute(
-          `INSERT INTO performance_parameters (${fields.join(', ')}) VALUES (${values.join(', ')})`
+        // Check if a record already exists
+        const [existing]: any = await projectDb.execute(
+          `SELECT id FROM performance_parameters LIMIT 1`
         );
+
+        if (existing && existing.length > 0) {
+          // UPDATE existing record
+          const updatePairs = [];
+          for (let i = 5; i < fields.length; i++) { // Skip id, project_id, source_document_id, confidence, extraction_method
+            updatePairs.push(`${fields[i]} = ${values[i]}`);
+          }
+          await projectDb.execute(
+            `UPDATE performance_parameters SET ${updatePairs.join(', ')}, updated_at = NOW() WHERE id = '${existing[0].id}'`
+          );
+        } else {
+          // INSERT new record
+          await projectDb.execute(
+            `INSERT INTO performance_parameters (${fields.join(', ')}) VALUES (${values.join(', ')})`
+          );
+        }
 
         console.log(`[Consolidator] Saved performance parameters (confidence: ${(perfParams.confidence * 100).toFixed(1)}%)`);
 

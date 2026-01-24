@@ -151,47 +151,7 @@ ${documentText.substring(0, 15000)}`;
           { role: "user", content: prompt }
         ],
         response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "performance_parameters",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                dc_capacity_mw: { type: ["string", "null"] },
-                ac_capacity_mw: { type: ["string", "null"] },
-                module_model: { type: ["string", "null"] },
-                module_power_watts: { type: ["string", "null"] },
-                module_count: { type: ["integer", "null"] },
-                inverter_model: { type: ["string", "null"] },
-                inverter_power_kw: { type: ["string", "null"] },
-                inverter_count: { type: ["integer", "null"] },
-                tracking_type: { type: ["string", "null"] },
-                tilt_angle_degrees: { type: ["string", "null"] },
-                azimuth_degrees: { type: ["string", "null"] },
-                latitude: { type: ["string", "null"] },
-                longitude: { type: ["string", "null"] },
-                site_name: { type: ["string", "null"] },
-                elevation_m: { type: ["string", "null"] },
-                timezone: { type: ["string", "null"] },
-                system_losses_percent: { type: ["string", "null"] },
-                degradation_rate_percent: { type: ["string", "null"] },
-                availability_percent: { type: ["string", "null"] },
-                soiling_loss_percent: { type: ["string", "null"] },
-                weather_file_url: { type: ["string", "null"] },
-                ghi_annual_kwh_m2: { type: ["string", "null"] },
-                dni_annual_kwh_m2: { type: ["string", "null"] },
-                temperature_ambient_c: { type: ["string", "null"] },
-                p50_generation_gwh: { type: ["string", "null"] },
-                p90_generation_gwh: { type: ["string", "null"] },
-                capacity_factor_percent: { type: ["string", "null"] },
-                specific_yield_kwh_kwp: { type: ["string", "null"] },
-                notes: { type: ["string", "null"] }
-              },
-              required: [],
-              additionalProperties: false
-            }
-          }
+          type: "json_object"
         }
       });
 
