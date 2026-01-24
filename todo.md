@@ -1178,3 +1178,8 @@
 - [ ] Verify narratives are being saved to project database
 - [ ] Check if performance-financial-extractor.ts is working
 - [ ] Move Run Validation button to top of Performance Validation page
+
+## 🐛 CRITICAL BUGS (Jan 24, 2026 - Post GitHub Push)
+
+- [x] Fix performance extraction query - uses 'section' instead of 'section_key'
+- [x] Fix weather location extraction - returning 0,0 instead of actual coordinates from TMY header (fixed regex escaping)

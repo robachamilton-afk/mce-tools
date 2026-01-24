@@ -310,15 +310,15 @@ export function parseWeatherFile(csvContent: string, fileName: string): ParsedWe
       
       // PVGIS metadata
       if (line.includes('latitude')) {
-        const match = lines[i].match(/latitude[:\\s,]+([\\-\\d.]+)/i);
+        const match = lines[i].match(/latitude[:\s,]+([\-\d.]+)/i);
         if (match) latitude = parseFloat(match[1]);
       }
       if (line.includes('longitude')) {
-        const match = lines[i].match(/longitude[:\\s,]+([\\-\\d.]+)/i);
+        const match = lines[i].match(/longitude[:\s,]+([\-\d.]+)/i);
         if (match) longitude = parseFloat(match[1]);
       }
       if (line.includes('elevation')) {
-        const match = lines[i].match(/elevation[:\\s,]+([\\-\\d.]+)/i);
+        const match = lines[i].match(/elevation[:\s,]+([\-\d.]+)/i);
         if (match) elevation = parseFloat(match[1]);
       }
       

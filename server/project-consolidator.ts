@@ -257,7 +257,7 @@ export class ProjectConsolidator {
     try {
       // Get narratives which already contain consolidated information
       const [narratives]: any = await projectDb.execute(
-        `SELECT section, narrative FROM section_narratives WHERE project_id = ${this.projectId}`
+        `SELECT section_key, narrative FROM section_narratives WHERE project_id = ${this.projectId}`
       );
 
       if (!narratives || narratives.length === 0) {
