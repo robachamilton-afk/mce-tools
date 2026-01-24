@@ -68,22 +68,40 @@ export function createMainDbPool() {
 
 /**
  * Create a connection to the main database (for project queries)
- * Note: Projects now use table prefixes instead of separate databases
+ * Returns a wrapped connection that automatically handles table prefixes
  */
-export async function createProjectDbConnection(projectDbName?: string) {
-  // Always connect to main database - projectDbName parameter kept for compatibility
+export async function createProjectDbConnection(projectDbName?: string): Promise<any> {
   const config = getDbConfig();
-  return await mysql.createConnection(config);
+  const connection = await mysql.createConnection(config);
+  
+  // If projectDbName provided, wrap with auto-prefixing
+  if (projectDbName) {
+    const { extractProjectId } = await import('./project-id-helper');
+    const { ProjectDbConnection } = await import('./project-db-wrapper');
+    const projectId = extractProjectId(projectDbName);
+    return new ProjectDbConnection(connection, projectId);
+  }
+  
+  return connection;
 }
 
 /**
  * Create a connection pool to the main database (for project queries)
- * Note: Projects now use table prefixes instead of separate databases
+ * Returns a wrapped pool that automatically handles table prefixes
  */
 export function createProjectDbPool(projectDbName?: string) {
-  // Always connect to main database - projectDbName parameter kept for compatibility
   const config = getDbConfig();
-  return mysql.createPool(config);
+  const pool = mysql.createPool(config);
+  
+  // If projectDbName provided, wrap with auto-prefixing
+  if (projectDbName) {
+    const { extractProjectId } = require('./project-id-helper');
+    const { ProjectDbPool } = require('./project-db-wrapper');
+    const projectId = extractProjectId(projectDbName);
+    return new ProjectDbPool(pool, projectId);
+  }
+  
+  return pool;
 }
 
 /**

@@ -140,7 +140,8 @@ export async function createProject(
   });
 
   // Get the inserted project ID
-  const projectId = result.insertId;
+  // Drizzle returns insertId as a number directly in result[0].insertId for mysql2
+  const projectId = Number(result[0].insertId);
 
   // Provision tables for the project (with prefix proj_{id}_)
   const { provisionProjectTables, getTableProvisionConfig } = await import("./project-table-provisioner");

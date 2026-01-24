@@ -66,11 +66,21 @@ export async function provisionProjectTables(config: ProjectTableConfig): Promis
     const transformedSql = transformSchemaWithPrefix(schemaSql, prefix);
 
     // Split and execute statements
-    const statements = transformedSql
-      .split(';')
-      .map(stmt => stmt.trim())
-      .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
-
+    const parts = transformedSql.split(';');
+    
+    // Process each part: remove comment lines but keep the SQL statements
+    const statements = parts
+      .map(part => {
+        // Remove comment lines (lines starting with --)
+        const lines = part.split('\n');
+        const sqlLines = lines.filter(line => {
+          const trimmed = line.trim();
+          return trimmed.length > 0 && !trimmed.startsWith('--');
+        });
+        return sqlLines.join('\n').trim();
+      })
+      .filter(stmt => stmt.length > 0 && stmt.toUpperCase().includes('CREATE TABLE'));
+    
     console.log(`[ProjectTables] Executing ${statements.length} CREATE TABLE statements`);
 
     for (const statement of statements) {

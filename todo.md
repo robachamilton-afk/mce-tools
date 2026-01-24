@@ -13,6 +13,7 @@
 - [x] Implement project listing and detail views
 - [ ] Implement project deletion with data cleanup
 - [x] Create project management dashboard
+- [x] Refactor from separate databases to table-prefix architecture (prod compatibility)
 
 ## Phase 3: Document Upload Interface
 - [x] Build document upload page with drag-and-drop support

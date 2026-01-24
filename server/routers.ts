@@ -138,11 +138,7 @@ export const appRouter = router({
         const projectDbName = projectRows[0]?.dbName;
         
         if (projectDbName) {
-          const projectDb = mysql.createPool({
-            host: '127.0.0.1',
-            user: 'root',
-            database: projectDbName,
-          });
+          const projectDb = createProjectDbPool(projectDbName);
           
           // Insert initial processing job
           await projectDb.execute(
@@ -157,11 +153,7 @@ export const appRouter = router({
         // Progress callback to update job status
         const updateProgress = async (stage: string, progress: number) => {
           if (projectDbName) {
-            const projectDb = mysql.createPool({
-              host: '127.0.0.1',
-              user: 'root',
-              database: projectDbName,
-            });
+            const projectDb = createProjectDbPool(projectDbName);
             
             const status = progress >= 100 ? 'completed' : 'processing';
             const completedAt = progress >= 100 ? ', completed_at = NOW()' : '';
@@ -226,11 +218,7 @@ export const appRouter = router({
                 console.error('[Document Processor] Failed to parse weather file header:', parseErr);
               }
               
-              const weatherProjectDb = mysql.createPool({
-                host: '127.0.0.1',
-                user: 'root',
-                database: projectDbName,
-              });
+              const weatherProjectDb = createProjectDbPool(projectDbName);
               
               // Build INSERT with optional location fields
               const fields = [
@@ -302,11 +290,7 @@ export const appRouter = router({
               const projectDbName = projectRows[0]?.dbName;
               
               if (projectDbName) {
-                const projectDb = mysql.createPool({
-                  host: '127.0.0.1',
-                  user: 'root',
-                  database: projectDbName,
-                });
+                const projectDb = createProjectDbPool(projectDbName);
                 
                 // Phase 1: Simple insert - no reconciliation during upload
                 // Use simple fact inserter for fast processing
@@ -382,11 +366,7 @@ export const appRouter = router({
             
             // Update job status to failed
             if (projectDbName) {
-              const projectDb = mysql.createPool({
-                host: '127.0.0.1',
-                user: 'root',
-                database: projectDbName,
-              });
+              const projectDb = createProjectDbPool(projectDbName);
               
               await projectDb.execute(
                 `UPDATE processing_jobs SET status = 'failed', error_message = ?, completed_at = NOW() WHERE document_id = ?`,
@@ -416,8 +396,7 @@ export const appRouter = router({
         const projectDbName = projects[0].dbName;
         
         // Query documents from project database
-        const dbUrl = process.env.DATABASE_URL || "mysql://root@127.0.0.1:3306/ingestion_engine_main";
-        const connection = await mysql.createConnection(dbUrl.replace(/\/[^/]*$/, `/${projectDbName}`));
+        const connection = await createProjectDbConnection(projectDbName);
         
         try {
           const [rows] = await connection.execute(
@@ -457,8 +436,7 @@ export const appRouter = router({
         const projectDbName = projects[0].dbName;
         
         // Update document type in project database
-        const dbUrl = process.env.DATABASE_URL || "mysql://root@127.0.0.1:3306/ingestion_engine_main";
-        const connection = await mysql.createConnection(dbUrl.replace(/\/[^/]*$/, `/${projectDbName}`));
+        const connection = await createProjectDbConnection(projectDbName);
         
         try {
           await connection.execute(
@@ -514,14 +492,7 @@ export const appRouter = router({
     getProgress: protectedProcedure
       .input(z.object({ projectDbName: z.string(), documentId: z.string() }))
       .query(async ({ input }) => {
-        const db = mysql.createPool({
-          host: process.env.DB_HOST || 'localhost',
-          user: process.env.DB_USER || 'root',
-          password: process.env.DB_PASSWORD || '',
-          database: input.projectDbName,
-          waitForConnections: true,
-          connectionLimit: 10,
-        });
+        const db = createProjectDbPool(input.projectDbName);
         
         const [rows] = await db.execute(
           `SELECT status, stage, progress_percent, error_message, started_at, completed_at 
@@ -796,11 +767,7 @@ Synthesized narrative:`;
     list: protectedProcedure
       .input(z.object({ projectDbName: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = await mysql.createConnection({
-          host: process.env.DATABASE_HOST || 'localhost',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = await createProjectDbConnection(input.projectDbName);
 
         try {
           const [conflicts] = await projectDb.execute(`
@@ -835,11 +802,7 @@ Synthesized narrative:`;
         mergedValue: z.string().optional(), // For merge resolution
       }))
       .mutation(async ({ input }) => {
-        const projectDb = await mysql.createConnection({
-          host: process.env.DATABASE_HOST || 'localhost',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = await createProjectDbConnection(input.projectDbName);
 
         try {
           // Get conflict details
@@ -929,11 +892,7 @@ Synthesized narrative:`;
         const { runPerformanceValidation } = await import('./performance-validator');
         
         console.log('[Validation] Connecting to database:', input.projectDbName);
-        const projectDb = await mysql.createConnection({
-          host: '127.0.0.1',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = await createProjectDbConnection(input.projectDbName);
         console.log('[Validation] Connected to database');
 
         try {
@@ -1025,11 +984,7 @@ Synthesized narrative:`;
     getByProject: protectedProcedure
       .input(z.object({ projectDbName: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = await mysql.createConnection({
-          host: process.env.DATABASE_HOST || 'localhost',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = await createProjectDbConnection(input.projectDbName);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1047,11 +1002,7 @@ Synthesized narrative:`;
     getById: protectedProcedure
       .input(z.object({ projectDbName: z.string(), validationId: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = await mysql.createConnection({
-          host: process.env.DATABASE_HOST || 'localhost',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = await createProjectDbConnection(input.projectDbName);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1099,11 +1050,7 @@ Synthesized narrative:`;
         warnings: z.string().optional(), // JSON string
       }))
       .mutation(async ({ input }) => {
-        const projectDb = await mysql.createConnection({
-          host: process.env.DATABASE_HOST || 'localhost',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = await createProjectDbConnection(input.projectDbName);
 
         try {
           const validationId = `pv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -1173,11 +1120,7 @@ Synthesized narrative:`;
     getByProject: protectedProcedure
       .input(z.object({ projectDbName: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = mysql.createPool({
-          host: '127.0.0.1',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = createProjectDbPool(input.projectDbName);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1194,11 +1137,7 @@ Synthesized narrative:`;
     getById: protectedProcedure
       .input(z.object({ projectDbName: z.string(), id: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = mysql.createPool({
-          host: '127.0.0.1',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = createProjectDbPool(input.projectDbName);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1219,11 +1158,7 @@ Synthesized narrative:`;
     getByProject: protectedProcedure
       .input(z.object({ projectDbName: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = mysql.createPool({
-          host: '127.0.0.1',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = createProjectDbPool(input.projectDbName);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1240,11 +1175,7 @@ Synthesized narrative:`;
     getById: protectedProcedure
       .input(z.object({ projectDbName: z.string(), id: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = mysql.createPool({
-          host: '127.0.0.1',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = createProjectDbPool(input.projectDbName);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1265,11 +1196,7 @@ Synthesized narrative:`;
     getByProject: protectedProcedure
       .input(z.object({ projectDbName: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = mysql.createPool({
-          host: '127.0.0.1',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = createProjectDbPool(input.projectDbName);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1292,11 +1219,7 @@ Synthesized narrative:`;
         sourceDocumentId: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const projectDb = mysql.createPool({
-          host: '127.0.0.1',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = createProjectDbPool(input.projectDbName);
 
         try {
           // Decode base64 content
@@ -1390,11 +1313,7 @@ Synthesized narrative:`;
         longitude: z.number().optional(),
       }))
       .query(async ({ input }) => {
-        const projectDb = mysql.createPool({
-          host: '127.0.0.1',
-          user: 'root',
-          database: input.projectDbName,
-        });
+        const projectDb = createProjectDbPool(input.projectDbName);
 
         try {
           // Check for uploaded weather file with processed data
