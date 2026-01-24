@@ -131,7 +131,7 @@ export const appRouter = router({
         const projectIdNum = parseInt(input.projectId);
         
         // Create processing job record using project ID (table-prefix architecture)
-        const projectDb = createProjectDbPool(`proj_${projectIdNum}`);
+        const projectDb = createProjectDbPool(projectIdNum);
         
         try {
           
@@ -147,7 +147,7 @@ export const appRouter = router({
         
         // Progress callback to update job status
         const updateProgress = async (stage: string, progress: number) => {
-          const projectDb = createProjectDbPool(`proj_${projectIdNum}`);
+          const projectDb = createProjectDbPool(projectIdNum);
           try {
             
             const status = progress >= 100 ? 'completed' : 'processing';
@@ -170,7 +170,7 @@ export const appRouter = router({
           // Also create a weather_files record so it shows up in Performance Validation
           try {
             console.log(`[Document Processor] Creating weather_files record for ${document.fileName}...`);
-            const weatherProjectDb = createProjectDbPool(`proj_${projectIdNum}`);
+            const weatherProjectDb = createProjectDbPool(projectIdNum);
             try {
               const { v4: uuidv4 } = await import('uuid');
               const weatherFileId = uuidv4();
@@ -280,7 +280,7 @@ export const appRouter = router({
           .then(async (result) => {
             // Save extracted facts to database
             if (result.facts.length > 0) {
-              const projectDb = createProjectDbPool(`proj_${projectIdNum}`);
+              const projectDb = createProjectDbPool(projectIdNum);
               try {
                 
                 // Phase 1: Simple insert - no reconciliation during upload
@@ -357,7 +357,7 @@ export const appRouter = router({
             console.error(`Failed to process document ${document.id}:`, err);
             
             // Update job status to failed
-            const projectDb = createProjectDbPool(`proj_${projectIdNum}`);
+            const projectDb = createProjectDbPool(projectIdNum);
             try {
               
               await projectDb.execute(
@@ -387,7 +387,7 @@ export const appRouter = router({
         }
         
         // Query documents from project database using table-prefix architecture
-        const connection = await createProjectDbConnection(`proj_${parseInt(input.projectId)}`);
+        const connection = await createProjectDbConnection(parseInt(input.projectId));
         
         try {
           const [rows] = await connection.execute(
@@ -426,7 +426,7 @@ export const appRouter = router({
         }
         
         // Update document type in project database using table-prefix architecture
-        const connection = await createProjectDbConnection(`proj_${parseInt(input.projectId)}`);
+        const connection = await createProjectDbConnection(parseInt(input.projectId));
         
         try {
           await connection.execute(
@@ -482,7 +482,7 @@ export const appRouter = router({
     getProgress: protectedProcedure
       .input(z.object({ projectId: z.number(), documentId: z.string() }))
       .query(async ({ input }) => {
-        const db = createProjectDbPool(`proj_${input.projectId}`);
+        const db = createProjectDbPool(input.projectId);
         
         const [rows] = await db.execute(
           `SELECT status, stage, progress_percent, error_message, started_at, completed_at 
@@ -589,7 +589,6 @@ export const appRouter = router({
         const { ProjectConsolidator } = await import('./project-consolidator');
         const consolidator = new ProjectConsolidator(
           input.projectId,
-          project.dbName,
           (progress) => {
             console.log(`[Consolidation Progress] ${progress.stage}: ${progress.message}`);
           }
@@ -753,7 +752,7 @@ Synthesized narrative:`;
     list: protectedProcedure
       .input(z.object({ projectId: z.number() }))
       .query(async ({ input }) => {
-        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
+        const projectDb = await createProjectDbConnection(input.projectId);
 
         try {
           const [conflicts] = await projectDb.execute(`
@@ -788,7 +787,7 @@ Synthesized narrative:`;
         mergedValue: z.string().optional(), // For merge resolution
       }))
       .mutation(async ({ input }) => {
-        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
+        const projectDb = await createProjectDbConnection(input.projectId);
 
         try {
           // Get conflict details
@@ -877,7 +876,7 @@ Synthesized narrative:`;
         const { runPerformanceValidation } = await import('./performance-validator');
         
         console.log('[Validation] Connecting to database:', input.projectId);
-        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
+        const projectDb = await createProjectDbConnection(input.projectId);
         console.log('[Validation] Connected to database');
 
         try {
@@ -969,7 +968,7 @@ Synthesized narrative:`;
     getByProject: protectedProcedure
       .input(z.object({ projectId: z.number() }))
       .query(async ({ input }) => {
-        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
+        const projectDb = await createProjectDbConnection(input.projectId);
 
         try {
           const [rows] = await projectDb.execute(
@@ -987,7 +986,7 @@ Synthesized narrative:`;
     getById: protectedProcedure
       .input(z.object({ projectId: z.number(), validationId: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
+        const projectDb = await createProjectDbConnection(input.projectId);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1035,7 +1034,7 @@ Synthesized narrative:`;
         warnings: z.string().optional(), // JSON string
       }))
       .mutation(async ({ input }) => {
-        const projectDb = await createProjectDbConnection(`proj_${input.projectId}`);
+        const projectDb = await createProjectDbConnection(input.projectId);
 
         try {
           const validationId = `pv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -1105,7 +1104,7 @@ Synthesized narrative:`;
     getByProject: protectedProcedure
       .input(z.object({ projectId: z.number() }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
+        const projectDb = createProjectDbPool(input.projectId);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1122,7 +1121,7 @@ Synthesized narrative:`;
     getById: protectedProcedure
       .input(z.object({ projectId: z.number(), id: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
+        const projectDb = createProjectDbPool(input.projectId);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1143,7 +1142,7 @@ Synthesized narrative:`;
     getByProject: protectedProcedure
       .input(z.object({ projectId: z.number() }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
+        const projectDb = createProjectDbPool(input.projectId);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1160,7 +1159,7 @@ Synthesized narrative:`;
     getById: protectedProcedure
       .input(z.object({ projectId: z.number(), id: z.string() }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
+        const projectDb = createProjectDbPool(input.projectId);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1181,7 +1180,7 @@ Synthesized narrative:`;
     getByProject: protectedProcedure
       .input(z.object({ projectId: z.number() }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
+        const projectDb = createProjectDbPool(input.projectId);
 
         try {
           const [rows] = await projectDb.execute(
@@ -1203,7 +1202,7 @@ Synthesized narrative:`;
         sourceDocumentId: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
+        const projectDb = createProjectDbPool(input.projectId);
 
         try {
           // Decode base64 content
@@ -1297,7 +1296,7 @@ Synthesized narrative:`;
         longitude: z.number().optional(),
       }))
       .query(async ({ input }) => {
-        const projectDb = createProjectDbPool(`proj_${input.projectId}`);
+        const projectDb = createProjectDbPool(input.projectId);
 
         try {
           // Check for uploaded weather file with processed data

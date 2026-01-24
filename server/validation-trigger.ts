@@ -29,13 +29,13 @@ export class ValidationTrigger {
   async checkValidationReadiness(
     projectId: number
   ): Promise<ValidationTriggerCheck> {
-    const projectDb = createProjectDbPool(`proj_${projectId}`);
+    const projectDb = createProjectDbPool(projectId);
 
     try {
       const missingData: string[] = [];
 
       // Check for performance parameters
-      const [perfParams] = await projectDb.execute<any[]>(
+      const [perfParams] = await projectDb.execute(
         `SELECT id, dc_capacity_mw, ac_capacity_mw, latitude, longitude 
          FROM performance_parameters 
          WHERE project_id = ? 
@@ -55,7 +55,7 @@ export class ValidationTrigger {
       }
 
       // Check for weather file
-      const [weatherFiles] = await projectDb.execute<any[]>(
+      const [weatherFiles] = await projectDb.execute(
         `SELECT id, status, original_format 
          FROM weather_files 
          WHERE project_id = ? AND is_active = 1 
@@ -102,11 +102,11 @@ export class ValidationTrigger {
   ): Promise<{ validationId: string; status: string }> {
     console.log(`[Validation Trigger] Starting validation for project ${projectId}`);
 
-    const projectDb = createProjectDbPool(`proj_${projectId}`);
+    const projectDb = createProjectDbPool(projectId);
 
     try {
       // Fetch performance parameters
-      const [perfParams] = await projectDb.execute<any[]>(
+      const [perfParams] = await projectDb.execute(
         `SELECT * FROM performance_parameters WHERE id = ?`,
         [performanceParamsId]
       );
@@ -118,7 +118,7 @@ export class ValidationTrigger {
       const params = perfParams[0];
 
       // Fetch weather file
-      const [weatherFiles] = await projectDb.execute<any[]>(
+      const [weatherFiles] = await projectDb.execute(
         `SELECT * FROM weather_files WHERE id = ?`,
         [weatherFileId]
       );
@@ -188,9 +188,9 @@ export class ValidationTrigger {
       }
 
       // Check if validation already exists
-      const projectDb = createProjectDbPool(`proj_${projectId}`);
+      const projectDb = createProjectDbPool(projectId);
 
-      const [existingValidations] = await projectDb.execute<any[]>(
+      const [existingValidations] = await projectDb.execute(
         `SELECT id FROM performance_validations WHERE project_id = ? LIMIT 1`,
         [projectId]
       );

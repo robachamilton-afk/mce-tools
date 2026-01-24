@@ -145,6 +145,10 @@ export async function createProjectConnection(projectId: number): Promise<Projec
  */
 export async function createProjectPool(projectId: number): Promise<ProjectDbPool> {
   const { createProjectDbPool } = await import('./db-connection');
-  const pool = createProjectDbPool();
+  const pool = createProjectDbPool(); // Returns Pool when no projectId passed
+  // Pool is already a raw mysql2 pool, wrap it
+  if (pool instanceof ProjectDbPool) {
+    return pool;
+  }
   return new ProjectDbPool(pool, projectId);
 }

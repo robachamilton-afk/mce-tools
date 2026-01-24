@@ -1234,3 +1234,5 @@
 - [x] Fix factId error during project creation (foreign key data type mismatch: CHAR vs VARCHAR)
 - [x] Fix document upload SSL connection error (added minVersion: 'TLSv1.2' for TiDB compatibility)
 - [x] Use correct SSL configuration format: { minVersion: 'TLSv1.2', rejectUnauthorized: true }
+
+- [x] Fix extractProjectId() error in document upload (refactored db-connection.ts to accept numeric projectId instead of string prefix)

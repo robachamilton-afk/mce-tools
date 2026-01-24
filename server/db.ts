@@ -8,11 +8,11 @@ let _db: any = null;
 
 // Get database URL from environment or use local default
 const getDatabaseUrl = () => {
-  // In production, use the provided DATABASE_URL
-  if (process.env.NODE_ENV === 'production' && process.env.DATABASE_URL) {
+  // If DATABASE_URL is provided, use it (production or development with TiDB)
+  if (process.env.DATABASE_URL) {
     return process.env.DATABASE_URL;
   }
-  // In development, use local MySQL
+  // Otherwise, use local MySQL
   return "mysql://root@127.0.0.1:3306/ingestion_engine_main";
 };
 

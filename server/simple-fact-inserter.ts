@@ -21,7 +21,7 @@ interface ExtractedFact {
  * Insert facts directly without reconciliation
  */
 export async function insertRawFacts(
-  projectDb: mysql.Pool,
+  projectDb: mysql.Pool | any,
   projectId: number,
   documentId: string,
   facts: ExtractedFact[]

@@ -187,7 +187,7 @@ export async function reconcileInsight(
  * Creates a conflict record between two insights
  */
 export async function createConflict(
-  projectDb: mysql.Pool,
+  projectDb: mysql.Pool | any,
   projectId: number,
   insightAId: string,
   insightBId: string,
@@ -217,7 +217,7 @@ export async function createConflict(
  * Updates an existing insight with enriched information
  */
 export async function enrichInsight(
-  projectDb: mysql.Pool,
+  projectDb: mysql.Pool | any,
   insightId: string,
   newValue: string,
   newConfidence: number,

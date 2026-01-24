@@ -4,6 +4,7 @@
  */
 
 import mysql from 'mysql2/promise';
+import { ProjectDbConnection, ProjectDbPool } from './project-db-wrapper';
 
 /**
  * Parse DATABASE_URL and extract connection details
@@ -68,16 +69,14 @@ export function createMainDbPool() {
 /**
  * Create a connection to the main database (for project queries)
  * Returns a wrapped connection that automatically handles table prefixes
+ * @param projectId - Numeric project ID (e.g., 150004)
  */
-export async function createProjectDbConnection(projectDbName?: string): Promise<any> {
+export async function createProjectDbConnection(projectId?: number): Promise<any> {
   const config = getDbConfig();
   const connection = await mysql.createConnection(config);
   
-  // If projectDbName provided, wrap with auto-prefixing
-  if (projectDbName) {
-    const { extractProjectId } = await import('./project-id-helper');
-    const { ProjectDbConnection } = await import('./project-db-wrapper');
-    const projectId = extractProjectId(projectDbName);
+  // If projectId provided, wrap with auto-prefixing
+  if (projectId) {
     return new ProjectDbConnection(connection, projectId);
   }
   
@@ -87,16 +86,14 @@ export async function createProjectDbConnection(projectDbName?: string): Promise
 /**
  * Create a connection pool to the main database (for project queries)
  * Returns a wrapped pool that automatically handles table prefixes
+ * @param projectId - Numeric project ID (e.g., 150004)
  */
-export function createProjectDbPool(projectDbName?: string) {
+export function createProjectDbPool(projectId?: number) {
   const config = getDbConfig();
   const pool = mysql.createPool(config);
   
-  // If projectDbName provided, wrap with auto-prefixing
-  if (projectDbName) {
-    const { extractProjectId } = require('./project-id-helper');
-    const { ProjectDbPool } = require('./project-db-wrapper');
-    const projectId = extractProjectId(projectDbName);
+  // If projectId provided, wrap with auto-prefixing
+  if (projectId) {
     return new ProjectDbPool(pool, projectId);
   }
   
