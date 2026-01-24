@@ -27,24 +27,17 @@ export function getDbConfig(databaseName?: string) {
   const databaseUrl = process.env.DATABASE_URL;
 
   if (databaseUrl) {
-    // Use DATABASE_URL from environment (cloud database)
-    const config = parseDatabaseUrl(databaseUrl);
-    const isCloudDb = config.host.includes('tidbcloud') || config.host.includes('aws') || config.host.includes('gcp');
-    
-    return {
-      host: config.host,
-      port: config.port,
-      user: config.user,
-      password: config.password,
-      database: databaseName || config.database,
-      // Add SSL for cloud databases (TiDB requires minVersion)
-      ...(isCloudDb && { 
-        ssl: { 
-          minVersion: 'TLSv1.2',
-          rejectUnauthorized: true 
-        } 
-      }),
-    };
+    // Use DATABASE_URL directly - it already contains SSL configuration
+    // If we need a different database name, modify the URL
+    if (databaseName) {
+      const parsed = parseDatabaseUrl(databaseUrl);
+      // Rebuild URL with new database name but preserve query params
+      const urlObj = new URL(databaseUrl);
+      urlObj.pathname = `/${databaseName}`;
+      return { uri: urlObj.toString() };
+    }
+    // Use DATABASE_URL as-is (includes SSL params)
+    return { uri: databaseUrl };
   } else {
     // Development: use local MySQL
     return {
