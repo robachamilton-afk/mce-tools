@@ -322,15 +322,54 @@ export function parseWeatherFile(csvContent: string, fileName: string): ParsedWe
         if (match) elevation = parseFloat(match[1]);
       }
       
-      // Find header row
-      if (line.includes('ghi') || line.includes('global') || line.includes('g(h)')) {
+      // Find header row - check for various irradiance column naming conventions
+      // PVGIS uses: G(h) = GHI, Gb(n) = DNI, Gd(h) = DHI
+      // Other formats use: GHI, DNI, DHI or Global, Direct, Diffuse
+      if (line.includes('ghi') || line.includes('global') || line.includes('g(h)') || line.includes('gb(n)') || line.includes('gd(h)')) {
         dataStartLine = i + 1;
         const cols = lines[i].split(',').map(c => c.toLowerCase().trim());
         
-        ghiCol = cols.findIndex(c => c.includes('ghi') || c.includes('g(h)') || c === 'global');
-        dniCol = cols.findIndex(c => c.includes('dni') || c.includes('bn(h)') || c === 'direct');
-        dhiCol = cols.findIndex(c => c.includes('dhi') || c.includes('d(h)') || c === 'diffuse');
-        tempCol = cols.findIndex(c => c.includes('temp') || c.includes('t2m') || c === 'tamb');
+        // GHI column detection - G(h), GHI, Global Horizontal
+        ghiCol = cols.findIndex(c => 
+          c === 'g(h)' || 
+          c.includes('ghi') || 
+          c === 'global' || 
+          c === 'global_horizontal' ||
+          c === 'shortwave_radiation'
+        );
+        
+        // DNI column detection - Gb(n), DNI, Direct Normal, Direct Beam
+        dniCol = cols.findIndex(c => 
+          c === 'gb(n)' || 
+          c.includes('dni') || 
+          c === 'direct' ||
+          c === 'direct_normal' ||
+          c === 'direct_normal_irradiance' ||
+          c === 'bn(h)' ||
+          c.includes('beam')
+        );
+        
+        // DHI column detection - Gd(h), DHI, Diffuse Horizontal
+        dhiCol = cols.findIndex(c => 
+          c === 'gd(h)' || 
+          c.includes('dhi') || 
+          c === 'diffuse' ||
+          c === 'diffuse_horizontal' ||
+          c === 'diffuse_radiation' ||
+          c === 'd(h)'
+        );
+        
+        // Temperature column detection - T2m, Temp, Tamb
+        tempCol = cols.findIndex(c => 
+          c === 't2m' ||
+          c.includes('temp') || 
+          c === 'tamb' ||
+          c === 'temperature_2m' ||
+          c.includes('air_temp')
+        );
+        
+        console.log(`[Weather Parser] Detected columns - GHI: ${ghiCol}, DNI: ${dniCol}, DHI: ${dhiCol}, Temp: ${tempCol}`);
+        console.log(`[Weather Parser] Column names: ${cols.join(', ')}`);
         
         break;
       }
@@ -370,23 +409,24 @@ export function parseWeatherFile(csvContent: string, fileName: string): ParsedWe
       const dateStr = cols[0];
       
       // Try various date formats
-      const dateMatch = dateStr.match(/(\\d{4})[\\-\\/](\\d{1,2})[\\-\\/](\\d{1,2})/) ||
-                        dateStr.match(/(\\d{1,2})[\\-\\/](\\d{1,2})[\\-\\/](\\d{4})/) ||
-                        dateStr.match(/^(\\d{1,2})/);
+      // PVGIS format: YYYYMMDD:HHMM (e.g., 20180101:0000)
+      // Standard formats: YYYY-MM-DD, DD/MM/YYYY, etc.
+      const pvgisMatch = dateStr.match(/^(\d{4})(\d{2})(\d{2}):(\d{4})$/);
+      const isoMatch = dateStr.match(/(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})/);
+      const euroMatch = dateStr.match(/(\d{1,2})[\-\/](\d{1,2})[\-\/](\d{4})/);
+      const simpleMatch = dateStr.match(/^(\d{1,2})/);
       
-      if (dateMatch) {
-        // Determine which group is the month based on format
-        if (dateMatch[0].length >= 8) {
-          // Full date format
-          const parts = dateMatch[0].split(/[\\-\\/]/);
-          if (parts[0].length === 4) {
-            month = parseInt(parts[1]); // YYYY-MM-DD
-          } else {
-            month = parseInt(parts[1]); // DD-MM-YYYY or MM-DD-YYYY
-          }
-        } else {
-          month = parseInt(dateMatch[1]);
-        }
+      if (pvgisMatch) {
+        // PVGIS format: YYYYMMDD:HHMM
+        month = parseInt(pvgisMatch[2]);
+      } else if (isoMatch) {
+        // ISO format: YYYY-MM-DD
+        month = parseInt(isoMatch[2]);
+      } else if (euroMatch) {
+        // European format: DD/MM/YYYY or MM/DD/YYYY
+        month = parseInt(euroMatch[2]);
+      } else if (simpleMatch) {
+        month = parseInt(simpleMatch[1]);
       } else {
         // Estimate month from row position (8760 hours / 12 months)
         const hourOfYear = i - dataStartLine;

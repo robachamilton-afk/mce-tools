@@ -963,3 +963,13 @@
 - [x] Add upgrade CTA messaging for premium weather data (PVGIS license)
 - [ ] Design future "Purchase Data" workflow UI
 - [x] Test chart with both uploaded files and free API data
+
+## TMY Parsing & Chart Improvements
+- [x] Analyze TMY file column naming conventions (Gb(n) = DNI, Gd = Diffuse, etc.)
+- [x] Update weather file parser to recognize all irradiance column variants
+- [x] Store DHI/Diffuse data in monthly_irradiance alongside GHI and DNI
+- [x] Add chart toggle between GHI/Diffuse view and DNI view
+- [x] Re-process existing weather files with improved parser
+- [x] Test chart displays all irradiance data correctly
+- [ ] Extract location (lat/lon) from TMY file header and store in weather_files table
+- [ ] Use extracted location for map display and free weather data fallback

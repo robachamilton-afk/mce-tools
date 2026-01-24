@@ -208,6 +208,7 @@ export default function PerformanceValidation() {
                   month: m.monthName || m.month,
                   ghi: m.ghi_kwh_m2 || m.ghi || 0,
                   dni: m.dni_kwh_m2 || m.dni || 0,
+                  dhi: m.dhi_kwh_m2 || m.dhi || 0,
                 }))}
               />
             </CardContent>
