@@ -4,7 +4,9 @@ import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, CheckCircle2, FileText, MapPin, Zap, Settings } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileText, MapPin, Zap, Settings, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function PerformanceParameters() {
   const params = useParams();
@@ -42,20 +44,61 @@ export function PerformanceParameters() {
 
   if (!latestParams) {
     return (
-      <div className="container py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Performance Parameters</h1>
-          <p className="text-muted-foreground">Technical specifications extracted from project documents</p>
+      <div className="container py-8 space-y-6">
+        {/* Header with back navigation */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Performance Parameters</h1>
+            <p className="text-muted-foreground">Technical specifications extracted from project documents</p>
+          </div>
+          <Button
+            onClick={() => navigate('/projects')}
+            variant="outline"
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Projects
+          </Button>
         </div>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium mb-2">No Performance Parameters Found</p>
-            <p className="text-muted-foreground text-center max-w-md">
-              Upload technical documents (DD Pack, IM, Concept Design) to automatically extract system specifications.
-            </p>
+
+        {/* Missing Data Guidance */}
+        <Card className="border-orange-500/30 bg-orange-500/5">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              Data Required for Performance Parameters
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50">
+                <FileText className="h-5 w-5 mt-0.5 text-orange-500" />
+                <div>
+                  <p className="font-medium">Technical Documents Required</p>
+                  <p className="text-sm text-muted-foreground">
+                    Upload an IM, DD Pack, or Concept Design document containing system specifications (DC/AC capacity, module type, inverter specs, etc.)
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50">
+                <Settings className="h-5 w-5 mt-0.5 text-orange-500" />
+                <div>
+                  <p className="font-medium">Run Consolidation</p>
+                  <p className="text-sm text-muted-foreground">
+                    After uploading documents, click "Process & Consolidate" on the Insights page to extract performance parameters
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
+
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            No performance parameters extracted yet. Upload technical documents and run consolidation to populate this data.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -65,17 +108,25 @@ export function PerformanceParameters() {
   const confidenceColor = confidenceLevel === 'HIGH' ? 'bg-green-500' : confidenceLevel === 'MEDIUM' ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
-    <div className="container py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Performance Parameters</h1>
-            <p className="text-muted-foreground">Technical specifications for performance validation</p>
-          </div>
+    <div className="container py-8 space-y-6">
+      {/* Header with back navigation */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Performance Parameters</h1>
+          <p className="text-muted-foreground">Technical specifications for performance validation</p>
+        </div>
+        <div className="flex items-center gap-4">
           <Badge className={`${confidenceColor} text-white`}>
             {confidenceLevel} CONFIDENCE ({confidencePercent}%)
           </Badge>
+          <Button
+            onClick={() => navigate('/projects')}
+            variant="outline"
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Projects
+          </Button>
         </div>
       </div>
 

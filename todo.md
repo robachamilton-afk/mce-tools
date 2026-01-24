@@ -902,7 +902,14 @@
 - [x] Implement two-phase processing: Phase 1 (automatic) = extract raw facts only, Phase 2 (manual) = reconcile + narratives + specialized extraction
 - [x] Disable automatic reconciliation and narrative generation on upload
 - [x] Create manual 'Process & Consolidate' button and endpoint
-- [ ] Add weather file status display to Performance page
-- [ ] Add missing data guidance to Performance, Params, and Finance pages (show what's needed to generate reports)
-- [ ] Fix Processing Status UI spinning with 0 pending processes
-- [ ] Add back navigation links to Performance, Performance Parameters, and Financial Data pages
+- [x] Add weather file status display to Performance page
+- [x] Add missing data guidance to Performance, Params, and Finance pages (show what's needed to generate reports)
+- [x] Fix Processing Status UI spinning with 0 pending processes
+- [x] Add back navigation links to Performance, Performance Parameters, and Financial Data pages
+
+## New Issues Found
+- [x] Show raw facts in narrative sections (Project Overview, Financial Structure, Technical Design) before narratives are generated
+- [x] Implement narrative generation in consolidation logic
+- [ ] Implement reconciliation, performance extraction, and financial extraction in consolidation (stubs remain)
+- [ ] Add progress modal/indicator for consolidation process so user can see what's happening
+- [x] Complete all UI fixes: weather file status, missing data guidance, back navigation links, Processing Status spinner

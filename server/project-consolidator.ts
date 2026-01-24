@@ -84,9 +84,8 @@ export class ProjectConsolidator {
         `SELECT \`key\`, value FROM extracted_facts WHERE project_id = ${this.projectId} AND deleted_at IS NULL`
       );
 
-      // Group by section
-      const { normalizeSection } = await import('../shared/section-normalizer');
-      const { getSectionDisplayName } = await import('../shared/section-normalizer');
+      // Group by section using normalizeSection
+      const { normalizeSection, getSectionDisplayName } = await import('../shared/section-normalizer');
       
       const factsBySection = new Map<string, any[]>();
       for (const fact of facts) {
@@ -97,6 +96,8 @@ export class ProjectConsolidator {
         factsBySection.get(canonical)!.push(fact);
       }
 
+      console.log(`[Consolidator] factsBySection keys:`, Array.from(factsBySection.keys()));
+
       // Generate narratives for narrative-mode sections
       const narrativeSections = ['Project_Overview', 'Financial_Structure', 'Technical_Design'];
       const { getDb } = await import('./db');
@@ -104,9 +105,13 @@ export class ProjectConsolidator {
 
       for (const sectionName of narrativeSections) {
         const sectionFacts = factsBySection.get(sectionName);
+        console.log(`[Consolidator] Section ${sectionName}: ${sectionFacts?.length || 0} facts`);
+        
         if (sectionFacts && sectionFacts.length > 0) {
           const displayName = getSectionDisplayName(sectionName);
           const factsText = sectionFacts.map((f, i) => `${i + 1}. ${f.value}`).join('\n');
+
+          await this.updateProgress('narratives', 40 + (narrativeSections.indexOf(sectionName) * 5), `Generating narrative for ${displayName}...`);
 
           const response = await invokeLLM({
             messages: [
@@ -131,7 +136,7 @@ export class ProjectConsolidator {
                VALUES ('${this.projectDbName}', '${sectionName}', '${escapedNarrative}') 
                ON DUPLICATE KEY UPDATE narrative_text = '${escapedNarrative}', updated_at = NOW()`
             );
-            console.log(`[Consolidator] Generated narrative for ${displayName}`);
+            console.log(`[Consolidator] Generated narrative for ${displayName} (${narrative.length} chars)`);
           }
         }
       }

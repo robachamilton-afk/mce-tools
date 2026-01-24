@@ -184,7 +184,7 @@ export default function ProcessingStatus() {
 
           <Card className="p-4 bg-slate-900/50 border-slate-800">
             <div className="flex items-center gap-3">
-              <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
+              <Loader2 className={`h-8 w-8 text-blue-400 ${stats.processing > 0 ? 'animate-spin' : ''}`} />
               <div>
                 <p className="text-2xl font-bold text-white">{stats.processing}</p>
                 <p className="text-sm text-slate-400">Processing</p>

@@ -17,12 +17,15 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Zap, Sun, Gauge } from "lucide-react";
+import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Zap, Sun, Gauge, ArrowLeft, CloudSun, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 import { WeatherFileUpload } from "@/components/WeatherFileUpload";
 
 export default function PerformanceValidation() {
   const params = useParams();
   const projectId = params.projectId as string;
+  const [, navigate] = useLocation();
 
   // Get project to extract dbName
   const { data: projects } = trpc.projects.list.useQuery();
@@ -35,12 +38,29 @@ export default function PerformanceValidation() {
     { enabled: !!projectDbName }
   );
 
+  // Fetch weather files for this project
+  const { data: weatherFiles } = trpc.weatherFiles.getByProject.useQuery(
+    { projectDbName: projectDbName || "" },
+    { enabled: !!projectDbName }
+  );
+
+  // Fetch performance parameters to check what data is available
+  const { data: perfParams } = trpc.performanceParams.getByProject.useQuery(
+    { projectDbName: projectDbName || "" },
+    { enabled: !!projectDbName }
+  );
+
   const latestValidation = validations?.[0];
+  const weatherFilesArray = weatherFiles as any[] | undefined;
+  const perfParamsArray = perfParams as any[] | undefined;
+  const hasWeatherFile = weatherFilesArray && weatherFilesArray.length > 0;
+  const hasPerfParams = perfParamsArray && perfParamsArray.length > 0;
   
   // Refetch validations when weather file is uploaded
   const utils = trpc.useUtils();
   const handleWeatherUpload = () => {
     utils.performance.getByProject.invalidate({ projectDbName: projectDbName || "" });
+    utils.weatherFiles.getByProject.invalidate({ projectDbName: projectDbName || "" });
   };
 
   if (isLoading || !projectDbName) {
@@ -60,17 +80,76 @@ export default function PerformanceValidation() {
   if (!latestValidation) {
     return (
       <div className="container py-8 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Performance Validation</h1>
-          <p className="text-muted-foreground mt-2">
-            Independent solar farm performance analysis using NREL PySAM
-          </p>
+        {/* Header with back navigation */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Performance Validation</h1>
+            <p className="text-muted-foreground mt-2">
+              Independent solar farm performance analysis using NREL PySAM
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate('/projects')}
+            variant="outline"
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Projects
+          </Button>
         </div>
+
+        {/* Missing Data Guidance */}
+        <Card className="border-orange-500/30 bg-orange-500/5">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              Data Required for Performance Validation
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Weather File Status */}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50">
+                <CloudSun className={`h-5 w-5 mt-0.5 ${hasWeatherFile ? 'text-green-500' : 'text-orange-500'}`} />
+                <div>
+                  <p className="font-medium">
+                    {hasWeatherFile ? '✓ Weather File Uploaded' : 'Weather File Required'}
+                  </p>
+                  {hasWeatherFile ? (
+                    <p className="text-sm text-muted-foreground">
+                      {weatherFilesArray[0].file_name} ({(weatherFilesArray[0].file_size_bytes / 1024).toFixed(1)} KB)
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Upload a TMY weather file (CSV format) for accurate energy yield simulation
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Performance Parameters Status */}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50">
+                <Zap className={`h-5 w-5 mt-0.5 ${hasPerfParams ? 'text-green-500' : 'text-orange-500'}`} />
+                <div>
+                  <p className="font-medium">
+                    {hasPerfParams ? '✓ Performance Parameters Extracted' : 'Performance Parameters Required'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {hasPerfParams 
+                      ? `DC Capacity: ${perfParamsArray[0].dc_capacity_mw || 'N/A'} MW`
+                      : 'Upload an IM or feasibility study to extract system specifications'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            No performance validation results available yet. Performance validation will be run automatically after document processing completes.
+            No performance validation results available yet. Upload the required data above, then click "Process & Consolidate" on the Insights page to run validation.
           </AlertDescription>
         </Alert>
         

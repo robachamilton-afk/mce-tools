@@ -451,45 +451,111 @@ export default function FactVerification() {
                 {/* Section Content */}
                 {expandedSections.has(section.name) && (
                   <div className="border-t border-slate-800">
-                    {/* Narrative Mode */}
-                    {section.presentationMode === 'narrative' && narratives[section.name] && (
-                      <div className="p-6 space-y-4">
-                        <div className="prose prose-invert max-w-none">
-                          <p className="text-slate-200 text-base leading-relaxed whitespace-pre-wrap">
-                            {narratives[section.name]}
-                          </p>
+                    {/* Narrative Mode - Show narrative if exists, otherwise show raw facts */}
+                    {section.presentationMode === 'narrative' ? (
+                      narratives[section.name] ? (
+                        <div className="p-6 space-y-4">
+                          <div className="prose prose-invert max-w-none">
+                            <p className="text-slate-200 text-base leading-relaxed whitespace-pre-wrap">
+                              {narratives[section.name]}
+                            </p>
+                          </div>
+                          <div className="pt-4 border-t border-slate-800/50">
+                            <button
+                              onClick={() => {
+                                const newShowIndividual = new Set(showIndividualInsights);
+                                if (newShowIndividual.has(section.name)) {
+                                  newShowIndividual.delete(section.name);
+                                } else {
+                                  newShowIndividual.add(section.name);
+                                }
+                                setShowIndividualInsights(newShowIndividual);
+                              }}
+                              className="text-sm text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-2"
+                            >
+                              {showIndividualInsights.has(section.name) ? (
+                                <>
+                                  <ChevronDown className="h-4 w-4" />
+                                  Hide {section.facts.length} individual insights
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronRight className="h-4 w-4" />
+                                  View {section.facts.length} individual insights
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          {/* Show individual insights if toggled */}
+                          {showIndividualInsights.has(section.name) && (
+                            <div className="border-t border-slate-800/50 mt-4">
+                              {section.facts.map((fact, idx) => (
+                                <div
+                                  key={fact.id}
+                                  className={`p-4 ${idx !== section.facts.length - 1 ? "border-b border-slate-800/50" : ""} hover:bg-slate-800/30 transition-colors`}
+                                >
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                      <p className="text-slate-200 text-sm mb-2">{fact.value}</p>
+                                      <div className="flex gap-2 flex-wrap">
+                                        {getConfidenceBadge(parseFloat(fact.confidence))}
+                                        {getStatusBadge(fact.verification_status)}
+                                        {getMethodBadge(fact.extraction_method)}
+                                      </div>
+                                    </div>
+                                    <Button
+                                      onClick={() => handleEdit(fact)}
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-slate-400 hover:text-white"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <div className="pt-4 border-t border-slate-800/50">
-                          <button
-                            onClick={() => {
-                              const newShowIndividual = new Set(showIndividualInsights);
-                              if (newShowIndividual.has(section.name)) {
-                                newShowIndividual.delete(section.name);
-                              } else {
-                                newShowIndividual.add(section.name);
-                              }
-                              setShowIndividualInsights(newShowIndividual);
-                            }}
-                            className="text-sm text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-2"
-                          >
-                            {showIndividualInsights.has(section.name) ? (
-                              <>
-                                <ChevronDown className="h-4 w-4" />
-                                Hide {section.facts.length} individual insights
-                              </>
-                            ) : (
-                              <>
-                                <ChevronRight className="h-4 w-4" />
-                                View {section.facts.length} individual insights
-                              </>
-                            )}
-                          </button>
+                      ) : (
+                        // No narrative yet - show raw facts with notice
+                        <div className="p-6 space-y-4">
+                          <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 mb-4">
+                            <p className="text-sm text-orange-400">
+                              ℹ️ Narrative not yet generated. Click "Process & Consolidate" to generate a summary narrative for this section.
+                            </p>
+                          </div>
+                          <div>
+                            {section.facts.map((fact, idx) => (
+                              <div
+                                key={fact.id}
+                                className={`p-4 ${idx !== section.facts.length - 1 ? "border-b border-slate-800/50" : ""} hover:bg-slate-800/30 transition-colors`}
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex-1">
+                                    <p className="text-slate-200 text-sm mb-2">{fact.value}</p>
+                                    <div className="flex gap-2 flex-wrap">
+                                      {getConfidenceBadge(parseFloat(fact.confidence))}
+                                      {getStatusBadge(fact.verification_status)}
+                                      {getMethodBadge(fact.extraction_method)}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    onClick={() => handleEdit(fact)}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-slate-400 hover:text-white"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {/* Itemized Mode (always show for itemized sections, or when toggled for narrative sections) */}
-                    {(section.presentationMode === 'itemized' || showIndividualInsights.has(section.name)) && (
+                      )
+                    ) : (
+                      // Itemized Mode - always show facts
                       <div>
                         {section.facts.map((fact, idx) => (
                           <div
