@@ -1183,3 +1183,9 @@
 
 - [x] Fix performance extraction query - uses 'section' instead of 'section_key'
 - [x] Fix weather location extraction - returning 0,0 instead of actual coordinates from TMY header (fixed regex escaping)
+
+## 🐛 Performance Validation UI & Calculation (Jan 24, 2026)
+
+- [ ] Fix UI - validation results replacing page content instead of adding below graphs
+- [ ] Fix calculation - generation numbers too low (need to debug PVWatts logic)
+- [ ] Preserve navigation links and page structure after validation runs

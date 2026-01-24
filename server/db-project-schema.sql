@@ -250,6 +250,7 @@ CREATE TABLE performance_validations (
   pysam_version VARCHAR(20),
   calculation_time_seconds VARCHAR(20),
   warnings TEXT,
+  assumptions TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_project_id (project_id),
   INDEX idx_calculation_id (calculation_id)

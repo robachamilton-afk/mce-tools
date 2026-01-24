@@ -939,18 +939,30 @@ Synthesized narrative:`;
       .mutation(async ({ input }) => {
         const { runPerformanceValidation } = await import('./performance-validator');
         
+        console.log('[Validation] Connecting to database:', input.projectDbName);
         const projectDb = await mysql.createConnection({
           host: '127.0.0.1',
           user: 'root',
           database: input.projectDbName,
         });
+        console.log('[Validation] Connected to database');
 
         try {
+          console.log('[Validation] Starting validation for project:', input.projectId, 'type:', typeof input.projectId);
+          
           // Fetch current performance parameters
-          const [paramRows] = await projectDb.execute(
-            `SELECT * FROM performance_parameters WHERE project_id = ? ORDER BY created_at DESC LIMIT 1`,
-            [input.projectId]
-          ) as any;
+          console.log('[Validation] Fetching params...');
+          let paramRows: any;
+          try {
+            const result = await projectDb.execute(
+              `SELECT * FROM performance_parameters WHERE project_id = ${Number(input.projectId)} ORDER BY created_at DESC LIMIT 1`
+            );
+            paramRows = result[0];
+            console.log('[Validation] Got params:', paramRows?.length, 'rows');
+          } catch (queryError: any) {
+            console.error('[Validation] Query error:', queryError.message, queryError.code, queryError.sqlMessage);
+            throw queryError;
+          }
           
           if (!paramRows || paramRows.length === 0) {
             throw new Error('No performance parameters found. Please run consolidation first.');
@@ -959,20 +971,30 @@ Synthesized narrative:`;
           const params = paramRows[0];
           
           // Fetch weather file data if available
+          console.log('[Validation] Fetching weather data...');
           const [weatherRows] = await projectDb.execute(
-            `SELECT annual_summary FROM weather_files WHERE project_id = ? ORDER BY created_at DESC LIMIT 1`,
-            [input.projectId]
+            `SELECT annual_summary FROM weather_files WHERE project_id = ${Number(input.projectId)} ORDER BY created_at DESC LIMIT 1`
           ) as any;
+          console.log('[Validation] Got weather rows:', weatherRows?.length);
           
           let weatherData = null;
           if (weatherRows && weatherRows.length > 0 && weatherRows[0].annual_summary) {
-            weatherData = JSON.parse(weatherRows[0].annual_summary);
+            const summary = weatherRows[0].annual_summary;
+            console.log('[Validation] annual_summary type:', typeof summary);
+            // Handle both string and already-parsed object
+            weatherData = typeof summary === 'string' ? JSON.parse(summary) : summary;
           }
           
           // Run validation calculation
           const result = await runPerformanceValidation(input.projectId, params, weatherData);
           
-          // Save validation result to database
+          console.log('[Validation] About to INSERT:', {
+            assumptions: result.assumptions,
+            warnings: result.warnings,
+            assumptionsType: typeof result.assumptions,
+            warningsType: typeof result.warnings
+          });
+          
           await projectDb.execute(
             `INSERT INTO performance_validations (
               id, project_id, calculation_id,
@@ -1004,7 +1026,9 @@ Synthesized narrative:`;
           };
         } catch (error: any) {
           await projectDb.end();
-          throw new Error(`Validation failed: ${error.message}`);
+          const errorMsg = error?.message || error?.toString() || JSON.stringify(error);
+          console.error('[Performance Validation Error]', errorMsg);
+          throw new Error(`Validation failed: ${errorMsg}`);
         }
       }),
     
