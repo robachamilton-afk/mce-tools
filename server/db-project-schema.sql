@@ -289,3 +289,15 @@ CREATE TABLE IF NOT EXISTS weather_files (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+-- Section narratives for consolidation
+CREATE TABLE IF NOT EXISTS section_narratives (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  project_id INT NOT NULL,
+  section_key VARCHAR(255) NOT NULL,
+  narrative TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_project_id (project_id),
+  INDEX idx_section_key (section_key)
+);

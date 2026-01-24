@@ -1171,3 +1171,10 @@
 - [ ] Add "Run Validation" button to existing Performance Validation page
 - [ ] Keep existing weather graphs and charts intact
 - [ ] Display validation results below the weather data section
+
+## 🐛 URGENT: Performance Parameters Not Extracting (Jan 24, 2026)
+
+- [ ] Check consolidation logs to see if performance extractor is being called
+- [ ] Verify narratives are being saved to project database
+- [ ] Check if performance-financial-extractor.ts is working
+- [ ] Move Run Validation button to top of Performance Validation page

@@ -118,6 +118,46 @@ export default function PerformanceValidation() {
           </Button>
         </div>
 
+        {/* Run Validation Button */}
+        {hasPerfParams && (
+          <Card className="border-blue-500/30 bg-blue-500/5">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Zap className="h-5 w-5 text-blue-500" />
+                Ready to Run Validation
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Performance parameters have been extracted. Click below to run an independent PVWatts-style validation calculation.
+              </p>
+              <Button
+                onClick={() => {
+                  if (projectDbName && projectId) {
+                    runValidation.mutate({
+                      projectId: parseInt(projectId),
+                      projectDbName
+                    });
+                  }
+                }}
+                disabled={runValidation.isPending}
+                className="gap-2"
+              >
+                <Play className="h-4 w-4" />
+                {runValidation.isPending ? 'Running Validation...' : 'Run Performance Validation'}
+              </Button>
+              {runValidation.error && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    {runValidation.error.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Missing Data Guidance */}
         <Card className="border-orange-500/30 bg-orange-500/5">
           <CardHeader>
@@ -231,46 +271,6 @@ export default function PerformanceValidation() {
           projectDbName={projectDbName}
           onUploadComplete={handleWeatherUpload}
         />
-        
-        {/* Run Validation Button */}
-        {hasPerfParams && (
-          <Card className="border-blue-500/30 bg-blue-500/5">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Zap className="h-5 w-5 text-blue-500" />
-                Ready to Run Validation
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Performance parameters have been extracted. Click below to run an independent PVWatts-style validation calculation.
-              </p>
-              <Button
-                onClick={() => {
-                  if (projectDbName && projectId) {
-                    runValidation.mutate({
-                      projectId: parseInt(projectId),
-                      projectDbName
-                    });
-                  }
-                }}
-                disabled={runValidation.isPending}
-                className="gap-2"
-              >
-                <Play className="h-4 w-4" />
-                {runValidation.isPending ? 'Running Validation...' : 'Run Performance Validation'}
-              </Button>
-              {runValidation.error && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    {runValidation.error.message}
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        )}
       </div>
     );
   }
