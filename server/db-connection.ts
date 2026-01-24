@@ -24,19 +24,21 @@ function parseDatabaseUrl(url: string) {
  * Works in both development (local MySQL) and production (Manus DATABASE_URL)
  */
 export function getDbConfig(databaseName?: string) {
-  const isProduction = process.env.NODE_ENV === 'production';
   const databaseUrl = process.env.DATABASE_URL;
 
-  if (isProduction && databaseUrl) {
-    // Production: use DATABASE_URL from environment
+  if (databaseUrl) {
+    // Use DATABASE_URL from environment (cloud database)
     const config = parseDatabaseUrl(databaseUrl);
+    const isCloudDb = config.host.includes('tidbcloud') || config.host.includes('aws') || config.host.includes('gcp');
+    
     return {
       host: config.host,
       port: config.port,
       user: config.user,
       password: config.password,
       database: databaseName || config.database,
-      ssl: { rejectUnauthorized: true },
+      // Add SSL for cloud databases
+      ...(isCloudDb && { ssl: { rejectUnauthorized: true } }),
     };
   } else {
     // Development: use local MySQL
@@ -109,17 +111,20 @@ export function createProjectDbPool(projectDbName?: string) {
  * Used by project-db-provisioner.ts
  */
 export function getProjectDbProvisionConfig(dbName: string) {
-  const isProduction = process.env.NODE_ENV === 'production';
   const databaseUrl = process.env.DATABASE_URL;
 
-  if (isProduction && databaseUrl) {
+  if (databaseUrl) {
     const config = parseDatabaseUrl(databaseUrl);
+    const isCloudDb = config.host.includes('tidbcloud') || config.host.includes('aws') || config.host.includes('gcp');
+    
     return {
       dbName,
       dbHost: config.host,
       dbPort: config.port,
       dbUser: config.user,
       dbPassword: config.password,
+      // Add SSL for cloud databases
+      ...(isCloudDb && { ssl: { rejectUnauthorized: true } }),
     };
   } else {
     return {

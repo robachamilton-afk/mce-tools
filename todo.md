@@ -1231,4 +1231,5 @@
 
 ## Bug Fixes - Post Refactoring (Jan 24, 2026)
 - [x] Fix factId error during project creation (foreign key data type mismatch: CHAR vs VARCHAR)
-- [ ] Fix document upload SSL connection error (requires further investigation)
+- [x] Fix document upload SSL connection error (added SSL auto-detection for cloud databases)
+- [x] Add SSL configuration to database connections for TiDB Cloud compatibility
