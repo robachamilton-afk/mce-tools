@@ -628,38 +628,6 @@ export default function PerformanceValidation() {
         </Card>
       )}
 
-      {/* Weather Data Section */}
-      {hasWeatherData && weatherData && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CloudSun className="h-5 w-5" />
-              Weather Data
-            </CardTitle>
-            {weatherData.source && (
-              <CardDescription>
-                Data source: {weatherData.source}
-                {weatherData.monthlyData?.[0]?.year && (
-                  <span className="ml-2">
-                    (Year: {weatherData.monthlyData[0].year})
-                  </span>
-                )}
-              </CardDescription>
-            )}
-          </CardHeader>
-          <CardContent>
-            <MonthlyIrradianceChart 
-              data={weatherData.monthlyData.map((m: any) => ({
-                month: m.monthName || m.month,
-                ghi: m.ghi_kwh_m2 || m.ghi || 0,
-                dni: m.dni_kwh_m2 || m.dni || 0,
-                dhi: m.dhi_kwh_m2 || m.dhi || 0,
-              }))}
-            />
-          </CardContent>
-        </Card>
-      )}
-
       {/* Metadata */}
       <Card>
         <CardHeader>

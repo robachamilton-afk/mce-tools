@@ -265,7 +265,12 @@ export default function FactVerification() {
       totalFacts: typedFacts.length,
       pendingFacts: typedFacts.filter(f => f.verification_status === "pending").length,
       approvedFacts: typedFacts.filter(f => f.verification_status === "approved").length,
-      avgConfidence: typedFacts.reduce((sum: number, f: Fact) => sum + parseFloat(f.confidence || "0"), 0) / typedFacts.length,
+      avgConfidence: typedFacts.reduce((sum: number, f: Fact) => {
+        const conf = f.confidence || "0";
+        // Handle both "85%" and "0.85" formats
+        const value = conf.includes("%") ? parseFloat(conf) / 100 : parseFloat(conf);
+        return sum + value;
+      }, 0) / typedFacts.length,
     };
   }).sort((a, b) => {
     // Sort by canonical section order
@@ -290,7 +295,12 @@ export default function FactVerification() {
     approved: facts?.filter((f) => f.verification_status === "approved").length || 0,
     rejected: facts?.filter((f) => f.verification_status === "rejected").length || 0,
     avgConfidence: facts?.length
-      ? (facts.reduce((sum, f) => sum + parseFloat(f.confidence || "0"), 0) / facts.length * 100).toFixed(0)
+      ? (facts.reduce((sum, f) => {
+          const conf = f.confidence || "0";
+          // Handle both "85%" and "0.85" formats
+          const value = conf.includes("%") ? parseFloat(conf) / 100 : parseFloat(conf);
+          return sum + value;
+        }, 0) / facts.length * 100).toFixed(0)
       : "0",
   };
 

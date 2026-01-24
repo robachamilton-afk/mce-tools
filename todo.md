@@ -1189,3 +1189,8 @@
 - [ ] Fix UI - validation results replacing page content instead of adding below graphs
 - [ ] Fix calculation - generation numbers too low (need to debug PVWatts logic)
 - [ ] Preserve navigation links and page structure after validation runs
+
+## Current Tasks
+- [x] Remove duplicate irradiance graph from Performance Validation page (bottom one)
+- [x] Create Red Flag dashboard
+- [x] Fix confidence calculation bug (showing 2000% instead of proper percentage)
