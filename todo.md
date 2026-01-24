@@ -897,3 +897,12 @@
 - [ ] Ensure progress updates only reach 100% when all extraction steps complete
 - [ ] Test weather file upload via both pathways (regular upload + Performance page)
 - [ ] Verify weather files appear in Documents list with correct type
+
+## Current Issues to Fix
+- [x] Implement two-phase processing: Phase 1 (automatic) = extract raw facts only, Phase 2 (manual) = reconcile + narratives + specialized extraction
+- [x] Disable automatic reconciliation and narrative generation on upload
+- [x] Create manual 'Process & Consolidate' button and endpoint
+- [ ] Add weather file status display to Performance page
+- [ ] Add missing data guidance to Performance, Params, and Finance pages (show what's needed to generate reports)
+- [ ] Fix Processing Status UI spinning with 0 pending processes
+- [ ] Add back navigation links to Performance, Performance Parameters, and Financial Data pages

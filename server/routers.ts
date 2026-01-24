@@ -199,335 +199,29 @@ export const appRouter = router({
                   database: projectDbName,
                 });
                 
-                // Import reconciliation functions
-                const { reconcileInsight, enrichInsight, createConflict } = await import('./insight-reconciler');
-                const { normalizeSection: normalizeSectionKey } = await import('../shared/section-normalizer');
-                const { v4: uuidv4 } = await import('uuid');
+                // Phase 1: Simple insert - no reconciliation during upload
+                // Use simple fact inserter for fast processing
+                const { insertRawFacts } = await import('./simple-fact-inserter');
                 
-                // Process each fact through reconciliation
-                let insertedCount = 0;
-                let enrichedCount = 0;
-                let conflictCount = 0;
+                // Insert facts directly without reconciliation
+                const insertedCount = await insertRawFacts(
+                  projectDb,
+                  projectIdNum,
+                  document.id,
+                  result.facts
+                );
                 
-                for (const fact of result.facts) {
-                  const normalizedKey = normalizeSectionKey(fact.key);
-                  
-                  // Reconcile with existing insights
-                  const reconciliation = await reconcileInsight(
-                    projectDb,
-                    projectIdNum,
-                    {
-                      id: uuidv4(),
-                      key: normalizedKey,
-                      value: fact.value,
-                      confidence: String(fact.confidence),
-                      source_document_id: document.id,
-                      extraction_method: fact.extractionMethod
-                    },
-                    normalizedKey
-                  );
-                  
-                  if (reconciliation.action === 'insert') {
-                    // Insert as new insight
-                    const insightId = uuidv4();
-                    const sourceDocsJson = JSON.stringify([document.id]).replace(/'/g, "''");
-                    const escapedValue = fact.value.replace(/'/g, "''");
-                    
-                    await projectDb.execute(
-                      `INSERT INTO extracted_facts (id, source_document_id, source_documents, project_id, category, \`key\`, value, confidence, extraction_method, verification_status, enrichment_count, created_at) 
-                       VALUES ('${insightId}', '${document.id}', '${sourceDocsJson}', ${projectIdNum}, '${fact.category}', '${normalizedKey}', '${escapedValue}', '${fact.confidence}', '${fact.extractionMethod}', 'pending', 1, NOW())`
-                    );
-                    insertedCount++;
-                  } else if (reconciliation.action === 'update') {
-                    // Enrich existing insight
-                    await enrichInsight(
-                      projectDb,
-                      reconciliation.existingInsightId!,
-                      reconciliation.mergedValue!,
-                      reconciliation.newConfidence!,
-                      document.id
-                    );
-                    enrichedCount++;
-                  } else if (reconciliation.action === 'conflict') {
-                    // Insert as new and create conflict
-                    const insightId = uuidv4();
-                    const sourceDocsJson = JSON.stringify([document.id]).replace(/'/g, "''");
-                    const escapedValue = fact.value.replace(/'/g, "''");
-                    
-                    await projectDb.execute(
-                      `INSERT INTO extracted_facts (id, source_document_id, source_documents, project_id, category, \`key\`, value, confidence, extraction_method, verification_status, enrichment_count, created_at) 
-                       VALUES ('${insightId}', '${document.id}', '${sourceDocsJson}', ${projectIdNum}, '${fact.category}', '${normalizedKey}', '${escapedValue}', '${fact.confidence}', '${fact.extractionMethod}', 'pending', 1, NOW())`
-                    );
-                    
-                    await createConflict(
-                      projectDb,
-                      projectIdNum,
-                      reconciliation.existingInsightId!,
-                      insightId,
-                      'value_mismatch'
-                    );
-                    conflictCount++;
-                  }
-                }
-                
-                console.log(`[Document Processor] Reconciliation complete: ${insertedCount} new, ${enrichedCount} enriched, ${conflictCount} conflicts`);
-                
-                // Step 6: Generate section narratives for narrative-mode sections
-                await updateProgress('generating_narratives', 92);
-                console.log(`[Document Processor] Generating section narratives...`);
-                
-                const { getSectionDisplayName } = await import('../shared/section-normalizer');
-                const { invokeLLM } = await import('./_core/llm');
-                
-                // Group facts by normalized section
-                const factsBySection = new Map<string, typeof result.facts>();
-                for (const fact of result.facts) {
-                  const canonical = normalizeSectionKey(fact.key);
-                  if (!factsBySection.has(canonical)) {
-                    factsBySection.set(canonical, []);
-                  }
-                  factsBySection.get(canonical)!.push(fact);
-                }
-                
-                // Generate narratives for narrative-mode sections
-                const narrativeSections = ['Project_Overview', 'Financial_Structure', 'Technical_Design'];
-                const db = await getDb();
-                
-                for (const sectionName of narrativeSections) {
-                  const sectionFacts = factsBySection.get(sectionName);
-                  if (sectionFacts && sectionFacts.length > 0) {
-                    const displayName = getSectionDisplayName(sectionName);
-                    const factsText = sectionFacts.map((f, i) => `${i + 1}. ${f.value}`).join('\n');
-                    
-                    const response = await invokeLLM({
-                      messages: [
-                        {
-                          role: 'system',
-                          content: `You are a technical writing assistant. Synthesize the following project insights into a cohesive, flowing narrative paragraph suitable for executive review. Maintain all factual details but present them as connected prose rather than bullet points.`
-                        },
-                        {
-                          role: 'user',
-                          content: `Section: ${displayName}\n\nInsights:\n${factsText}\n\nSynthesize these insights into 2-3 well-structured paragraphs.`
-                        }
-                      ]
-                    });
-                    
-                    const narrativeContent = response.choices[0]?.message?.content;
-                    const narrative = typeof narrativeContent === 'string' ? narrativeContent : '';
-                    
-                    if (narrative && db) {
-                      try {
-                        // Store narrative in main database
-                        // Escape single quotes in narrative text
-                        const escapedNarrative = narrative.replace(/'/g, "''");
-                        await db.execute(
-                          `INSERT INTO section_narratives (project_db_name, section_name, narrative_text) 
-                           VALUES ('${projectDbName}', '${sectionName}', '${escapedNarrative}') 
-                           ON DUPLICATE KEY UPDATE narrative_text = '${escapedNarrative}', updated_at = NOW()`
-                        );
-                        console.log(`[Document Processor] Generated and saved narrative for ${displayName} (${narrative.length} chars)`);
-                      } catch (error) {
-                        console.error(`[Document Processor] Failed to save narrative for ${displayName}:`, error);
-                      }
-                    }
-                  }
-                }
-                
-                // Step 7: Extract performance parameters
-                await updateProgress('extracting_performance_params', 94);
-                console.log(`[Document Processor] Extracting performance parameters...`);
-                
-                const { PerformanceFinancialExtractor } = await import('./performance-financial-extractor');
-                const extractor = new PerformanceFinancialExtractor();
-                
-                try {
-                  const perfParams = await extractor.extractPerformanceParameters(
-                    result.extractedText,
-                    finalDocumentType as string
-                  );
-                  
-                  if (perfParams && perfParams.confidence > 0) {
-                    const { v4: uuidv4 } = await import('uuid');
-                    const paramId = uuidv4();
-                    
-                    // Build INSERT statement dynamically for non-null fields
-                    const fields = ['id', 'project_id', 'source_document_id', 'confidence', 'extraction_method'];
-                    const values = [`'${paramId}'`, projectIdNum.toString(), `'${document.id}'`, perfParams.confidence.toString(), `'${perfParams.extraction_method}'`];
-                    
-                    // Add non-null performance parameter fields
-                    const paramFields: (keyof typeof perfParams)[] = [
-                      'dc_capacity_mw', 'ac_capacity_mw', 'module_model', 'module_power_watts', 'module_count',
-                      'inverter_model', 'inverter_power_kw', 'inverter_count', 'tracking_type', 'tilt_angle_degrees',
-                      'azimuth_degrees', 'latitude', 'longitude', 'site_name', 'elevation_m', 'timezone',
-                      'system_losses_percent', 'degradation_rate_percent', 'availability_percent', 'soiling_loss_percent',
-                      'weather_file_url', 'ghi_annual_kwh_m2', 'dni_annual_kwh_m2', 'temperature_ambient_c',
-                      'p50_generation_gwh', 'p90_generation_gwh', 'capacity_factor_percent', 'specific_yield_kwh_kwp', 'notes'
-                    ];
-                    
-                    for (const field of paramFields) {
-                      const value = perfParams[field];
-                      if (value !== null && value !== undefined) {
-                        fields.push(field);
-                        if (typeof value === 'number') {
-                          values.push(value.toString());
-                        } else {
-                          const escapedValue = String(value).replace(/'/g, "''");
-                          values.push(`'${escapedValue}'`);
-                        }
-                      }
-                    }
-                    
-                    await projectDb.execute(
-                      `INSERT INTO performance_parameters (${fields.join(', ')}) VALUES (${values.join(', ')})`
-                    );
-                    
-                    console.log(`[Document Processor] Saved performance parameters (confidence: ${(perfParams.confidence * 100).toFixed(1)}%)`);
-                  }
-                } catch (perfError) {
-                  console.error(`[Document Processor] Performance parameter extraction failed:`, perfError);
-                }
-                
-                // Step 8: Extract financial data
-                await updateProgress('extracting_financial_data', 96);
-                console.log(`[Document Processor] Extracting financial data...`);
-                
-                try {
-                  const financialData = await extractor.extractFinancialData(
-                    result.extractedText,
-                    finalDocumentType as string
-                  );
-                  
-                  if (financialData && financialData.confidence > 0) {
-                    const { v4: uuidv4 } = await import('uuid');
-                    const finId = uuidv4();
-                    
-                    // Build INSERT statement dynamically for non-null fields
-                    const fields = ['id', 'project_id', 'source_document_id', 'confidence', 'extraction_method'];
-                    const values = [`'${finId}'`, projectIdNum.toString(), `'${document.id}'`, financialData.confidence.toString(), `'${financialData.extraction_method}'`];
-                    
-                    // Add non-null financial data fields
-                    const finFields: (keyof typeof financialData)[] = [
-                      'total_capex_usd', 'modules_usd', 'inverters_usd', 'trackers_usd', 'civil_works_usd',
-                      'grid_connection_usd', 'development_costs_usd', 'other_capex_usd', 'total_opex_annual_usd',
-                      'om_usd', 'insurance_usd', 'land_lease_usd', 'asset_management_usd', 'other_opex_usd',
-                      'capex_per_watt_usd', 'opex_per_mwh_usd', 'original_currency', 'exchange_rate_to_usd',
-                      'cost_year', 'escalation_rate_percent', 'notes'
-                    ];
-                    
-                    for (const field of finFields) {
-                      const value = financialData[field];
-                      if (value !== null && value !== undefined) {
-                        fields.push(field);
-                        if (typeof value === 'number') {
-                          values.push(value.toString());
-                        } else {
-                          const escapedValue = String(value).replace(/'/g, "''");
-                          values.push(`'${escapedValue}'`);
-                        }
-                      }
-                    }
-                    
-                    await projectDb.execute(
-                      `INSERT INTO financial_data (${fields.join(', ')}) VALUES (${values.join(', ')})`
-                    );
-                    
-                    console.log(`[Document Processor] Saved financial data (confidence: ${(financialData.confidence * 100).toFixed(1)}%)`);
-                  }
-                } catch (finError) {
-                  console.error(`[Document Processor] Financial data extraction failed:`, finError);
-                }
-                
-                // Step 9: Extract and download weather files
-                await updateProgress('extracting_weather_files', 98);
-                console.log(`[Document Processor] Extracting weather file references...`);
-                
-                try {
-                  const { WeatherFileExtractor } = await import('./weather-file-extractor');
-                  const weatherExtractor = new WeatherFileExtractor();
-                  
-                  const weatherData = await weatherExtractor.extractWeatherReferences(
-                    result.extractedText,
-                    document.id,
-                    document.fileName
-                  );
-                  
-                  if (weatherData.references.length > 0) {
-                    console.log(`[Document Processor] Found ${weatherData.references.length} weather file references`);
-                    
-                    // Process each reference (download if URL)
-                    for (const reference of weatherData.references) {
-                      if (reference.type === 'url' && reference.url) {
-                        console.log(`[Document Processor] Downloading weather file: ${reference.url}`);
-                        
-                        const downloadResult = await weatherExtractor.processWeatherFile(
-                          reference,
-                          projectIdNum,
-                          document.id
-                        );
-                        
-                        if (downloadResult) {
-                          // Save to weather_files table
-                          const { v4: uuidv4 } = await import('uuid');
-                          const weatherFileId = uuidv4();
-                          
-                          await projectDb.execute(
-                            `INSERT INTO weather_files (
-                              id, project_id, file_key, file_url, file_name, file_size_bytes,
-                              source_type, source_document_id, extracted_url, original_format,
-                              status, created_at, updated_at
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-                            [
-                              weatherFileId,
-                              projectIdNum,
-                              downloadResult.fileKey,
-                              downloadResult.fileUrl,
-                              downloadResult.fileName,
-                              downloadResult.fileSizeBytes,
-                              'extracted',
-                              document.id,
-                              reference.url,
-                              downloadResult.originalFormat,
-                              'pending' // Will be processed by validation trigger
-                            ]
-                          );
-                          
-                          console.log(`[Document Processor] Saved weather file: ${downloadResult.fileName}`);
-                        }
-                      } else if (reference.type === 'reference') {
-                        console.log(`[Document Processor] Found weather data reference: ${reference.description}`);
-                        // Could create a placeholder record for manual follow-up
-                      }
-                    }
-                  }
-                } catch (weatherError) {
-                  console.error(`[Document Processor] Weather file extraction failed:`, weatherError);
-                }
+                console.log(`[Document Processor] Inserted ${insertedCount} raw facts (reconciliation deferred to manual consolidation)`);
                 
                 await projectDb.end();
-                console.log(`[Document Processor] Saved ${result.facts.length} facts, narratives, performance params, financial data, and weather files`);
+                console.log(`[Document Processor] Phase 1 complete: ${result.facts.length} facts extracted and stored`);
                 
-                // Step 10: Auto-trigger validation if ready
-                await updateProgress('checking_validation_trigger', 99);
-                console.log(`[Document Processor] Checking if validation can be triggered...`);
-                
-                try {
-                  const { ValidationTrigger } = await import('./validation-trigger');
-                  const trigger = new ValidationTrigger();
-                  
-                  const triggerResult = await trigger.autoTriggerIfReady(projectIdNum, projectDbName);
-                  
-                  if (triggerResult.triggered) {
-                    console.log(`[Document Processor] ✓ Auto-triggered validation: ${triggerResult.validationId}`);
-                  } else {
-                    console.log(`[Document Processor] Validation not triggered: ${triggerResult.reason}`);
-                  }
-                } catch (triggerError) {
-                  console.error(`[Document Processor] Validation trigger check failed:`, triggerError);
-                }
-                
-                // Mark as 100% complete ONLY after all processing is done
+                // Mark as 100% complete - Phase 2 (consolidation) will be triggered manually
                 await updateProgress('completed', 100);
                 console.log(`[Document Processor] All processing completed for document ${document.id}`);
+                
+                // Skip narrative generation, performance extraction, financial extraction, weather extraction
+                // These will happen in Phase 2 when user clicks "Process & Consolidate"
               }
             }
           })
@@ -785,6 +479,28 @@ export const appRouter = router({
         );
         
         return { success: true, message: "Project deleted successfully" };
+      }),
+    consolidate: protectedProcedure
+      .input(z.object({ projectId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const project = await getProjectById(input.projectId);
+        if (!project || project.createdByUserId !== ctx.user.id) {
+          throw new Error("Project not found or access denied");
+        }
+
+        // Run Phase 2 consolidation
+        const { ProjectConsolidator } = await import('./project-consolidator');
+        const consolidator = new ProjectConsolidator(
+          input.projectId,
+          project.dbName,
+          (progress) => {
+            console.log(`[Consolidation Progress] ${progress.stage}: ${progress.message}`);
+          }
+        );
+
+        await consolidator.consolidate();
+
+        return { success: true, message: "Project consolidated successfully" };
       }),
   }),
 

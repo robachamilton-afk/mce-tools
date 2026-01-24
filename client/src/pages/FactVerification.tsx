@@ -97,6 +97,16 @@ export default function FactVerification() {
 
   const isLoading = isLoadingProject || isLoadingFacts;
 
+  const consolidateMutation = trpc.projects.consolidate.useMutation({
+    onSuccess: () => {
+      toast.success("Consolidation complete! Narratives and analysis updated.");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Consolidation failed: ${error.message}`);
+    },
+  });
+
   const updateFactMutation = trpc.facts.update.useMutation({
     onSuccess: () => {
       toast.success("Insight updated successfully");
@@ -258,13 +268,31 @@ export default function FactVerification() {
               <h1 className="text-2xl font-bold text-white">Project Insights</h1>
               <p className="text-sm text-slate-400 mt-1">Review and approve extracted insights organized by section</p>
             </div>
-            <Button
-              onClick={() => navigate(`/projects`)}
-              variant="outline"
-              className="border-slate-700 hover:bg-slate-800"
-            >
-              Back to Projects
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => navigate(`/projects`)}
+                variant="outline"
+                className="border-slate-700 hover:bg-slate-800"
+              >
+                Back to Projects
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!projectId) return;
+                  toast.info("Starting consolidation...");
+                  consolidateMutation.mutate({ projectId });
+                }}
+                disabled={consolidateMutation.isPending}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white disabled:opacity-50"
+              >
+                {consolidateMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Loader2 className="h-4 w-4 mr-2" />
+                )}
+                Process & Consolidate
+              </Button>
+            </div>
           </div>
         </div>
       </header>
