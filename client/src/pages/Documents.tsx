@@ -1,4 +1,4 @@
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { trpc } from "../lib/trpc";
 import { useAuth } from "../_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -12,15 +12,15 @@ import { useState } from "react";
 export function Documents() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
+  const params = useParams();
 
   const [editingDoc, setEditingDoc] = useState<any>(null);
   const [newDocType, setNewDocType] = useState<string>("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<any>(null);
   
-  // Get projectId from URL query params
-  const searchParams = new URLSearchParams(window.location.search);
-  const projectId = searchParams.get("projectId");
+  // Get projectId from URL path params
+  const projectId = params.id as string;
 
   // Fetch project details
   const { data: project, isLoading: projectLoading } = trpc.projects.get.useQuery(
@@ -156,8 +156,8 @@ export function Documents() {
       <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto py-4 flex items-center justify-between">
           <div>
-            <Button variant="ghost" onClick={() => setLocation("/projects")} className="mb-2">
-              ← Back to Projects
+            <Button variant="ghost" onClick={() => setLocation(`/project-dashboard?projectId=${projectId}`)} className="mb-2">
+              ← Back to Dashboard
             </Button>
             <h1 className="text-3xl font-bold text-white">Documents</h1>
             {project && (

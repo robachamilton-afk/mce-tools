@@ -944,3 +944,13 @@
 - [x] Create monthly irradiance chart component (bar chart showing GHI/DNI by month)
 - [x] Integrate irradiance chart into Performance page
 - [x] Display parsed TMY weather data in chart format
+
+## Session 5 Bug Fixes (Jan 24, 2026)
+- [x] Fix "Back to Projects" button - now goes to project dashboard from all sub-pages
+- [x] Fix "Document List" link on project dashboard - corrected route
+- [x] Fix Documents page to use path params instead of query params
+- [x] Fix weather file detection - regular upload now creates weather_files record
+- [x] Add monthly_irradiance, annual_summary, parsed_location columns to weather_files schema
+- [x] Add columns to db-project-schema.sql for new projects
+- [ ] Test irradiance chart displaying after consolidation
+- [ ] Verify performance parameter extraction is running during consolidation

@@ -290,7 +290,7 @@ export default function ProjectDetailDashboard() {
 
               {/* Documents */}
               <Card className="bg-slate-900 border-slate-700 p-4 hover:border-purple-500/50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/documents?projectId=${projectId}`)}>
+                    onClick={() => navigate(`/project/${projectId}/documents`)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-purple-500/20 rounded-lg">

@@ -177,6 +177,47 @@ export const appRouter = router({
         // Skip extraction for weather files - they're data files, not documents
         if (finalDocumentType === 'WEATHER_FILE') {
           console.log(`[Document Processor] Skipping extraction for weather file: ${document.fileName}`);
+          
+          // Also create a weather_files record so it shows up in Performance Validation
+          if (projectDbName) {
+            try {
+              const { v4: uuidv4 } = await import('uuid');
+              const weatherFileId = uuidv4();
+              const originalFormat = document.fileName.toLowerCase().endsWith('.csv') ? 'tmy_csv' : 'unknown';
+              
+              const weatherProjectDb = mysql.createPool({
+                host: '127.0.0.1',
+                user: 'root',
+                database: projectDbName,
+              });
+              
+              await weatherProjectDb.execute(
+              `INSERT INTO weather_files (
+                id, project_id, file_key, file_url, file_name, file_size_bytes,
+                source_type, source_document_id, original_format, status,
+                is_active, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+              [
+                weatherFileId,
+                projectIdNum,
+                document.filePath, // Use filePath as file_key
+                document.filePath, // Use filePath as file_url
+                document.fileName,
+                input.fileSize,
+                'document_upload', // Source type
+                document.id, // Link to document
+                originalFormat,
+                'pending',
+                1 // is_active
+              ]
+            );
+            console.log(`[Document Processor] Created weather_files record: ${weatherFileId}`);
+              await weatherProjectDb.end();
+            } catch (weatherErr) {
+              console.error('[Document Processor] Failed to create weather_files record:', weatherErr);
+            }
+          }
+          
           await updateProgress('completed', 100);
           console.log(`Document uploaded: ${document.id}, marked as completed (weather file)`);
           return { ...document, documentId: document.id };

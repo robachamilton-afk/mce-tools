@@ -52,12 +52,12 @@ export function PerformanceParameters() {
             <p className="text-muted-foreground">Technical specifications extracted from project documents</p>
           </div>
           <Button
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate(`/project-dashboard?projectId=${projectId}`)}
             variant="outline"
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Projects
+            Back to Dashboard
           </Button>
         </div>
 
@@ -120,12 +120,12 @@ export function PerformanceParameters() {
             {confidenceLevel} CONFIDENCE ({confidencePercent}%)
           </Badge>
           <Button
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate(`/project-dashboard?projectId=${projectId}`)}
             variant="outline"
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Projects
+            Back to Dashboard
           </Button>
         </div>
       </div>

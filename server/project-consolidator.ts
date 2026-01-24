@@ -465,9 +465,8 @@ export class ProjectConsolidator {
                 monthly_irradiance = '${monthlyDataJson}',
                 annual_summary = '${annualSummaryJson}',
                 parsed_location = '${locationJson}',
-                processing_status = 'completed',
                 updated_at = NOW()
-               WHERE id = '${weatherFile.id}'`
+              WHERE id = '${weatherFile.id}'`
             );
 
             console.log(`[Consolidator] Parsed weather file ${weatherFile.file_name}:`);
@@ -476,9 +475,6 @@ export class ProjectConsolidator {
             console.log(`  - Avg Temp: ${parsedData.annualSummary.temperature_avg_c}°C`);
           } else {
             console.log(`[Consolidator] Could not parse weather file ${weatherFile.file_name}`);
-            await projectDb.execute(
-              `UPDATE weather_files SET processing_status = 'failed', updated_at = NOW() WHERE id = '${weatherFile.id}'`
-            );
           }
         } catch (error) {
           console.error(`[Consolidator] Error processing weather file ${weatherFile.file_name}:`, error);

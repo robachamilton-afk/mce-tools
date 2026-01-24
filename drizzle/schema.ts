@@ -282,6 +282,11 @@ export const weatherFiles = mysqlTable("weather_files", {
   outlierCount: int("outlier_count"),
   validationWarnings: text("validation_warnings"), // JSON array of warnings
   
+  // Parsed data (from TMY file)
+  monthlyIrradiance: json("monthly_irradiance"), // JSON array of monthly GHI/DNI data
+  annualSummary: json("annual_summary"), // JSON object with annual totals
+  parsedLocation: json("parsed_location"), // JSON object with lat/lon/elevation from file
+  
   // Status
   status: varchar("status", { length: 20 }).default("pending"), // pending, processing, ready, failed
   processingError: text("processing_error"),

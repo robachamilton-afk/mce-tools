@@ -53,12 +53,12 @@ export function FinancialData() {
             <p className="text-muted-foreground">CapEx and OpEx breakdown for benchmarking</p>
           </div>
           <Button
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate(`/project-dashboard?projectId=${projectId}`)}
             variant="outline"
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Projects
+            Back to Dashboard
           </Button>
         </div>
 
@@ -152,12 +152,12 @@ export function FinancialData() {
             {confidenceLevel} CONFIDENCE ({confidencePercent}%)
           </Badge>
           <Button
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate(`/project-dashboard?projectId=${projectId}`)}
             variant="outline"
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Projects
+            Back to Dashboard
           </Button>
         </div>
       </div>

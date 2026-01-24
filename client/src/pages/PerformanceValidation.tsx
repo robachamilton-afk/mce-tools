@@ -90,12 +90,12 @@ export default function PerformanceValidation() {
             </p>
           </div>
           <Button
-            onClick={() => navigate('/projects')}
+            onClick={() => navigate(`/project-dashboard?projectId=${projectId}`)}
             variant="outline"
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Projects
+            Back to Dashboard
           </Button>
         </div>
 

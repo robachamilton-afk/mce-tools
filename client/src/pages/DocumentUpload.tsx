@@ -301,11 +301,11 @@ export default function DocumentUpload() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setLocation("/projects")}
+              onClick={() => setLocation(`/project-dashboard?projectId=${projectId}`)}
               className="text-slate-400 hover:text-white hover:bg-slate-800"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Projects
+              Back to Dashboard
             </Button>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">

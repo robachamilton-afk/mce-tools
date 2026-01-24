@@ -253,11 +253,11 @@ export default function RedFlags() {
               <p className="text-slate-400">Identified risks and issues requiring attention</p>
             </div>
             <Button
-              onClick={() => navigate("/projects")}
+              onClick={() => navigate(`/project-dashboard?projectId=${projectId}`)}
               variant="outline"
               className="border-slate-700 hover:bg-slate-800"
             >
-              Back to Projects
+              Back to Dashboard
             </Button>
           </div>
         </div>
