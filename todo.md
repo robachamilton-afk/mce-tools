@@ -1140,3 +1140,25 @@
 - [x] Update API endpoint for OpenAI vs Manus Forge
 - [x] Test document processing with OpenAI API key
 - [x] Verify all extraction workflows work with new provider
+
+
+## 🗺️ Location Extraction & Mapbox Integration
+- [ ] Add location extraction during document upload/scan (Phase 1)
+- [ ] Keep location refinement during consolidation (Phase 2)
+- [ ] Switch from Google Maps to Mapbox
+- [ ] Add Mapbox public token to environment
+- [ ] Set default map view to satellite
+- [ ] Fix map to display extracted location from performance_parameters
+- [ ] Test location extraction with document upload
+- [ ] Verify map displays correct coordinates
+
+
+## 🐛 Critical Bug Fixes (Session 2026-01-24)
+- [x] Fix performance parameters extraction - LLM identifies capacity (300MWp) and grid limit (280MW) in narratives but not storing in performance_parameters table
+- [x] Add location extraction during document upload/scan phase (Phase 1 extraction) - extract from document text using LLM
+- [x] Fix weather_files record creation bug - uploaded files don't create database records with location data
+- [x] Update consolidation to read location from weather_files table (currently hardcoded to 0,0)
+- [x] Fix Mapbox map to display extracted location (currently showing 0,0 default)
+- [x] Parse weather file header during upload to extract lat/lon/elevation
+- [x] Pass location from performance_parameters to MapView component
+- [x] Create section_narratives table in project database

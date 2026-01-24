@@ -255,30 +255,35 @@ export class ProjectConsolidator {
     });
 
     try {
-      // Get all document text for extraction
+      // Get narratives which already contain consolidated information
+      const [narratives]: any = await projectDb.execute(
+        `SELECT section, narrative FROM section_narratives WHERE project_id = ${this.projectId}`
+      );
+
+      if (!narratives || narratives.length === 0) {
+        console.log('[Consolidator] No narratives found for performance extraction');
+        return;
+      }
+
+      // Build a summary from narratives (they already contain extracted facts)
+      const narrativeSummary = narratives.map((n: any) => `${n.section}:\n${n.narrative}`).join('\n\n');
+
+      // Get first completed document for metadata
       const [documents]: any = await projectDb.execute(
         `SELECT id, fileName, documentType FROM documents WHERE status = 'completed' LIMIT 1`
       );
 
       if (!documents || documents.length === 0) {
-        console.log('[Consolidator] No completed documents found for performance extraction');
+        console.log('[Consolidator] No completed documents found');
         return;
       }
-
-      // Get extracted facts to build performance parameters from
-      const [facts]: any = await projectDb.execute(
-        `SELECT \`key\`, value FROM extracted_facts WHERE project_id = ${this.projectId} AND deleted_at IS NULL`
-      );
-
-      // Build a summary of facts for LLM extraction
-      const factsSummary = facts.map((f: any) => f.value).join('\n');
 
       // Use the performance extractor
       const { PerformanceFinancialExtractor } = await import('./performance-financial-extractor');
       const extractor = new PerformanceFinancialExtractor();
       
       const perfParams = await extractor.extractPerformanceParameters(
-        factsSummary,
+        narrativeSummary,
         documents[0].documentType || 'FEASIBILITY_STUDY'
       );
 

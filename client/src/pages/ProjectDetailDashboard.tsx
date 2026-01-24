@@ -26,8 +26,8 @@ export default function ProjectDetailDashboard() {
   const projectId = projectIdStr ? parseInt(projectIdStr, 10) : null;
 
   const [mapReady, setMapReady] = useState(false);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [marker, setMarker] = useState<google.maps.Marker | null>(null);
+  const [map, setMap] = useState<mapboxgl.Map | null>(null);
+  // Marker is now handled by MapView component
 
   // Fetch project details
   const { data: project, isLoading: isLoadingProject } = trpc.projects.get.useQuery(
@@ -92,28 +92,10 @@ export default function ProjectDetailDashboard() {
   const completenessPercent = [hasInsights, hasDocs, hasPerformanceParams, hasNarrative].filter(Boolean).length * 25;
 
   // Map initialization
-  const handleMapReady = (mapInstance: google.maps.Map) => {
+  const handleMapReady = (mapInstance: mapboxgl.Map) => {
     setMap(mapInstance);
     setMapReady(true);
-
-    // Set project location if available
-    if (perfParams && Array.isArray(perfParams) && perfParams.length > 0 && (perfParams[0] as any).latitude && (perfParams[0] as any).longitude) {
-      const location = {
-        lat: (perfParams[0] as any).latitude,
-        lng: (perfParams[0] as any).longitude,
-      };
-      
-      mapInstance.setCenter(location);
-      mapInstance.setZoom(12);
-
-      // Add marker
-      const newMarker = new google.maps.Marker({
-        position: location,
-        map: mapInstance,
-        title: project?.projectName || "Project Location",
-      });
-      setMarker(newMarker);
-    }
+    // Marker and location are now handled by MapView component
   };
 
   if (!projectId) {
@@ -191,7 +173,18 @@ export default function ProjectDetailDashboard() {
                 </h2>
               </div>
               <div className="h-[400px]">
-                <MapView onMapReady={handleMapReady} />
+                <MapView 
+                  onMapReady={handleMapReady}
+                  initialCenter={{
+                    lat: perfParams && Array.isArray(perfParams) && perfParams.length > 0 && (perfParams[0] as any).latitude
+                      ? parseFloat((perfParams[0] as any).latitude)
+                      : 0,
+                    lng: perfParams && Array.isArray(perfParams) && perfParams.length > 0 && (perfParams[0] as any).longitude
+                      ? parseFloat((perfParams[0] as any).longitude)
+                      : 0
+                  }}
+                  initialZoom={12}
+                />
               </div>
               {perfParams && Array.isArray(perfParams) && perfParams.length > 0 && (
                 <div className="p-4 border-t border-slate-700 bg-slate-800/50">

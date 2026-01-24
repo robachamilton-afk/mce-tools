@@ -187,33 +187,98 @@ export const appRouter = router({
               const weatherFileId = uuidv4();
               const originalFormat = document.fileName.toLowerCase().endsWith('.csv') ? 'tmy_csv' : 'unknown';
               
+              // Parse weather file header to extract location
+              let latitude: number | null = null;
+              let longitude: number | null = null;
+              let elevation: number | null = null;
+              let locationName: string | null = null;
+              
+              try {
+                const fs = await import('fs/promises');
+                const fileContent = await fs.readFile(document.filePath, 'utf-8');
+                const lines = fileContent.split('\n');
+                
+                // Parse PVGIS TMY header format
+                for (const line of lines.slice(0, 20)) {
+                  if (line.includes('Latitude')) {
+                    const match = line.match(/Latitude[^:]*:\s*([\d.-]+)/);
+                    if (match) latitude = parseFloat(match[1]);
+                  }
+                  if (line.includes('Longitude')) {
+                    const match = line.match(/Longitude[^:]*:\s*([\d.-]+)/);
+                    if (match) longitude = parseFloat(match[1]);
+                  }
+                  if (line.includes('Elevation')) {
+                    const match = line.match(/Elevation[^:]*:\s*([\d.-]+)/);
+                    if (match) elevation = parseFloat(match[1]);
+                  }
+                  if (line.includes('Location')) {
+                    const match = line.match(/Location[^:]*:\s*(.+)/);
+                    if (match) locationName = match[1].trim();
+                  }
+                }
+                
+                if (latitude && longitude) {
+                  console.log(`[Document Processor] Extracted location from weather file: ${latitude}, ${longitude}`);
+                }
+              } catch (parseErr) {
+                console.error('[Document Processor] Failed to parse weather file header:', parseErr);
+              }
+              
               const weatherProjectDb = mysql.createPool({
                 host: '127.0.0.1',
                 user: 'root',
                 database: projectDbName,
               });
               
-              await weatherProjectDb.execute(
-              `INSERT INTO weather_files (
-                id, project_id, file_key, file_url, file_name, file_size_bytes,
-                source_type, source_document_id, original_format, status,
-                is_active, created_at, updated_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-              [
+              // Build INSERT with optional location fields
+              const fields = [
+                'id', 'project_id', 'file_key', 'file_url', 'file_name', 'file_size_bytes',
+                'source_type', 'source_document_id', 'original_format', 'status', 'is_active',
+                'created_at', 'updated_at'
+              ];
+              const placeholders = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', 'NOW()', 'NOW()'];
+              const values: any[] = [
                 weatherFileId,
                 projectIdNum,
-                document.filePath, // Use filePath as file_key
-                document.filePath, // Use filePath as file_url
+                document.filePath,
+                document.filePath,
                 document.fileName,
                 input.fileSize,
-                'document_upload', // Source type
-                document.id, // Link to document
+                'document_upload',
+                document.id,
                 originalFormat,
                 'pending',
-                1 // is_active
-              ]
-            );
-            console.log(`[Document Processor] Created weather_files record: ${weatherFileId}`);
+                1
+              ];
+              
+              if (latitude !== null) {
+                fields.push('latitude');
+                placeholders.push('?');
+                values.push(latitude);
+              }
+              if (longitude !== null) {
+                fields.push('longitude');
+                placeholders.push('?');
+                values.push(longitude);
+              }
+              if (elevation !== null) {
+                fields.push('elevation');
+                placeholders.push('?');
+                values.push(elevation);
+              }
+              if (locationName) {
+                fields.push('location_name');
+                placeholders.push('?');
+                values.push(locationName);
+              }
+              
+              await weatherProjectDb.execute(
+                `INSERT INTO weather_files (${fields.join(', ')}) VALUES (${placeholders.join(', ')})`,
+                values
+              );
+              
+              console.log(`[Document Processor] Created weather_files record: ${weatherFileId}`);
               await weatherProjectDb.end();
             } catch (weatherErr) {
               console.error('[Document Processor] Failed to create weather_files record:', weatherErr);
@@ -255,6 +320,49 @@ export const appRouter = router({
                 );
                 
                 console.log(`[Document Processor] Inserted ${insertedCount} raw facts (reconciliation deferred to manual consolidation)`);
+                
+                // Phase 1: Extract location from document text
+                try {
+                  const { LocationExtractor } = await import('./location-extractor');
+                  const locationExtractor = new LocationExtractor();
+                  const locationData = await locationExtractor.extractLocation(result.extractedText);
+                  
+                  if (locationData && locationData.confidence > 0.3) {
+                    // Save location to performance_parameters table
+                    const { v4: uuidv4 } = await import('uuid');
+                    const paramId = uuidv4();
+                    
+                    const fields = ['id', 'project_id', 'source_document_id', 'confidence', 'extraction_method'];
+                    const values = [`'${paramId}'`, projectIdNum.toString(), `'${document.id}'`, locationData.confidence.toString(), `'${locationData.extraction_method}'`];
+                    
+                    if (locationData.latitude) {
+                      fields.push('latitude');
+                      values.push(locationData.latitude.toString());
+                    }
+                    if (locationData.longitude) {
+                      fields.push('longitude');
+                      values.push(locationData.longitude.toString());
+                    }
+                    if (locationData.site_name) {
+                      fields.push('site_name');
+                      values.push(`'${locationData.site_name.replace(/'/g, "''")}'`);
+                    }
+                    
+                    await projectDb.execute(
+                      `INSERT INTO performance_parameters (${fields.join(', ')}) VALUES (${values.join(', ')})`
+                    );
+                    
+                    console.log(`[Document Processor] Saved Phase 1 location (confidence: ${(locationData.confidence * 100).toFixed(1)}%):`, {
+                      coords: locationData.latitude && locationData.longitude ? `${locationData.latitude}, ${locationData.longitude}` : 'N/A',
+                      site: locationData.site_name || 'N/A'
+                    });
+                  } else {
+                    console.log(`[Document Processor] No location found in document (or confidence too low)`);
+                  }
+                } catch (locErr) {
+                  console.error(`[Document Processor] Location extraction failed:`, locErr);
+                  // Don't fail the whole process if location extraction fails
+                }
                 
                 await projectDb.end();
                 console.log(`[Document Processor] Phase 1 complete: ${result.facts.length} facts extracted and stored`);
