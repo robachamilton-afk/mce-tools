@@ -255,6 +255,19 @@ CREATE TABLE performance_validations (
   INDEX idx_calculation_id (calculation_id)
 );
 
+-- Section narratives: generated narratives for each section
+CREATE TABLE IF NOT EXISTS section_narratives (
+  id VARCHAR(36) PRIMARY KEY,
+  project_id INT NOT NULL,
+  section_key VARCHAR(100) NOT NULL,
+  narrative TEXT,
+  confidence VARCHAR(20) DEFAULT '0.85',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_project_section (project_id, section_key),
+  INDEX idx_project_id (project_id)
+);
+
 -- Weather files for performance validation
 CREATE TABLE IF NOT EXISTS weather_files (
   id VARCHAR(36) PRIMARY KEY,

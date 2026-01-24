@@ -1079,6 +1079,72 @@ Synthesized narrative:`;
   
   // Performance parameters router
   performanceParams: router({
+    runValidation: protectedProcedure
+      .input(z.object({ 
+        projectId: z.number(),
+        projectDbName: z.string() 
+      }))
+      .mutation(async ({ input }) => {
+        const { runPerformanceValidation } = await import('./performance-validator');
+        
+        // Fetch current performance parameters
+        const projectDb = mysql.createPool({
+          host: '127.0.0.1',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          const [rows] = await projectDb.execute(
+            `SELECT * FROM performance_parameters WHERE project_id = ? ORDER BY created_at DESC LIMIT 1`,
+            [input.projectId]
+          ) as any;
+          
+          if (!rows || rows.length === 0) {
+            throw new Error('No performance parameters found. Please run consolidation first.');
+          }
+          
+          const params = rows[0];
+          
+          // Run validation calculation
+          const result = await runPerformanceValidation(input.projectId, params);
+          
+          // Save validation result to database
+          await projectDb.execute(
+            `INSERT INTO performance_validations (
+              id, project_id, calculation_id,
+              annual_generation_gwh, capacity_factor_percent, specific_yield_kwh_kwp,
+              contractor_claim_gwh, variance_percent, variance_gwh, flag_triggered, confidence_level,
+              dc_capacity_mw, ac_capacity_mw, tracking_type, total_system_losses_percent,
+              parameters_extracted_count, parameters_assumed_count,
+              ghi_annual_kwh_m2, warnings
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              result.id, result.project_id, result.calculation_id,
+              result.annual_generation_gwh, result.capacity_factor_percent, result.specific_yield_kwh_kwp,
+              result.contractor_claim_gwh, result.variance_percent, result.variance_gwh, result.flag_triggered, result.confidence_level,
+              result.dc_capacity_mw, result.ac_capacity_mw, result.tracking_type, result.total_system_losses_percent,
+              result.parameters_extracted_count, result.parameters_assumed_count,
+              result.ghi_annual_kwh_m2, JSON.stringify(result.warnings)
+            ]
+          );
+          
+          await projectDb.end();
+          
+          return {
+            success: true,
+            result: {
+              ...result,
+              assumptions: result.assumptions,
+              warnings: result.warnings
+            }
+          };
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Validation failed: ${error.message}`);
+        }
+      }),
+    
     getByProject: protectedProcedure
       .input(z.object({ projectDbName: z.string() }))
       .query(async ({ input }) => {

@@ -224,13 +224,27 @@ export class ProjectConsolidator {
             const narrativeContent = response.choices[0]?.message?.content;
             const narrative = typeof narrativeContent === 'string' ? narrativeContent : '';
 
-            if (narrative && mainDb) {
+            if (narrative) {
               const escapedNarrative = narrative.replace(/'/g, "''");
-              await mainDb.execute(
-                `INSERT INTO section_narratives (project_db_name, section_name, narrative_text) 
-                 VALUES ('${this.projectDbName}', '${sectionName}', '${escapedNarrative}') 
-                 ON DUPLICATE KEY UPDATE narrative_text = '${escapedNarrative}', updated_at = NOW()`
+              
+              // Save to main database for cross-project queries
+              if (mainDb) {
+                await mainDb.execute(
+                  `INSERT INTO section_narratives (project_db_name, section_name, narrative_text) 
+                   VALUES ('${this.projectDbName}', '${sectionName}', '${escapedNarrative}') 
+                   ON DUPLICATE KEY UPDATE narrative_text = '${escapedNarrative}', updated_at = NOW()`
+                );
+              }
+              
+              // Also save to project database for performance extraction
+              const { v4: uuidv4 } = await import('uuid');
+              const narrativeId = uuidv4();
+              await projectDb.execute(
+                `INSERT INTO section_narratives (id, project_id, section_key, narrative, confidence) 
+                 VALUES ('${narrativeId}', ${this.projectId}, '${sectionName}', '${escapedNarrative}', '0.85') 
+                 ON DUPLICATE KEY UPDATE narrative = '${escapedNarrative}', updated_at = NOW()`
               );
+              
               console.log(`[Consolidator] Generated narrative for ${displayName} (${narrative.length} chars)`);
             }
           } catch (narrativeError) {
@@ -256,9 +270,12 @@ export class ProjectConsolidator {
 
     try {
       // Get narratives which already contain consolidated information
+      console.log(`[Consolidator] Querying narratives for project_id=${this.projectId} in ${this.projectDbName}`);
       const [narratives]: any = await projectDb.execute(
-        `SELECT section, narrative FROM section_narratives WHERE project_id = ${this.projectId}`
+        `SELECT section_key, narrative FROM section_narratives WHERE project_id = ${this.projectId}`
       );
+
+      console.log(`[Consolidator] Found ${narratives?.length || 0} narratives`);
 
       if (!narratives || narratives.length === 0) {
         console.log('[Consolidator] No narratives found for performance extraction');
@@ -266,19 +283,23 @@ export class ProjectConsolidator {
       }
 
       // Build a summary from narratives (they already contain extracted facts)
-      const narrativeSummary = narratives.map((n: any) => `${n.section}:\n${n.narrative}`).join('\n\n');
+      const narrativeSummary = narratives.map((n: any) => `${n.section_key}:\n${n.narrative}`).join('\n\n');
+      console.log(`[Consolidator] Narrative summary length: ${narrativeSummary.length} chars`);
 
-      // Get first completed document for metadata
+      // Get first document for metadata (any non-weather document)
       const [documents]: any = await projectDb.execute(
-        `SELECT id, fileName, documentType FROM documents WHERE status = 'completed' LIMIT 1`
+        `SELECT id, fileName, documentType FROM documents WHERE documentType != 'WEATHER_FILE' LIMIT 1`
       );
 
+      console.log(`[Consolidator] Found ${documents?.length || 0} documents`);
+
       if (!documents || documents.length === 0) {
-        console.log('[Consolidator] No completed documents found');
+        console.log('[Consolidator] No documents found');
         return;
       }
 
       // Use the performance extractor
+      console.log(`[Consolidator] Calling performance extractor with docType=${documents[0].documentType}`);
       const { PerformanceFinancialExtractor } = await import('./performance-financial-extractor');
       const extractor = new PerformanceFinancialExtractor();
       
@@ -287,13 +308,13 @@ export class ProjectConsolidator {
         documents[0].documentType || 'FEASIBILITY_STUDY'
       );
 
-      if (perfParams && perfParams.confidence > 0) {
-        const { v4: uuidv4 } = await import('uuid');
-        const paramId = uuidv4();
+      console.log(`[Consolidator] Performance extractor returned:`, perfParams ? JSON.stringify(perfParams, null, 2) : 'null');
 
-        // Build INSERT statement dynamically for non-null fields
-        const fields = ['id', 'project_id', 'source_document_id', 'confidence', 'extraction_method'];
-        const values = [`'${paramId}'`, this.projectId.toString(), `'${documents[0].id}'`, perfParams.confidence.toString(), `'${perfParams.extraction_method}'`];
+      if (perfParams && perfParams.confidence > 0) {
+        // Check if existing record exists
+        const [existing]: any = await projectDb.execute(
+          `SELECT id, latitude, longitude FROM performance_parameters WHERE project_id = ${this.projectId} LIMIT 1`
+        );
 
         const paramFields: (keyof typeof perfParams)[] = [
           'dc_capacity_mw', 'ac_capacity_mw', 'module_model', 'module_power_watts', 'module_count',
@@ -304,24 +325,55 @@ export class ProjectConsolidator {
           'p50_generation_gwh', 'p90_generation_gwh', 'capacity_factor_percent', 'specific_yield_kwh_kwp', 'notes'
         ];
 
-        for (const field of paramFields) {
-          const value = perfParams[field];
-          if (value !== null && value !== undefined) {
-            fields.push(field);
-            if (typeof value === 'number') {
-              values.push(value.toString());
-            } else {
-              const escapedValue = String(value).replace(/'/g, "''");
-              values.push(`'${escapedValue}'`);
+        if (existing && existing.length > 0) {
+          // UPDATE existing record, preserving location if not in new extraction
+          const updates: string[] = [];
+          updates.push(`confidence = ${perfParams.confidence}`);
+          updates.push(`extraction_method = '${perfParams.extraction_method}'`);
+          updates.push(`source_document_id = '${documents[0].id}'`);
+
+          for (const field of paramFields) {
+            const value = perfParams[field];
+            if (value !== null && value !== undefined) {
+              if (typeof value === 'number') {
+                updates.push(`${field} = ${value}`);
+              } else {
+                const escapedValue = String(value).replace(/'/g, "''");
+                updates.push(`${field} = '${escapedValue}'`);
+              }
             }
           }
+
+          await projectDb.execute(
+            `UPDATE performance_parameters SET ${updates.join(', ')} WHERE id = '${existing[0].id}'`
+          );
+          console.log(`[Consolidator] Updated existing performance parameters (confidence: ${(perfParams.confidence * 100).toFixed(1)}%)`);
+        } else {
+          // INSERT new record
+          const { v4: uuidv4 } = await import('uuid');
+          const paramId = uuidv4();
+
+          const fields = ['id', 'project_id', 'source_document_id', 'confidence', 'extraction_method'];
+          const values = [`'${paramId}'`, this.projectId.toString(), `'${documents[0].id}'`, perfParams.confidence.toString(), `'${perfParams.extraction_method}'`];
+
+          for (const field of paramFields) {
+            const value = perfParams[field];
+            if (value !== null && value !== undefined) {
+              fields.push(field);
+              if (typeof value === 'number') {
+                values.push(value.toString());
+              } else {
+                const escapedValue = String(value).replace(/'/g, "''");
+                values.push(`'${escapedValue}'`);
+              }
+            }
+          }
+
+          await projectDb.execute(
+            `INSERT INTO performance_parameters (${fields.join(', ')}) VALUES (${values.join(', ')})`
+          );
+          console.log(`[Consolidator] Saved new performance parameters (confidence: ${(perfParams.confidence * 100).toFixed(1)}%)`);
         }
-
-        await projectDb.execute(
-          `INSERT INTO performance_parameters (${fields.join(', ')}) VALUES (${values.join(', ')})`
-        );
-
-        console.log(`[Consolidator] Saved performance parameters (confidence: ${(perfParams.confidence * 100).toFixed(1)}%)`);
 
         // Check minimum requirements for performance model
         const hasLocation = perfParams.latitude && perfParams.longitude;

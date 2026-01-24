@@ -103,8 +103,8 @@ export class PerformanceFinancialExtractor {
 Extract the following information if present in the document. Return ONLY a JSON object with these fields (use null for missing values):
 
 {
-  "dc_capacity_mw": "DC capacity in MW (e.g., '100.5')",
-  "ac_capacity_mw": "AC capacity in MW (e.g., '80.0')",
+  "dc_capacity_mw": "DC capacity in MW (e.g., '100.5'). Look for terms like 'DC capacity', 'installed capacity', 'nameplate capacity', 'MWp'.",
+  "ac_capacity_mw": "AC capacity in MW (e.g., '80.0'). Look for terms like 'AC capacity', 'inverter capacity', 'grid connection capacity', 'grid limitation', 'export capacity', 'injection capacity'. Note: Grid limitations and export capacities typically refer to AC capacity.",
   "module_model": "Solar module model name (e.g., 'Longi LR5-72HPH-550M')",
   "module_power_watts": "Module power rating in watts (e.g., '550')",
   "module_count": "Total number of modules (integer)",
@@ -139,6 +139,8 @@ IMPORTANT:
 - Use null for any field not found in the document
 - For tracking_type, standardize to: fixed_tilt, single_axis, or dual_axis
 - For numeric fields, extract only the number (no units in the value)
+- **Grid limitations, export limits, and injection capacities refer to AC capacity** - if you see "grid limitation of X MW", extract X as ac_capacity_mw
+- If both inverter capacity and grid limitation are mentioned, use the lower value as ac_capacity_mw (the grid limitation becomes the effective AC capacity)
 - Return valid JSON only, no explanations
 
 Document text:
@@ -147,53 +149,15 @@ ${documentText.substring(0, 15000)}`;
     try {
       const response = await invokeLLM({
         messages: [
-          { role: "system", content: "You are a technical data extraction assistant. Extract information accurately and return valid JSON only." },
+          { role: "system", content: "You are a technical data extraction assistant. Extract information accurately and return valid JSON only. Always respond with a JSON object, no markdown formatting or code blocks." },
           { role: "user", content: prompt }
         ],
         response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "performance_parameters",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                dc_capacity_mw: { type: ["string", "null"] },
-                ac_capacity_mw: { type: ["string", "null"] },
-                module_model: { type: ["string", "null"] },
-                module_power_watts: { type: ["string", "null"] },
-                module_count: { type: ["integer", "null"] },
-                inverter_model: { type: ["string", "null"] },
-                inverter_power_kw: { type: ["string", "null"] },
-                inverter_count: { type: ["integer", "null"] },
-                tracking_type: { type: ["string", "null"] },
-                tilt_angle_degrees: { type: ["string", "null"] },
-                azimuth_degrees: { type: ["string", "null"] },
-                latitude: { type: ["string", "null"] },
-                longitude: { type: ["string", "null"] },
-                site_name: { type: ["string", "null"] },
-                elevation_m: { type: ["string", "null"] },
-                timezone: { type: ["string", "null"] },
-                system_losses_percent: { type: ["string", "null"] },
-                degradation_rate_percent: { type: ["string", "null"] },
-                availability_percent: { type: ["string", "null"] },
-                soiling_loss_percent: { type: ["string", "null"] },
-                weather_file_url: { type: ["string", "null"] },
-                ghi_annual_kwh_m2: { type: ["string", "null"] },
-                dni_annual_kwh_m2: { type: ["string", "null"] },
-                temperature_ambient_c: { type: ["string", "null"] },
-                p50_generation_gwh: { type: ["string", "null"] },
-                p90_generation_gwh: { type: ["string", "null"] },
-                capacity_factor_percent: { type: ["string", "null"] },
-                specific_yield_kwh_kwp: { type: ["string", "null"] },
-                notes: { type: ["string", "null"] }
-              },
-              required: [],
-              additionalProperties: false
-            }
-          }
+          type: "json_object"
         }
       });
+      
+      console.log(`[Performance Extractor] LLM response received`);
 
       if (!response.choices || response.choices.length === 0) {
         console.log(`[Performance Extractor] No choices returned from LLM`);
