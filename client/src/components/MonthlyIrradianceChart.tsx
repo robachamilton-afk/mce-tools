@@ -81,10 +81,9 @@ export function MonthlyIrradianceChart({ data }: MonthlyIrradianceChartProps) {
             ))}
 
             {/* Bars */}
-            <div className="absolute inset-0 flex items-end justify-around gap-1">
+            <div className="absolute inset-0 flex items-end justify-around gap-2">
               {data.map((month, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full flex gap-0.5 items-end justify-center">
+                <div key={idx} className="flex-1 flex gap-0.5 items-end justify-center h-full">
                     {/* GHI bar */}
                     <div
                       className="flex-1 bg-gradient-to-t from-yellow-600 to-yellow-400 rounded-t transition-all hover:opacity-80 cursor-pointer group relative"
@@ -111,7 +110,6 @@ export function MonthlyIrradianceChart({ data }: MonthlyIrradianceChartProps) {
                         DNI: {month.dni.toFixed(1)} kWh/m²
                       </div>
                     </div>
-                  </div>
                 </div>
               ))}
             </div>

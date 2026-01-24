@@ -45,6 +45,17 @@ export default function PerformanceValidation() {
     { enabled: !!projectDbName }
   );
 
+  // Fetch weather data (uploaded or free fallback)
+  // TODO: Extract location from project data - for now using hardcoded test location
+  const { data: weatherData } = trpc.weatherFiles.getWeatherData.useQuery(
+    { 
+      projectDbName: projectDbName || "",
+      latitude: 19.638,  // TODO: Get from project location
+      longitude: 56.884, // TODO: Get from project location
+    },
+    { enabled: !!projectDbName }
+  );
+
   // Fetch performance parameters to check what data is available
   const { data: perfParams } = trpc.performanceParams.getByProject.useQuery(
     { projectDbName: projectDbName || "" },
@@ -56,6 +67,7 @@ export default function PerformanceValidation() {
   const perfParamsArray = perfParams as any[] | undefined;
   const hasWeatherFile = weatherFilesArray && weatherFilesArray.length > 0;
   const hasPerfParams = perfParamsArray && perfParamsArray.length > 0;
+  const hasWeatherData = !!weatherData;
   
   // Refetch validations when weather file is uploaded
   const utils = trpc.useUtils();
@@ -155,14 +167,51 @@ export default function PerformanceValidation() {
         </Alert>
         
         {/* Monthly Irradiance Chart */}
-        {hasWeatherFile && weatherFilesArray[0].monthly_irradiance && (
-          <MonthlyIrradianceChart 
-            data={weatherFilesArray[0].monthly_irradiance.map((m: any) => ({
-              month: m.monthName || m.month,
-              ghi: m.ghi_kwh_m2 || m.ghi || 0,
-              dni: m.dni_kwh_m2 || m.dni || 0,
-            }))}
-          />
+        {hasWeatherData && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CloudSun className="h-5 w-5 text-yellow-500" />
+                  <CardTitle>Monthly Irradiance</CardTitle>
+                </div>
+                <div className="flex items-center gap-2">
+                  {weatherData.source === 'free' ? (
+                    <>
+                      <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                        Free Data Source
+                      </Badge>
+                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
+                        Open-Meteo API
+                      </Badge>
+                    </>
+                  ) : (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20">
+                      Project-Specific Data
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              {weatherData.source === 'free' && (
+                <CardDescription className="flex items-start gap-2 mt-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                  <span>
+                    Using free weather data from Open-Meteo. For higher accuracy, upload a TMY file or{' '}
+                    <span className="text-blue-400 font-medium">purchase premium data</span> (PVGIS license coming soon).
+                  </span>
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent>
+              <MonthlyIrradianceChart 
+                data={weatherData.monthlyData.map((m: any) => ({
+                  month: m.monthName || m.month,
+                  ghi: m.ghi_kwh_m2 || m.ghi || 0,
+                  dni: m.dni_kwh_m2 || m.dni || 0,
+                }))}
+              />
+            </CardContent>
+          </Card>
         )}
         
         {/* Weather file upload */}

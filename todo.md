@@ -954,3 +954,12 @@
 - [x] Add columns to db-project-schema.sql for new projects
 - [ ] Test irradiance chart displaying after consolidation
 - [ ] Verify performance parameter extraction is running during consolidation
+
+## Weather Data & Visualization Improvements
+- [x] Fix weather chart bar height display bug (bars sitting at zero despite having data)
+- [x] Add free weather API integration (Open-Meteo or NASA POWER) for fallback data
+- [x] Implement location-based weather data fetching when no file uploaded
+- [x] Add data source indicator badges (Free Data vs Project-Specific Data)
+- [x] Add upgrade CTA messaging for premium weather data (PVGIS license)
+- [ ] Design future "Purchase Data" workflow UI
+- [x] Test chart with both uploaded files and free API data

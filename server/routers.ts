@@ -1182,6 +1182,60 @@ Synthesized narrative:`;
           throw new Error(`Failed to upload weather file: ${error.message}`);
         }
       }),
+
+    // Get weather data (uploaded or free fallback)
+    getWeatherData: protectedProcedure
+      .input(z.object({
+        projectDbName: z.string(),
+        latitude: z.number().optional(),
+        longitude: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        const projectDb = mysql.createPool({
+          host: '127.0.0.1',
+          user: 'root',
+          database: input.projectDbName,
+        });
+
+        try {
+          // Check for uploaded weather file with processed data
+          const [rows] = await projectDb.execute(
+            `SELECT * FROM weather_files 
+             WHERE is_active = 1 AND monthly_irradiance IS NOT NULL 
+             ORDER BY created_at DESC LIMIT 1`
+          );
+          
+          const uploadedFile = (rows as any[])[0];
+          
+          if (uploadedFile && uploadedFile.monthly_irradiance) {
+            // Return uploaded file data
+            await projectDb.end();
+            return {
+              source: 'uploaded' as const,
+              monthlyData: typeof uploadedFile.monthly_irradiance === 'string'
+                ? JSON.parse(uploadedFile.monthly_irradiance)
+                : uploadedFile.monthly_irradiance,
+              annualGHI: uploadedFile.annual_ghi_kwh_m2,
+              annualDNI: uploadedFile.annual_dni_kwh_m2,
+              fileName: uploadedFile.file_name,
+            };
+          }
+          
+          await projectDb.end();
+          
+          // Fall back to free weather data if location available
+          if (input.latitude !== undefined && input.longitude !== undefined) {
+            const { fetchFreeWeatherData } = await import('./free-weather-service');
+            const freeData = await fetchFreeWeatherData(input.latitude, input.longitude);
+            return freeData;
+          }
+          
+          return null;
+        } catch (error: any) {
+          await projectDb.end();
+          throw new Error(`Failed to get weather data: ${error.message}`);
+        }
+      }),
   }),
 });
 
