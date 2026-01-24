@@ -67,18 +67,22 @@ export function createMainDbPool() {
 }
 
 /**
- * Create a connection to a project-specific database
+ * Create a connection to the main database (for project queries)
+ * Note: Projects now use table prefixes instead of separate databases
  */
-export async function createProjectDbConnection(projectDbName: string) {
-  const config = getDbConfig(projectDbName);
+export async function createProjectDbConnection(projectDbName?: string) {
+  // Always connect to main database - projectDbName parameter kept for compatibility
+  const config = getDbConfig();
   return await mysql.createConnection(config);
 }
 
 /**
- * Create a connection pool to a project-specific database
+ * Create a connection pool to the main database (for project queries)
+ * Note: Projects now use table prefixes instead of separate databases
  */
-export function createProjectDbPool(projectDbName: string) {
-  const config = getDbConfig(projectDbName);
+export function createProjectDbPool(projectDbName?: string) {
+  // Always connect to main database - projectDbName parameter kept for compatibility
+  const config = getDbConfig();
   return mysql.createPool(config);
 }
 

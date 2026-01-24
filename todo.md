@@ -1200,3 +1200,18 @@
 - [x] Create automated database initialization for production deployments
 - [x] Fix production database connection (respect DATABASE_URL env var)
 - [x] Fix all database references for production (project-db-provisioner, delete operations)
+
+## Architecture Refactoring (Production Fix)
+- [ ] Design table prefix architecture (replace per-project databases)
+- [ ] Update database schema and provisioning logic
+- [x] Refactor all queries to use prefixed tables (using view layer instead)
+- [ ] Test create/delete operations
+- [ ] Migrate existing development data
+
+## Data Sovereignty & Deletion (Future Enhancement)
+- [ ] Implement soft delete with configurable retention period
+- [ ] Create hard delete process with audit trail
+- [ ] Add deletion_audit table with cryptographic verification
+- [ ] Build data export functionality (GDPR compliance)
+- [ ] Create deletion verification API endpoint
+- [ ] Generate compliance certificates for deletions

@@ -139,15 +139,13 @@ export async function createProject(
     createdByUserId,
   });
 
-  // Provision the per-project database with schema
-  const { provisionProjectDatabase } = await import("./project-db-provisioner");
-  const { getProjectDbProvisionConfig } = await import("./db-connection");
-  const config = getProjectDbProvisionConfig(dbName);
-  await provisionProjectDatabase(config);
+  // Get the inserted project ID
+  const projectId = result.insertId;
 
-  // Initialize project database schema (creates tables if missing)
-  const { initializeProjectDatabase } = await import("./db-init");
-  await initializeProjectDatabase(dbName);
+  // Provision tables for the project (with prefix proj_{id}_)
+  const { provisionProjectTables, getTableProvisionConfig } = await import("./project-table-provisioner");
+  const config = getTableProvisionConfig(projectId);
+  await provisionProjectTables(config);
   console.log(`[Projects] ✓ Database ${dbName} initialized`);
 
   return result;
