@@ -220,27 +220,30 @@ export async function uploadDocument(
   uploadedBy: number
 ): Promise<{ id: string; fileName: string; filePath: string }> {
   const mysql = await import('mysql2/promise');
+  const { getDbConfig } = await import('./db-connection');
   
-  // Get project dbName from main database
-  const dbUrl = process.env.DATABASE_URL || "mysql://root@127.0.0.1:3306/ingestion_engine_main";
-  const mainConn = await mysql.createConnection(dbUrl);
-  const [rows] = await mainConn.execute('SELECT dbName FROM projects WHERE id = ?', [projectId]);
+  // Get project from main database
+  const mainConfig = getDbConfig();
+  const mainConn = await mysql.createConnection(mainConfig);
+  const [rows] = await mainConn.execute('SELECT id FROM projects WHERE id = ?', [projectId]);
   await mainConn.end();
   
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new Error(`Project ${projectId} not found`);
   }
-  const projectDbName = (rows[0] as any).dbName;
   
   // Save file to disk
   const metadata = await saveDocument(parseInt(projectId), fileBuffer, fileName, documentType);
   
-  // Save metadata to database using raw mysql2 connection
-  const connection = await mysql.createConnection(dbUrl.replace(/\/[^/]*$/, `/${projectDbName}`));
+  // Save metadata to database using table-prefix architecture
+  const projectConfig = getDbConfig();
+  const connection = await mysql.createConnection(projectConfig);
   
   try {
+    // Use table prefix for project-specific documents table
+    const tableName = `proj_${projectId}_documents`;
     await connection.execute(
-      `INSERT INTO documents (id, fileName, filePath, fileSizeBytes, fileHash, documentType, status)
+      `INSERT INTO ${tableName} (id, fileName, filePath, fileSizeBytes, fileHash, documentType, status)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [metadata.id, fileName, metadata.filePath, fileSize, metadata.fileHash, documentType, 'Uploaded']
     );

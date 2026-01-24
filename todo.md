@@ -1230,6 +1230,7 @@
 - [x] Fix all TypeScript compilation errors from refactoring
 
 ## Bug Fixes - Post Refactoring (Jan 24, 2026)
+- [x] Fix document upload SSL error (was database connection in uploadDocument function, not S3)
 - [x] Fix factId error during project creation (foreign key data type mismatch: CHAR vs VARCHAR)
 - [x] Fix document upload SSL connection error (added minVersion: 'TLSv1.2' for TiDB compatibility)
 - [x] Use correct SSL configuration format: { minVersion: 'TLSv1.2', rejectUnauthorized: true }
