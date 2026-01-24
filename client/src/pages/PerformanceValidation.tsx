@@ -156,7 +156,13 @@ export default function PerformanceValidation() {
         
         {/* Monthly Irradiance Chart */}
         {hasWeatherFile && weatherFilesArray[0].monthly_irradiance && (
-          <MonthlyIrradianceChart data={weatherFilesArray[0].monthly_irradiance} />
+          <MonthlyIrradianceChart 
+            data={weatherFilesArray[0].monthly_irradiance.map((m: any) => ({
+              month: m.monthName || m.month,
+              ghi: m.ghi_kwh_m2 || m.ghi || 0,
+              dni: m.dni_kwh_m2 || m.dni || 0,
+            }))}
+          />
         )}
         
         {/* Weather file upload */}

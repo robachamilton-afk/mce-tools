@@ -292,7 +292,7 @@ export interface ParsedWeatherData {
  */
 export function parseWeatherFile(csvContent: string, fileName: string): ParsedWeatherData | null {
   try {
-    const lines = csvContent.split('\\n').filter(line => line.trim());
+    const lines = csvContent.split('\n').filter(line => line.trim());
     
     if (lines.length < 10) {
       console.log('[Weather Parser] File too short to be valid weather data');
