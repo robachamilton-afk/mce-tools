@@ -1,4 +1,3 @@
-import { useParams } from "wouter";
 import React from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +18,7 @@ import {
 } from "recharts";
 import { AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Zap, Sun, Gauge, ArrowLeft, CloudSun, FileText, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { WeatherFileUpload } from "@/components/WeatherFileUpload";
 import { MonthlyIrradianceChart } from "@/components/MonthlyIrradianceChart";
 
@@ -297,13 +296,89 @@ export default function PerformanceValidation() {
 
   return (
     <div className="container py-8 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Performance Validation</h1>
-        <p className="text-muted-foreground mt-2">
-          Independent solar farm performance analysis using NREL PySAM
-        </p>
+      {/* Header with back navigation */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Performance Validation</h1>
+          <p className="text-muted-foreground mt-2">
+            Independent solar farm performance analysis using NREL PySAM
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => navigate(`/project-dashboard?projectId=${projectId}`)}
+            variant="outline"
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </Button>
+          <Button
+            onClick={() => {
+              if (projectDbName && projectId) {
+                runValidation.mutate({
+                  projectId: parseInt(projectId),
+                  projectDbName
+                });
+              }
+            }}
+            disabled={runValidation.isPending}
+            className="gap-2"
+          >
+            <Play className="h-4 w-4" />
+            {runValidation.isPending ? 'Running Validation...' : 'Run Performance Validation'}
+          </Button>
+        </div>
       </div>
+
+      {/* Monthly Irradiance Chart - Always show if weather data exists */}
+      {hasWeatherData && weatherData && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CloudSun className="h-5 w-5 text-yellow-500" />
+                <CardTitle>Monthly Irradiance</CardTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                {weatherData.source === 'free' ? (
+                  <>
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                      Free Data Source
+                    </Badge>
+                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
+                      Open-Meteo API
+                    </Badge>
+                  </>
+                ) : (
+                  <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20">
+                    Project-Specific Data
+                  </Badge>
+                )}
+              </div>
+            </div>
+            {weatherData.source === 'free' && (
+              <CardDescription className="flex items-start gap-2 mt-2">
+                <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                <span>
+                  Using free weather data from Open-Meteo. For higher accuracy, upload a TMY file or{' '}
+                  <span className="text-blue-400 font-medium">purchase premium data</span> (PVGIS license coming soon).
+                </span>
+              </CardDescription>
+            )}
+          </CardHeader>
+          <CardContent>
+            <MonthlyIrradianceChart 
+              data={weatherData.monthlyData.map((m: any) => ({
+                month: m.monthName || m.month,
+                ghi: m.ghi_kwh_m2 || m.ghi || 0,
+                dni: m.dni_kwh_m2 || m.dni || 0,
+                dhi: m.dhi_kwh_m2 || m.dhi || 0,
+              }))}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Red Flag Alert */}
       {latestValidation.flag_triggered === 1 && (

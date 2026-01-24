@@ -169,11 +169,16 @@ export async function runPerformanceValidation(
   const poaAnnual = ghiAnnual * poaMultiplier;
   
   // PVWatts-style calculation
-  const moduleEfficiency = 0.21;
+  // The DC capacity rating is measured at Standard Test Conditions (STC): 1000 W/m² irradiance
+  // Energy = DC Capacity (kW) × Annual POA Irradiance (kWh/m²) × Performance Ratio / STC Irradiance (1000 W/m² = 1 kW/m²)
+  // This gives us: kW × (kWh/m²) / (kW/m²) = kWh
   const performanceRatio = (1 - totalLosses / 100) * (availability / 100);
   
   // DC energy before inverter clipping
-  const dcEnergyGwh = (dcCapacityMw * 1000) * poaAnnual * moduleEfficiency * performanceRatio / 1e6;
+  // Formula: DC_kW × POA_annual_kWh_per_m2 × PR / 1 kW_per_m2
+  // Example: 300,000 kW × 2968 kWh/m² × 0.82 / 1 = 730,176,000 kWh = 730 GWh
+  const dcEnergyKwh = (dcCapacityMw * 1000) * poaAnnual * performanceRatio;
+  const dcEnergyGwh = dcEnergyKwh / 1e6;
   
   // AC energy after inverter clipping
   const dcAcRatio = dcCapacityMw / acCapacityMw;
