@@ -4,7 +4,7 @@ import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, CheckCircle2, FileText, MapPin, Zap, Settings, ArrowLeft, AlertTriangle, Play, TrendingUp, TrendingDown } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileText, MapPin, Zap, Settings, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -23,16 +23,6 @@ export function PerformanceParameters() {
     { projectDbName: projectDbName || '' },
     { enabled: !!projectDbName }
   );
-  
-  // Run validation mutation
-  const runValidation = trpc.performanceParams.runValidation.useMutation({
-    onSuccess: (data) => {
-      console.log('Validation complete:', data);
-    },
-    onError: (error) => {
-      console.error('Validation failed:', error);
-    }
-  });
 
   const paramsArray = Array.isArray(parameters) ? parameters : [];
   const latestParams: any = paramsArray.length > 0 ? paramsArray[0] : null;
@@ -129,21 +119,6 @@ export function PerformanceParameters() {
           <Badge className={`${confidenceColor} text-white`}>
             {confidenceLevel} CONFIDENCE ({confidencePercent}%)
           </Badge>
-          <Button
-            onClick={() => {
-              if (projectDbName && projectId) {
-                runValidation.mutate({
-                  projectId: parseInt(projectId),
-                  projectDbName
-                });
-              }
-            }}
-            disabled={runValidation.isPending}
-            className="gap-2"
-          >
-            <Play className="h-4 w-4" />
-            {runValidation.isPending ? 'Running...' : 'Run Validation'}
-          </Button>
           <Button
             onClick={() => navigate(`/project-dashboard?projectId=${projectId}`)}
             variant="outline"
@@ -248,99 +223,6 @@ export function PerformanceParameters() {
         </CardContent>
       </Card>
 
-      {/* Validation Results */}
-      {runValidation.data && (
-        <Card className="mb-6 border-blue-500/30 bg-blue-500/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-blue-500" />
-              Performance Validation Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Main Results */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-lg bg-background/50">
-                <div className="text-sm text-muted-foreground mb-1">Calculated Generation</div>
-                <div className="text-2xl font-bold">{runValidation.data.result.annual_generation_gwh} GWh/year</div>
-                <div className="text-sm text-muted-foreground mt-1">
-                  Capacity Factor: {runValidation.data.result.capacity_factor_percent}%
-                </div>
-              </div>
-              
-              {runValidation.data.result.contractor_claim_gwh && (
-                <>
-                  <div className="p-4 rounded-lg bg-background/50">
-                    <div className="text-sm text-muted-foreground mb-1">Contractor Claim</div>
-                    <div className="text-2xl font-bold">{runValidation.data.result.contractor_claim_gwh} GWh/year</div>
-                  </div>
-                  
-                  <div className="p-4 rounded-lg bg-background/50">
-                    <div className="text-sm text-muted-foreground mb-1">Variance</div>
-                    <div className={`text-2xl font-bold flex items-center gap-2 ${
-                      runValidation.data.result.flag_triggered ? 'text-red-500' : 'text-green-500'
-                    }`}>
-                      {parseFloat(runValidation.data.result.variance_percent || '0') > 0 ? (
-                        <TrendingUp className="h-6 w-6" />
-                      ) : (
-                        <TrendingDown className="h-6 w-6" />
-                      )}
-                      {Math.abs(parseFloat(runValidation.data.result.variance_percent || '0')).toFixed(1)}%
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {runValidation.data.result.variance_gwh} GWh
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-            
-            {/* Assumptions */}
-            {runValidation.data.result.assumptions && runValidation.data.result.assumptions.length > 0 && (
-              <div className="space-y-2">
-                <div className="font-medium text-sm">Assumptions Used:</div>
-                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                  {runValidation.data.result.assumptions.map((assumption: string, i: number) => (
-                    <li key={i}>{assumption}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            
-            {/* Warnings */}
-            {runValidation.data.result.warnings && runValidation.data.result.warnings.length > 0 && (
-              <Alert className="border-yellow-500/30 bg-yellow-500/5">
-                <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                <AlertDescription>
-                  <div className="font-medium mb-2">Warnings:</div>
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    {runValidation.data.result.warnings.map((warning: string, i: number) => (
-                      <li key={i}>{warning}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
-            
-            {/* Confidence */}
-            <div className="flex items-center justify-between p-3 rounded-lg bg-background/50">
-              <div>
-                <div className="font-medium">Validation Confidence</div>
-                <div className="text-sm text-muted-foreground">
-                  {runValidation.data.result.parameters_extracted_count} extracted, {runValidation.data.result.parameters_assumed_count} assumed
-                </div>
-              </div>
-              <Badge className={`${
-                runValidation.data.result.confidence_level === 'HIGH' ? 'bg-green-500' :
-                runValidation.data.result.confidence_level === 'MEDIUM' ? 'bg-yellow-500' : 'bg-red-500'
-              } text-white`}>
-                {runValidation.data.result.confidence_level}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
       {/* Metadata */}
       <Card>
         <CardHeader>
