@@ -568,16 +568,12 @@ export const appRouter = router({
           throw new Error("Project not found or access denied");
         }
         
-        const { deleteProjectDatabase } = await import("./project-db-provisioner");
+        const { deleteProjectTables } = await import("./project-db-provisioner");
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
-        // Parse DATABASE_URL to get connection details
-        const { getProjectDbProvisionConfig } = await import("./db-connection");
-        const config = getProjectDbProvisionConfig(project.dbName);
-        
-        // Delete the project database
-        await deleteProjectDatabase(config);
+        // Delete all project tables (proj_{id}_*)
+        await deleteProjectTables(input.projectId);
         
         // Delete project record from main database
         await db.execute(

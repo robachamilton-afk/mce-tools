@@ -11,9 +11,11 @@
 - [x] Implement project creation endpoint with per-project DB provisioning
 - [x] Implement project database schema deployment (auto-migration)
 - [x] Implement project listing and detail views
-- [ ] Implement project deletion with data cleanup
+- [x] Implement project deletion with data cleanup
 - [x] Create project management dashboard
 - [x] Refactor from separate databases to table-prefix architecture (prod compatibility)
+- [x] Fix database connection logic to use correct database in dev vs prod
+- [x] Implement foreign key constraint handling during table deletion
 
 ## Phase 3: Document Upload Interface
 - [x] Build document upload page with drag-and-drop support

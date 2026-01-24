@@ -79,33 +79,83 @@ export async function provisionProjectDatabase(config: ProjectDbConfig): Promise
 }
 
 /**
- * Deletes a project database (used for cleanup/archival)
+ * Deletes project tables (used for cleanup/archival)
+ * NOTE: With table-prefix architecture, we drop tables instead of databases
+ * @param projectId - The numeric project ID used to identify tables (proj_{id}_*)
  */
-export async function deleteProjectDatabase(config: ProjectDbConfig): Promise<boolean> {
+export async function deleteProjectTables(projectId: number): Promise<boolean> {
   let connection: mysql.Connection | null = null;
 
   try {
+    // Use the same database URL logic as getDb()
+    const getDatabaseUrl = () => {
+      if (process.env.NODE_ENV === 'production' && process.env.DATABASE_URL) {
+        return process.env.DATABASE_URL;
+      }
+      return "mysql://root@127.0.0.1:3306/ingestion_engine_main";
+    };
+    
+    const dbUrl = getDatabaseUrl();
+    const url = new URL(dbUrl);
+    const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    
+    const dbName = url.pathname.substring(1); // Remove leading '/'
+    
     connection = await mysql.createConnection({
-      host: config.dbHost,
-      port: config.dbPort,
-      user: config.dbUser,
-      password: config.dbPassword,
-      ssl: {
-        rejectUnauthorized: false,
-      },
+      host: url.hostname,
+      port: parseInt(url.port) || 3306,
+      user: url.username,
+      password: url.password,
+      database: dbName,
+      ...(isLocal ? {} : { ssl: { rejectUnauthorized: true } }),
     });
 
-    await connection.execute(`DROP DATABASE IF EXISTS \`${config.dbName}\``);
-    console.log(`[ProjectDB] Deleted database: ${config.dbName}`);
+    // Get all tables with the project prefix
+    const prefix = `proj_${projectId}_`;
+    const [tables] = await connection.execute(
+      "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME LIKE ?",
+      [dbName, `${prefix}%`]
+    ) as any;
+
+    console.log(`[ProjectDB] Found ${tables.length} tables to delete for project ${projectId}`);
+
+    // Disable foreign key checks to avoid constraint errors
+    await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
+    
+    // Drop each table
+    for (const row of tables) {
+      const tableName = row.TABLE_NAME;
+      await connection.execute(`DROP TABLE IF EXISTS \`${tableName}\``);
+      console.log(`[ProjectDB] ✓ Dropped table: ${tableName}`);
+    }
+    
+    // Re-enable foreign key checks
+    await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+
+    console.log(`[ProjectDB] Successfully deleted all tables for project ${projectId}`);
     return true;
   } catch (error) {
-    console.error(`[ProjectDB] Failed to delete database: ${config.dbName}`, error);
+    console.error(`[ProjectDB] Failed to delete tables for project ${projectId}`, error);
     throw error;
   } finally {
     if (connection) {
       await connection.end();
     }
   }
+}
+
+/**
+ * Legacy function kept for backward compatibility
+ * @deprecated Use deleteProjectTables(projectId) instead
+ */
+export async function deleteProjectDatabase(config: ProjectDbConfig): Promise<boolean> {
+  // Extract project ID from dbName (format: proj_1_timestamp)
+  const match = config.dbName.match(/^proj_(\d+)_/);
+  if (!match) {
+    throw new Error(`Invalid dbName format: ${config.dbName}`);
+  }
+  const projectId = parseInt(match[1]);
+  return await deleteProjectTables(projectId);
 }
 
 /**
@@ -155,8 +205,10 @@ export async function verifyProjectDatabase(config: ProjectDbConfig): Promise<bo
 }
 
 /**
- * Gets a drizzle instance for a project database
- * Parses DATABASE_URL and replaces the database name
+ * Gets a drizzle instance for the main database
+ * NOTE: With table-prefix architecture, all projects share the main database
+ * Tables are prefixed with proj_{id}_ instead of using separate databases
+ * @param dbName - Legacy parameter, no longer used (kept for API compatibility)
  */
 export async function getProjectDb(dbName: string) {
   const { drizzle } = await import("drizzle-orm/mysql2");
@@ -165,11 +217,8 @@ export async function getProjectDb(dbName: string) {
     throw new Error("DATABASE_URL is not set");
   }
   
-  // Parse the DATABASE_URL and replace the database name
-  const url = new URL(process.env.DATABASE_URL);
-  url.pathname = `/${dbName}`;
-  
-  return drizzle(url.toString());
+  // Return connection to main database (all project tables are prefixed)
+  return drizzle(process.env.DATABASE_URL);
 }
 
 /**
