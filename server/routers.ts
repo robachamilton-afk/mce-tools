@@ -208,39 +208,76 @@ export const appRouter = router({
           // Process asynchronously in background
           (async () => {
             try {
-              // Read file
-              const fileBuffer = await fs.readFile(reassembledPath);
-              console.log(`[Chunked Upload] File loaded: ${fileBuffer.length} bytes`);
-              
-              // Determine document type
+              // Determine document type (without loading file into memory)
               let finalDocumentType = metadata.documentType;
               if (metadata.documentType === "AUTO") {
                 const { detectDocumentType } = await import("./document-type-detector");
-                const tempPath = path.join("/tmp", `temp_${Date.now()}_${metadata.fileName}`);
-                await fs.writeFile(tempPath, fileBuffer);
                 try {
-                  finalDocumentType = await detectDocumentType(tempPath, metadata.fileName);
+                  finalDocumentType = await detectDocumentType(reassembledPath, metadata.fileName);
                   console.log(`AI detected document type: ${finalDocumentType}`);
-                } finally {
-                  await fs.unlink(tempPath).catch(() => {});
+                } catch (err) {
+                  console.error(`[Chunked Upload] Document type detection failed:`, err);
+                  finalDocumentType = "OTHER";
                 }
               }
               
-              // Upload document
-              console.log(`[Chunked Upload] Uploading document to storage...`);
-              const document = await uploadDocument(
-                metadata.projectId,
-                metadata.fileName,
-                fileBuffer,
-                metadata.fileType,
-                metadata.fileSize,
-                finalDocumentType as any,
-                metadata.userId
+              // Move file directly to storage without loading into memory
+              console.log(`[Chunked Upload] Moving file to storage...`);
+              const { v4: uuidv4 } = await import('uuid');
+              const crypto = await import('crypto');
+              const projectIdNum = parseInt(metadata.projectId);
+              
+              // Ensure project storage directory exists
+              const DATA_DIR = process.cwd() + "/data/projects";
+              const projectDir = path.join(DATA_DIR, `proj_${projectIdNum}`);
+              const documentsDir = path.join(projectDir, "documents");
+              await fs.mkdir(documentsDir, { recursive: true });
+              
+              // Generate document ID and move file
+              const docId = uuidv4();
+              const fileExtension = path.extname(metadata.fileName);
+              const storedFileName = `${docId}${fileExtension}`;
+              const finalPath = path.join(documentsDir, storedFileName);
+              await fs.rename(reassembledPath, finalPath);
+              console.log(`[Chunked Upload] File moved to: ${finalPath}`);
+              
+              // Calculate hash using streaming (memory efficient)
+              const hashStream = crypto.createHash('sha256');
+              const readStream = (await import('fs')).createReadStream(finalPath);
+              for await (const chunk of readStream) {
+                hashStream.update(chunk);
+              }
+              const fileHash = hashStream.digest('hex');
+              console.log(`[Chunked Upload] File hash: ${fileHash}`);
+              
+              // Save to database
+              const mysql = await import('mysql2/promise');
+              const { getDbConfig } = await import('./db-connection');
+              const mainConfig = getDbConfig();
+              const mainConn = await mysql.createConnection(mainConfig as any);
+              const [rows] = await mainConn.execute('SELECT dbName FROM projects WHERE id = ?', [metadata.projectId]) as any;
+              await mainConn.end();
+              
+              if (!rows || rows.length === 0) {
+                throw new Error(`Project ${metadata.projectId} not found`);
+              }
+              
+              const dbName = rows[0].dbName;
+              const projectConfig = { ...(mainConfig as object), database: dbName };
+              const projectConn = await mysql.createConnection(projectConfig as any);
+              
+              await projectConn.execute(
+                `INSERT INTO documents (id, project_id, file_name, file_path, file_size, file_hash, document_type, uploaded_by, uploaded_at, status) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'uploaded')`,
+                [docId, projectIdNum, metadata.fileName, finalPath, metadata.fileSize, fileHash, finalDocumentType, metadata.userId]
               );
-              console.log(`[Chunked Upload] Document uploaded: ${document.id}`);
+              await projectConn.end();
+              
+              console.log(`[Chunked Upload] Document saved to database: ${docId}`);
+              
+              const document = { id: docId, fileName: metadata.fileName, filePath: finalPath };
 
               // Start processing
-              const projectIdNum = parseInt(metadata.projectId);
               const projectDb = createProjectDbPool(projectIdNum);
               
               try {
