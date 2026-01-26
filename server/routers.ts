@@ -206,6 +206,7 @@ export const appRouter = router({
           // Process asynchronously in background
           (async () => {
             try {
+              console.log(`[Chunked Upload] === BACKGROUND PROCESSING STARTED ===`);
               // Determine document type (without loading file into memory)
               let finalDocumentType = metadata.documentType;
               if (metadata.documentType === "AUTO") {
@@ -356,8 +357,11 @@ export const appRouter = router({
               console.log(`[Chunked Upload] Cleaning up S3 temp files for: ${input.uploadId}`);
               // Note: S3 cleanup is best-effort, files will be cleaned up by lifecycle policy if this fails
             } catch (error) {
-              console.error(`[Chunked Upload] ✗ Background processing failed:`, error);
+              console.error(`[Chunked Upload] === BACKGROUND PROCESSING FAILED ===`);
+              console.error(`[Chunked Upload] Error:`, error);
+              console.error(`[Chunked Upload] Error message:`, error instanceof Error ? error.message : String(error));
               console.error(`[Chunked Upload] Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
+              console.error(`[Chunked Upload] Error name:`, error instanceof Error ? error.name : 'Unknown');
               // Clean up local temp on error
               await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
               // S3 cleanup will happen via lifecycle policy
