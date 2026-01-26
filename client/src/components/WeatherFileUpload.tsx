@@ -29,9 +29,9 @@ export function WeatherFileUpload({ projectId, onUploadComplete }: WeatherFileUp
         return;
       }
       
-      // Validate file size (max 50MB)
-      if (file.size > 50 * 1024 * 1024) {
-        setErrorMessage('File too large. Maximum size is 50MB.');
+      // Validate file size (max 250MB)
+      if (file.size > 250 * 1024 * 1024) {
+        setErrorMessage('File too large. Maximum size is 250MB.');
         setUploadStatus('error');
         return;
       }
@@ -121,7 +121,7 @@ export function WeatherFileUpload({ projectId, onUploadComplete }: WeatherFileUp
             <label htmlFor="weather-file-input" className="cursor-pointer">
               <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-sm font-medium mb-1">Click to upload weather file</p>
-              <p className="text-xs text-muted-foreground">CSV, EPW, TM2, or TM3 (max 50MB)</p>
+              <p className="text-xs text-muted-foreground">CSV, EPW, TM2, or TM3 (max 250MB)</p>
             </label>
           ) : (
             <div className="flex items-center justify-center gap-2">

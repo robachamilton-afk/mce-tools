@@ -1276,3 +1276,9 @@
 ## Consolidation Issues (Jan 26, 2026 - Session 5)
 - [x] Fix Process & Consolidate not updating existing location data (excluded lat/lon from COALESCE so location consolidation can overwrite)
 - [x] Improve AC capacity extraction to recognize grid connection limits (added explicit guidance in prompt to look for grid limits, export limits, POI capacity)
+
+
+## Large File Upload (Jan 26, 2026 - Session 6)
+- [x] Fix "unexpected JSON" error when uploading large files (increased Express body parser limit from 200MB to 250MB)
+- [x] Increase Express body parser limit to support up to 250MB uploads (updated server/_core/index.ts)
+- [x] Update frontend validation to handle large files gracefully (updated WeatherFileUpload.tsx from 50MB to 250MB limit)
