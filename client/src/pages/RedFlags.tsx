@@ -111,14 +111,14 @@ export default function RedFlags() {
 
   // Fetch project details to get dbName
   const { data: project, isLoading: isLoadingProject } = trpc.projects.get.useQuery(
-    { projectId: projectId! },
+    { projectId: String(projectId) },
     { enabled: !!projectId }
   );
 
-  // Fetch facts using dbName from project
+  // Fetch facts using numeric projectId
   const { data: facts, isLoading: isLoadingFacts, refetch } = trpc.facts.list.useQuery(
-    { projectId: project?.dbName || "" },
-    { enabled: !!project?.dbName }
+    { projectId: String(projectId) },
+    { enabled: !!projectId }
   );
 
   const isLoading = isLoadingProject || isLoadingFacts;
@@ -228,7 +228,7 @@ export default function RedFlags() {
 
   const handleAcknowledge = (riskId: number) => {
     updateFactMutation.mutate({
-      projectId: project?.dbName || "",
+      projectId: String(projectId),
       factId: riskId,
       status: "approved",
     });
@@ -236,7 +236,7 @@ export default function RedFlags() {
 
   const handleDismiss = (riskId: number) => {
     updateFactMutation.mutate({
-      projectId: project?.dbName || "",
+      projectId: String(projectId),
       factId: riskId,
       status: "rejected",
     });

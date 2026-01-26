@@ -359,7 +359,7 @@ export default function ProjectDashboard() {
                             className="flex-1 text-xs border-red-700 text-red-400 hover:bg-red-950"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setLocation(`/conflicts?projectId=${project.id}&projectDbName=${project.dbName}`);
+                              setLocation(`/conflicts?projectId=${project.id}`);
                             }}
                           >
                             <AlertTriangle className="mr-1 h-3 w-3" />
@@ -580,7 +580,7 @@ export default function ProjectDashboard() {
             <Button
               onClick={() => {
                 if (projectToDelete) {
-                  deleteMutation.mutate({ projectId: projectToDelete });
+                  deleteMutation.mutate({ projectId: String(projectToDelete) });
                 }
               }}
               className="bg-red-600 hover:bg-red-700 text-white"

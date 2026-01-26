@@ -1238,3 +1238,18 @@
 - [x] Fix extractProjectId() error in document upload (refactored db-connection.ts to accept numeric projectId instead of string prefix)
 
 - [x] Fix document processing never starting in production (fixed processing_jobs INSERT schema mismatch and listJobs query connection)
+
+- [ ] Fix Processing Status showing same data for all projects (query not filtering by project)
+- [ ] Verify document processing actually runs in production (not just showing old data)
+
+
+## Processing Status Fix (COMPLETED - Jan 26, 2026)
+- [x] Fix Processing Status showing same data for all projects (NaN projectId issue)
+- [x] Root cause: Frontend was passing project.dbName (string like "proj_150005") instead of numeric projectId
+- [x] Fixed by standardizing all projectId handling:
+  - Server endpoints now use z.string() for projectId input
+  - Frontend passes String(projectId) consistently
+  - Server uses parseInt(input.projectId) where numeric values needed
+- [x] Fixed processing_jobs INSERT to match project schema (stage/progress_percent columns)
+- [x] Fixed listJobs query to use createProjectDbConnection() instead of getProjectDb()
+- [x] Fixed all TypeScript type errors in db-connection.ts and document-service.ts

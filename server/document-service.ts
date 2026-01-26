@@ -224,7 +224,7 @@ export async function uploadDocument(
   
   // Get project from main database
   const mainConfig = getDbConfig();
-  const mainConn = await mysql.createConnection(mainConfig);
+  const mainConn = await mysql.createConnection(mainConfig as any);
   const [rows] = await mainConn.execute('SELECT id FROM projects WHERE id = ?', [projectId]);
   await mainConn.end();
   
@@ -237,7 +237,7 @@ export async function uploadDocument(
   
   // Save metadata to database using table-prefix architecture
   const projectConfig = getDbConfig();
-  const connection = await mysql.createConnection(projectConfig);
+  const connection = await mysql.createConnection(projectConfig as any);
   
   try {
     // Use table prefix for project-specific documents table

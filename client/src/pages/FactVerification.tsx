@@ -78,20 +78,20 @@ export default function FactVerification() {
 
   // Fetch project details to get dbName
   const { data: project, isLoading: isLoadingProject } = trpc.projects.get.useQuery(
-    { projectId: projectId! },
+    { projectId: String(projectId) },
     { enabled: !!projectId }
   );
 
-  // Fetch facts using dbName from project
+  // Fetch facts using numeric projectId
   const { data: facts, isLoading: isLoadingFacts, refetch } = trpc.facts.list.useQuery(
-    { projectId: project?.dbName || "" },
-    { enabled: !!project?.dbName }
+    { projectId: String(projectId) },
+    { enabled: !!projectId }
   );
 
   // Fetch pre-generated narratives
   const { data: preGeneratedNarratives } = trpc.facts.getNarratives.useQuery(
-    { projectId: project?.dbName || "" },
-    { enabled: !!project?.dbName }
+    { projectId: String(projectId) },
+    { enabled: !!projectId }
   );
 
   // Update narratives state when pre-generated narratives load
@@ -189,18 +189,18 @@ export default function FactVerification() {
   }
 
   const handleApprove = (factId: number) => {
-    if (!project?.dbName) return;
+    if (!projectId) return;
     updateFactMutation.mutate({
-      projectId: project.dbName,
+      projectId: String(projectId),
       factId,
       status: "approved",
     });
   };
 
   const handleReject = (factId: number) => {
-    if (!project?.dbName) return;
+    if (!projectId) return;
     updateFactMutation.mutate({
-      projectId: project.dbName,
+      projectId: String(projectId),
       factId,
       status: "rejected",
     });
@@ -213,10 +213,10 @@ export default function FactVerification() {
   };
 
   const handleSaveEdit = () => {
-    if (!selectedFact || !project?.dbName) return;
+    if (!selectedFact || !projectId) return;
     
     updateFactMutation.mutate({
-      projectId: project.dbName,
+      projectId: String(projectId),
       factId: selectedFact.id,
       status: "approved",
       value: editedValue,
@@ -396,7 +396,7 @@ export default function FactVerification() {
                 onClick={() => {
                   if (!projectId) return;
                   toast.info("Starting consolidation...");
-                  consolidateMutation.mutate({ projectId });
+                  consolidateMutation.mutate({ projectId: String(projectId) });
                 }}
                 disabled={consolidateMutation.isPending}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white disabled:opacity-50"

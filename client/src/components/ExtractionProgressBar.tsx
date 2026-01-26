@@ -6,9 +6,8 @@ import { trpc } from '../lib/trpc';
 
 interface ExtractionProgressBarProps {
   documentId: string;
-  projectId: number;
-  onComplete?: () => void;
-}
+  projectId: string;
+  onComplete?: () => void;}
 
 interface ProgressStage {
   name: string;
@@ -39,7 +38,7 @@ export function ExtractionProgressBar({ documentId, projectId, onComplete }: Ext
 
   // Poll progress every 500ms
   const { data: progressData } = trpc.documents.getProgress.useQuery(
-    { projectId, documentId },
+    { projectId: String(projectId), documentId },
     {
       refetchInterval: status === 'processing' ? 500 : false,
       enabled: !!projectId && !!documentId,

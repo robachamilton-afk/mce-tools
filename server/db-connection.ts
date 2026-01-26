@@ -23,8 +23,9 @@ function parseDatabaseUrl(url: string) {
 /**
  * Get database connection configuration
  * Works in both development (local MySQL) and production (Manus DATABASE_URL)
+ * Returns either a connection string (for production) or config object (for development)
  */
-export function getDbConfig(databaseName?: string): string | object {
+export function getDbConfig(databaseName?: string): string | mysql.ConnectionOptions {
   const databaseUrl = process.env.DATABASE_URL;
 
   if (databaseUrl) {
@@ -55,7 +56,8 @@ export function getDbConfig(databaseName?: string): string | object {
  */
 export async function createMainDbConnection() {
   const config = getDbConfig();
-  return await mysql.createConnection(config);
+  // mysql2 accepts both string URLs and ConnectionOptions
+  return await mysql.createConnection(config as any);
 }
 
 /**
@@ -63,7 +65,8 @@ export async function createMainDbConnection() {
  */
 export function createMainDbPool() {
   const config = getDbConfig();
-  return mysql.createPool(config);
+  // mysql2 accepts both string URLs and PoolOptions
+  return mysql.createPool(config as any);
 }
 
 /**
@@ -73,7 +76,8 @@ export function createMainDbPool() {
  */
 export async function createProjectDbConnection(projectId?: number): Promise<any> {
   const config = getDbConfig();
-  const connection = await mysql.createConnection(config);
+  // mysql2 accepts both string URLs and ConnectionOptions
+  const connection = await mysql.createConnection(config as any);
   
   // If projectId provided, wrap with auto-prefixing
   if (projectId) {
@@ -90,7 +94,8 @@ export async function createProjectDbConnection(projectId?: number): Promise<any
  */
 export function createProjectDbPool(projectId?: number) {
   const config = getDbConfig();
-  const pool = mysql.createPool(config);
+  // mysql2 accepts both string URLs and PoolOptions
+  const pool = mysql.createPool(config as any);
   
   // If projectId provided, wrap with auto-prefixing
   if (projectId) {

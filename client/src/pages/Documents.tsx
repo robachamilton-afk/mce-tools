@@ -24,7 +24,7 @@ export function Documents() {
 
   // Fetch project details
   const { data: project, isLoading: projectLoading } = trpc.projects.get.useQuery(
-    { projectId: parseInt(projectId || "0") },
+    { projectId: projectId || "0" },
     { enabled: !!projectId && isAuthenticated }
   );
 

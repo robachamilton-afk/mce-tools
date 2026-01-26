@@ -32,38 +32,38 @@ export default function ProjectDetailDashboard() {
 
   // Fetch project details
   const { data: project, isLoading: isLoadingProject } = trpc.projects.get.useQuery(
-    { projectId: projectId! },
+    { projectId: String(projectId) },
     { enabled: !!projectId }
   );
 
   // Fetch insights count and confidence
   const { data: facts } = trpc.facts.list.useQuery(
-    { projectId: project?.dbName || "" },
-    { enabled: !!project?.dbName }
+    { projectId: String(projectId) },
+    { enabled: !!projectId }
   );
 
   // Fetch documents count
   const { data: documents } = trpc.documents.list.useQuery(
-    { projectId: project?.dbName || "" },
-    { enabled: !!project?.dbName }
+    { projectId: String(projectId) },
+    { enabled: !!projectId }
   );
 
   // Fetch processing jobs
   const { data: processingJobs } = trpc.processing.listJobs.useQuery(
-    { projectId: project?.dbName || "" },
-    { enabled: !!project?.dbName }
+    { projectId: String(projectId) },
+    { enabled: !!projectId }
   );
 
   // Fetch project overview narrative
   const { data: narratives } = trpc.facts.getNarratives.useQuery(
-    { projectId: project?.dbName || "" },
-    { enabled: !!project?.dbName }
+    { projectId: String(projectId) },
+    { enabled: !!projectId }
   );
 
   // Fetch performance parameters for location
   const { data: perfParams } = trpc.performanceParams.getByProject.useQuery(
-    { projectId: project?.id || "" },
-    { enabled: !!project?.dbName }
+    { projectId: String(projectId) },
+    { enabled: !!projectId }
   );
 
   // Calculate metrics

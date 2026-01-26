@@ -5,9 +5,8 @@ import { Card } from './ui/card';
 import { trpc } from '../lib/trpc';
 
 interface WeatherFileUploadProps {
-  projectId: number;
-  onUploadComplete?: () => void;
-}
+  projectId: string;
+  onUploadComplete?: () => void;}
 
 export function WeatherFileUpload({ projectId, onUploadComplete }: WeatherFileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -59,7 +58,7 @@ export function WeatherFileUpload({ projectId, onUploadComplete }: WeatherFileUp
 
         try {
           const result = await uploadMutation.mutateAsync({
-            projectId,
+            projectId: String(projectId),
             fileName: selectedFile.name,
             fileContent: base64Data,
           });

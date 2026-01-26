@@ -62,7 +62,7 @@ export default function DocumentUpload() {
 
   // Fetch project details
   const { data: project, isLoading: projectLoading } = trpc.projects.get.useQuery(
-    { projectId: projectId || 0 },
+    { projectId: String(projectId || 0) },
     { enabled: !!projectId && isAuthenticated }
   );
 

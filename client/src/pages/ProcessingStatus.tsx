@@ -46,15 +46,15 @@ export default function ProcessingStatus() {
 
   // Fetch project details to get dbName
   const { data: project, isLoading: isLoadingProject } = trpc.projects.get.useQuery(
-    { projectId: projectId! },
+    { projectId: String(projectId) },
     { enabled: !!projectId }
   );
 
-  // Fetch jobs using dbName from project
+  // Fetch jobs using numeric projectId
   const { data: jobs, isLoading: isLoadingJobs, refetch } = trpc.processing.listJobs.useQuery(
-    { projectId: project?.dbName || "" },
+    { projectId: String(projectId) },
     { 
-      enabled: !!project?.dbName,
+      enabled: !!projectId,
       refetchInterval: 3000, // Poll every 3 seconds for real-time updates
     }
   );
@@ -266,11 +266,11 @@ export default function ProcessingStatus() {
                           : "-"}
                       </TableCell>
                       <TableCell>
-                        {job.status === "failed" && project?.dbName && (
+                        {job.status === "failed" && projectId && (
                           <Button
                             size="sm"
                             onClick={() => retryJobMutation.mutate({ 
-                              projectId: project.dbName, 
+                              projectId: String(projectId), 
                               jobId: job.id 
                             })}
                             className="bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border border-orange-500/30"

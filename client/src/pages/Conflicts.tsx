@@ -41,7 +41,7 @@ export default function Conflicts() {
   const [mergedValue, setMergedValue] = useState("");
 
   const { data: conflicts, isLoading, refetch } = trpc.conflicts.list.useQuery(
-    { projectId: projectId || 0 },
+    { projectId: String(projectId || 0) },
     { enabled: !!projectId }
   );
 
@@ -61,7 +61,7 @@ export default function Conflicts() {
     
     if (confirm("Keep Insight A and delete Insight B?")) {
       resolveMutation.mutate({
-        projectId,
+        projectId: String(projectId),
         conflictId: conflict.id,
         resolution: "accept_a",
       });
@@ -73,7 +73,7 @@ export default function Conflicts() {
     
     if (confirm("Keep Insight B and delete Insight A?")) {
       resolveMutation.mutate({
-        projectId,
+        projectId: String(projectId),
         conflictId: conflict.id,
         resolution: "accept_b",
       });
@@ -91,7 +91,7 @@ export default function Conflicts() {
     
     if (confirm("Mark this conflict as ignored? Both insights will remain.")) {
       resolveMutation.mutate({
-        projectId,
+        projectId: String(projectId),
         conflictId: conflict.id,
         resolution: "ignore",
       });
@@ -102,7 +102,7 @@ export default function Conflicts() {
     if (!selectedConflict || !projectId) return;
     
     resolveMutation.mutate({
-      projectId,
+      projectId: String(projectId),
       conflictId: selectedConflict.id,
       resolution: "merge",
       mergedValue,
