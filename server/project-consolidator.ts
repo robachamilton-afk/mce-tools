@@ -324,14 +324,19 @@ export class ProjectConsolidator {
         );
 
         if (existing && existing.length > 0) {
-          // UPDATE existing record
+          // UPDATE existing record - only update non-null fields (merge new data with existing)
           const updatePairs = [];
           for (let i = 5; i < fields.length; i++) { // Skip id, project_id, source_document_id, confidence, extraction_method
-            updatePairs.push(`${fields[i]} = ${values[i]}`);
+            // Only update if the new value is not null (preserve existing values)
+            updatePairs.push(`${fields[i]} = COALESCE(${values[i]}, ${fields[i]})`);
           }
+          // Always update confidence and extraction_method to reflect latest extraction
+          updatePairs.push(`confidence = ${perfParams.confidence}`);
+          updatePairs.push(`extraction_method = '${perfParams.extraction_method}'`);
           await projectDb.execute(
             `UPDATE performance_parameters SET ${updatePairs.join(', ')}, updated_at = NOW() WHERE id = '${existing[0].id}'`
           );
+          console.log(`[Consolidator] Merged performance parameters with existing data (${fields.length - 5} fields updated)`);
         } else {
           // INSERT new record
           await projectDb.execute(
@@ -339,7 +344,7 @@ export class ProjectConsolidator {
           );
         }
 
-        console.log(`[Consolidator] Saved performance parameters (confidence: ${(perfParams.confidence * 100).toFixed(1)}%)`);
+
 
         // Check minimum requirements for performance model
         const hasLocation = perfParams.latitude && perfParams.longitude;
@@ -582,32 +587,25 @@ export class ProjectConsolidator {
         if (consolidated) {
           console.log(`[Consolidator] Consolidated location: ${consolidated.latitude}, ${consolidated.longitude} (source: ${consolidated.source})`);
 
-          // Update performance_parameters with consolidated location if not already set
-          const [existing]: any = await projectDb.execute(
-            `SELECT id FROM performance_parameters WHERE latitude IS NOT NULL LIMIT 1`
+          // Always update performance_parameters with highest-confidence location
+          const [anyParams]: any = await projectDb.execute(
+            `SELECT id FROM performance_parameters LIMIT 1`
           );
 
-          if (!existing || existing.length === 0) {
-            // No location in performance_parameters, insert or update
-            const [anyParams]: any = await projectDb.execute(
-              `SELECT id FROM performance_parameters LIMIT 1`
+          if (anyParams && anyParams.length > 0) {
+            // Update existing record with consolidated location (always overwrite with highest confidence)
+            await projectDb.execute(
+              `UPDATE performance_parameters SET latitude = '${consolidated.latitude}', longitude = '${consolidated.longitude}', confidence = ${consolidated.confidence}, extraction_method = 'location_consolidation' WHERE id = '${anyParams[0].id}'`
             );
-
-            if (anyParams && anyParams.length > 0) {
-              // Update existing record
-              await projectDb.execute(
-                `UPDATE performance_parameters SET latitude = '${consolidated.latitude}', longitude = '${consolidated.longitude}' WHERE id = '${anyParams[0].id}'`
-              );
-              console.log('[Consolidator] Updated performance_parameters with consolidated location');
-            } else {
-              // Create new record
-              const { v4: uuidv4 } = await import('uuid');
-              const paramId = uuidv4();
-              await projectDb.execute(
-                `INSERT INTO performance_parameters (id, project_id, latitude, longitude, confidence, extraction_method) VALUES ('${paramId}', ${this.projectId}, '${consolidated.latitude}', '${consolidated.longitude}', ${consolidated.confidence}, 'location_consolidation')`
-              );
-              console.log('[Consolidator] Created performance_parameters with consolidated location');
-            }
+            console.log(`[Consolidator] Updated performance_parameters with consolidated location from ${consolidated.source} (confidence: ${consolidated.confidence})`);
+          } else {
+            // Create new record
+            const { v4: uuidv4 } = await import('uuid');
+            const paramId = uuidv4();
+            await projectDb.execute(
+              `INSERT INTO performance_parameters (id, project_id, latitude, longitude, confidence, extraction_method) VALUES ('${paramId}', ${this.projectId}, '${consolidated.latitude}', '${consolidated.longitude}', ${consolidated.confidence}, 'location_consolidation')`
+            );
+            console.log(`[Consolidator] Created performance_parameters with consolidated location from ${consolidated.source} (confidence: ${consolidated.confidence})`);
           }
         }
       } else {

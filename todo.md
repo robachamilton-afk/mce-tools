@@ -1265,3 +1265,9 @@
 - [x] Fix Performance Params page not showing data despite weather file being processed (same projectId fix)
 - [x] Fix Financial page slow loading and inaccurate data (same projectId fix)
 - [x] Fixed PerformanceValidation.tsx, PerformanceParameters.tsx, FinancialData.tsx to use String(projectId)
+
+
+## Extraction Issues (Jan 26, 2026 - Session 4)
+- [x] Fix location extraction - using incorrect coordinates (changed consolidation logic to ALWAYS update with highest-confidence source, weather file = 0.95)
+- [x] Fix performance parameter extraction - not extracting all parameters (changed UPDATE to use COALESCE to merge new data with existing, preserving previously extracted values)
+- [x] Prioritize weather file coordinates over document-extracted coordinates (weather file now always overwrites document coordinates)
