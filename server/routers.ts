@@ -102,8 +102,10 @@ export const appRouter = router({
         const fs = await import("fs/promises");
         const path = await import("path");
         
-        // Create temp directory for chunks
-        const tempDir = path.join("/home/ubuntu/project-ingestion-engine/data/temp-uploads", uploadId);
+        // Create temp directory for chunks (use process.cwd() for production compatibility)
+        const baseDir = path.join(process.cwd(), "data", "temp-uploads");
+        await fs.mkdir(baseDir, { recursive: true }); // Ensure parent directory exists
+        const tempDir = path.join(baseDir, uploadId);
         await fs.mkdir(tempDir, { recursive: true });
         
         // Store metadata
@@ -138,7 +140,7 @@ export const appRouter = router({
         const fs = await import("fs/promises");
         const path = await import("path");
         
-        const tempDir = path.join("/home/ubuntu/project-ingestion-engine/data/temp-uploads", input.uploadId);
+        const tempDir = path.join(process.cwd(), "data", "temp-uploads", input.uploadId);
         const chunkPath = path.join(tempDir, `chunk-${input.chunkIndex}`);
         
         // Decode and save chunk
@@ -159,113 +161,128 @@ export const appRouter = router({
         const fs = await import("fs/promises");
         const path = await import("path");
         
-        const tempDir = path.join("/home/ubuntu/project-ingestion-engine/data/temp-uploads", input.uploadId);
-        
-        // Read metadata
-        const metadataPath = path.join(tempDir, "metadata.json");
-        const metadata = JSON.parse(await fs.readFile(metadataPath, "utf-8"));
-        
-        // Reassemble chunks
-        const chunks: Buffer[] = [];
-        for (let i = 0; i < metadata.totalChunks; i++) {
-          const chunkPath = path.join(tempDir, `chunk-${i}`);
-          const chunkBuffer = await fs.readFile(chunkPath);
-          chunks.push(chunkBuffer);
-        }
-        const fileBuffer = Buffer.concat(chunks);
-        
-        // Determine document type using AI if AUTO is selected
-        let finalDocumentType = metadata.documentType;
-        if (metadata.documentType === "AUTO") {
-          const { detectDocumentType } = await import("./document-type-detector");
-          const tempPath = path.join("/tmp", `temp_${Date.now()}_${metadata.fileName}`);
-          await fs.writeFile(tempPath, fileBuffer);
-          try {
-            finalDocumentType = await detectDocumentType(tempPath, metadata.fileName);
-            console.log(`AI detected document type: ${finalDocumentType}`);
-          } finally {
-            await fs.unlink(tempPath).catch(() => {});
-          }
-        }
-        
-        // Upload document using existing logic
-        const document = await uploadDocument(
-          metadata.projectId,
-          metadata.fileName,
-          fileBuffer,
-          metadata.fileType,
-          metadata.fileSize,
-          finalDocumentType as any,
-          ctx.user.id
-        );
-
-        // Start processing asynchronously
-        const projectIdNum = parseInt(metadata.projectId);
-        const projectDb = createProjectDbPool(projectIdNum);
-        
         try {
-          await projectDb.execute(
-            `INSERT INTO processing_jobs (document_id, status, stage, progress_percent, started_at) 
-             VALUES (?, 'processing', 'queued', 0, NOW())`,
-            [document.id]
-          );
-        } finally {
-          await projectDb.end();
-        }
-        
-        // Progress callback
-        const updateProgress = async (stage: string, progress: number) => {
-          const projectDb = createProjectDbPool(projectIdNum);
-          try {
-            await projectDb.execute(
-              `UPDATE processing_jobs SET stage = ?, progress_percent = ?, updated_at = NOW() WHERE document_id = ?`,
-              [stage, progress, document.id]
-            );
-          } finally {
-            await projectDb.end();
+          console.log(`[Chunked Upload] Finalizing upload: ${input.uploadId}`);
+          
+          const tempDir = path.join(process.cwd(), "data", "temp-uploads", input.uploadId);
+          
+          // Read metadata
+          const metadataPath = path.join(tempDir, "metadata.json");
+          const metadataContent = await fs.readFile(metadataPath, "utf-8");
+          console.log(`[Chunked Upload] Metadata: ${metadataContent}`);
+          const metadata = JSON.parse(metadataContent);
+          
+          // Reassemble chunks
+          console.log(`[Chunked Upload] Reassembling ${metadata.totalChunks} chunks...`);
+          const chunks: Buffer[] = [];
+          for (let i = 0; i < metadata.totalChunks; i++) {
+            const chunkPath = path.join(tempDir, `chunk-${i}`);
+            const chunkBuffer = await fs.readFile(chunkPath);
+            chunks.push(chunkBuffer);
           }
-        };
-        
-        // Process document asynchronously
-        processDocument(projectIdNum, document.id, document.filePath, finalDocumentType as any, 'llama3.2:latest', undefined, updateProgress).then(async (result) => {
-          // Save extracted facts
-          if (result.facts.length > 0) {
-            const projectDb = createProjectDbPool(projectIdNum);
+          const fileBuffer = Buffer.concat(chunks);
+          console.log(`[Chunked Upload] Reassembled file size: ${fileBuffer.length} bytes`);
+          
+          // Determine document type using AI if AUTO is selected
+          let finalDocumentType = metadata.documentType;
+          if (metadata.documentType === "AUTO") {
+            const { detectDocumentType } = await import("./document-type-detector");
+            const tempPath = path.join("/tmp", `temp_${Date.now()}_${metadata.fileName}`);
+            await fs.writeFile(tempPath, fileBuffer);
             try {
-              const { insertRawFacts } = await import('./simple-fact-inserter');
-              await insertRawFacts(projectDb, projectIdNum, document.id, result.facts);
+              finalDocumentType = await detectDocumentType(tempPath, metadata.fileName);
+              console.log(`AI detected document type: ${finalDocumentType}`);
             } finally {
-              await projectDb.end();
+              await fs.unlink(tempPath).catch(() => {});
             }
           }
           
-          // Update job status to completed
+          // Upload document using existing logic
+          console.log(`[Chunked Upload] Uploading document to storage...`);
+          const document = await uploadDocument(
+            metadata.projectId,
+            metadata.fileName,
+            fileBuffer,
+            metadata.fileType,
+            metadata.fileSize,
+            finalDocumentType as any,
+            ctx.user.id
+          );
+          console.log(`[Chunked Upload] Document uploaded: ${document.id}`);
+
+          // Start processing asynchronously
+          const projectIdNum = parseInt(metadata.projectId);
           const projectDb = createProjectDbPool(projectIdNum);
+          
           try {
             await projectDb.execute(
-              `UPDATE processing_jobs SET status = 'completed', stage = 'done', progress_percent = 100, completed_at = NOW() WHERE document_id = ?`,
+              `INSERT INTO processing_jobs (document_id, status, stage, progress_percent, started_at) 
+               VALUES (?, 'processing', 'queued', 0, NOW())`,
               [document.id]
             );
           } finally {
             await projectDb.end();
           }
-        }).catch(async (error) => {
-          console.error("Document processing failed:", error);
-          const projectDb = createProjectDbPool(projectIdNum);
-          try {
-            await projectDb.execute(
-              `UPDATE processing_jobs SET status = 'failed', stage = 'error', error_message = ?, completed_at = NOW() WHERE document_id = ?`,
-              [error.message, document.id]
-            );
-          } finally {
-            await projectDb.end();
-          }
-        });
+          
+          // Progress callback
+          const updateProgress = async (stage: string, progress: number) => {
+            const projectDb = createProjectDbPool(projectIdNum);
+            try {
+              await projectDb.execute(
+                `UPDATE processing_jobs SET stage = ?, progress_percent = ?, updated_at = NOW() WHERE document_id = ?`,
+                [stage, progress, document.id]
+              );
+            } finally {
+              await projectDb.end();
+            }
+          };
+          
+          // Process document asynchronously
+          processDocument(projectIdNum, document.id, document.filePath, finalDocumentType as any, 'llama3.2:latest', undefined, updateProgress).then(async (result) => {
+            // Save extracted facts
+            if (result.facts.length > 0) {
+              const projectDb = createProjectDbPool(projectIdNum);
+              try {
+                const { insertRawFacts } = await import('./simple-fact-inserter');
+                await insertRawFacts(projectDb, projectIdNum, document.id, result.facts);
+              } finally {
+                await projectDb.end();
+              }
+            }
+            
+            // Update job status to completed
+            const projectDb = createProjectDbPool(projectIdNum);
+            try {
+              await projectDb.execute(
+                `UPDATE processing_jobs SET status = 'completed', stage = 'done', progress_percent = 100, completed_at = NOW() WHERE document_id = ?`,
+                [document.id]
+              );
+            } finally {
+              await projectDb.end();
+            }
+          }).catch(async (error) => {
+            console.error("Document processing failed:", error);
+            const projectDb = createProjectDbPool(projectIdNum);
+            try {
+              await projectDb.execute(
+                `UPDATE processing_jobs SET status = 'failed', stage = 'error', error_message = ?, completed_at = NOW() WHERE document_id = ?`,
+                [error.message, document.id]
+              );
+            } finally {
+              await projectDb.end();
+            }
+          });
         
-        // Clean up temp directory
-        await fs.rm(tempDir, { recursive: true, force: true });
-        
-        return { documentId: document.id };
+          // Clean up temp directory
+          console.log(`[Chunked Upload] Cleaning up temp directory: ${tempDir}`);
+          await fs.rm(tempDir, { recursive: true, force: true });
+          
+          console.log(`[Chunked Upload] Upload finalized successfully: ${document.id}`);
+          return { documentId: document.id };
+        } catch (error: any) {
+          console.error(`[Chunked Upload] Finalization failed:`, error);
+          throw new Error(`Failed to finalize upload: ${error.message}`);
+        }
       }),
 
     upload: protectedProcedure
