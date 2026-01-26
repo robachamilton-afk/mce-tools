@@ -273,6 +273,17 @@ export const appRouter = router({
               const projectConfig = { ...(mainConfig as object), database: dbName };
               const projectConn = await mysql.createConnection(projectConfig as any);
               
+              console.log(`[Chunked Upload] Inserting document into database...`, {
+                documentId,
+                projectIdNum,
+                fileName: metadata.fileName,
+                finalPath,
+                fileSize: metadata.fileSize,
+                fileHash,
+                documentType: finalDocumentType,
+                userId: metadata.userId
+              });
+              
               await projectConn.execute(
                 `INSERT INTO documents (id, project_id, file_name, file_path, file_size, file_hash, document_type, uploaded_by, uploaded_at, status) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'uploaded')`,
@@ -280,7 +291,7 @@ export const appRouter = router({
               );
               await projectConn.end();
               
-              console.log(`[Chunked Upload] Document saved to database: ${documentId}`);
+              console.log(`[Chunked Upload] ✓ Document saved to database: ${documentId}`);
               
               const document = { id: documentId, fileName: metadata.fileName, filePath: finalPath };
 
@@ -344,13 +355,16 @@ export const appRouter = router({
                 }
               });
               
-              // Clean up temp directory
-              console.log(`[Chunked Upload] Cleaning up temp directory: ${tempDir}`);
-              await fs.rm(tempDir, { recursive: true, force: true });
+              console.log(`[Chunked Upload] Background processing initiated: ${document.id}`);
               
-              console.log(`[Chunked Upload] Background processing complete: ${document.id}`);
+              // Clean up temp directory AFTER file has been moved
+              console.log(`[Chunked Upload] Cleaning up temp directory: ${tempDir}`);
+              await fs.rm(tempDir, { recursive: true, force: true }).catch(err => {
+                console.error(`[Chunked Upload] Cleanup failed (non-fatal):`, err);
+              });
             } catch (error) {
-              console.error(`[Chunked Upload] Background processing failed:`, error);
+              console.error(`[Chunked Upload] ✗ Background processing failed:`, error);
+              console.error(`[Chunked Upload] Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
               // Clean up on error
               await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
             }
