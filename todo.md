@@ -1271,3 +1271,8 @@
 - [x] Fix location extraction - using incorrect coordinates (changed consolidation logic to ALWAYS update with highest-confidence source, weather file = 0.95)
 - [x] Fix performance parameter extraction - not extracting all parameters (changed UPDATE to use COALESCE to merge new data with existing, preserving previously extracted values)
 - [x] Prioritize weather file coordinates over document-extracted coordinates (weather file now always overwrites document coordinates)
+
+
+## Consolidation Issues (Jan 26, 2026 - Session 5)
+- [x] Fix Process & Consolidate not updating existing location data (excluded lat/lon from COALESCE so location consolidation can overwrite)
+- [x] Improve AC capacity extraction to recognize grid connection limits (added explicit guidance in prompt to look for grid limits, export limits, POI capacity)

@@ -104,7 +104,7 @@ Extract the following information if present in the document. Return ONLY a JSON
 
 {
   "dc_capacity_mw": "DC capacity in MW (e.g., '100.5')",
-  "ac_capacity_mw": "AC capacity in MW (e.g., '80.0')",
+  "ac_capacity_mw": "AC capacity in MW (e.g., '80.0'). Also look for grid connection limits, export limits, or POI capacity as these typically define AC capacity.",
   "module_model": "Solar module model name (e.g., 'Longi LR5-72HPH-550M')",
   "module_power_watts": "Module power rating in watts (e.g., '550')",
   "module_count": "Total number of modules (integer)",
@@ -137,6 +137,7 @@ Extract the following information if present in the document. Return ONLY a JSON
 IMPORTANT:
 - Extract exact values as they appear in the document
 - Use null for any field not found in the document
+- For ac_capacity_mw: Look for explicit AC capacity, grid connection limits, export limits, POI (Point of Interconnection) capacity, or grid constraints. These all typically define the AC capacity.
 - For tracking_type, standardize to: fixed_tilt, single_axis, or dual_axis
 - For numeric fields, extract only the number (no units in the value)
 - Return valid JSON only, no explanations

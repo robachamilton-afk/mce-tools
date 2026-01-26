@@ -324,11 +324,16 @@ export class ProjectConsolidator {
         );
 
         if (existing && existing.length > 0) {
-          // UPDATE existing record - only update non-null fields (merge new data with existing)
+          // UPDATE existing record - merge new data with existing, but skip lat/lon (handled by location consolidation)
           const updatePairs = [];
           for (let i = 5; i < fields.length; i++) { // Skip id, project_id, source_document_id, confidence, extraction_method
-            // Only update if the new value is not null (preserve existing values)
-            updatePairs.push(`${fields[i]} = COALESCE(${values[i]}, ${fields[i]})`);
+            const fieldName = fields[i];
+            // Skip latitude/longitude - they're handled separately by location consolidation
+            if (fieldName === 'latitude' || fieldName === 'longitude') {
+              continue;
+            }
+            // For other fields: use COALESCE to preserve existing values if new value is null
+            updatePairs.push(`${fieldName} = COALESCE(${values[i]}, ${fieldName})`);
           }
           // Always update confidence and extraction_method to reflect latest extraction
           updatePairs.push(`confidence = ${perfParams.confidence}`);
@@ -336,12 +341,13 @@ export class ProjectConsolidator {
           await projectDb.execute(
             `UPDATE performance_parameters SET ${updatePairs.join(', ')}, updated_at = NOW() WHERE id = '${existing[0].id}'`
           );
-          console.log(`[Consolidator] Merged performance parameters with existing data (${fields.length - 5} fields updated)`);
+          console.log(`[Consolidator] Merged performance parameters with existing data (${updatePairs.length - 2} fields updated, lat/lon handled by location consolidation)`);
         } else {
           // INSERT new record
           await projectDb.execute(
             `INSERT INTO performance_parameters (${fields.join(', ')}) VALUES (${values.join(', ')})`
           );
+          console.log(`[Consolidator] Created new performance_parameters record (confidence: ${(perfParams.confidence * 100).toFixed(1)}%)`);
         }
 
 
