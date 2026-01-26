@@ -401,12 +401,17 @@ export const appRouter = router({
     getProcessingStatus: protectedProcedure
       .input(z.object({ projectId: z.string(), documentId: z.string() }))
       .query(async ({ input }) => {
-        const { getProjectDb } = await import("./project-db-provisioner");
-        const db = await getProjectDb(input.projectId);
-        const [rows] = await db.execute(
-          "SELECT processing_status, processing_error FROM documents WHERE id = ?"
-        );
-        return (rows as unknown as any[])[0] || null;
+        const projectIdNum = parseInt(input.projectId);
+        const connection = await createProjectDbConnection(projectIdNum);
+        try {
+          const [rows] = await connection.execute(
+            "SELECT processing_status, processing_error FROM documents WHERE id = ?",
+            [input.documentId]
+          );
+          return (rows as unknown as any[])[0] || null;
+        } finally {
+          await connection.end();
+        }
       }),
     updateDocumentType: protectedProcedure
       .input(z.object({ 
@@ -445,39 +450,47 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const fs = await import('fs/promises');
-        const { getProjectDb } = await import("./project-db-provisioner");
-        const db = await getProjectDb(input.projectId);
+        const projectIdNum = parseInt(input.projectId);
+        const connection = await createProjectDbConnection(projectIdNum);
         
-        // Get document file path before deleting
-        const [docs] = await db.execute(
-          "SELECT filePath FROM documents WHERE id = " + parseInt(input.documentId)
-        ) as any;
-        
-        if (docs && docs.length > 0 && docs[0].filePath) {
-          try {
-            await fs.unlink(docs[0].filePath);
-          } catch (error) {
-            console.error(`Failed to delete file: ${error}`);
-            // Continue even if file deletion fails
+        try {
+          // Get document file path before deleting
+          const [docs] = await connection.execute(
+            "SELECT filePath FROM documents WHERE id = ?",
+            [input.documentId]
+          ) as any;
+          
+          if (docs && docs.length > 0 && docs[0].filePath) {
+            try {
+              await fs.unlink(docs[0].filePath);
+            } catch (error) {
+              console.error(`Failed to delete file: ${error}`);
+              // Continue even if file deletion fails
+            }
           }
+          
+          // Delete associated facts
+          await connection.execute(
+            "DELETE FROM extracted_facts WHERE source_document_id = ?",
+            [input.documentId]
+          );
+          
+          // Delete associated processing jobs
+          await connection.execute(
+            "DELETE FROM processing_jobs WHERE document_id = ?",
+            [input.documentId]
+          );
+          
+          // Delete document record
+          await connection.execute(
+            "DELETE FROM documents WHERE id = ?",
+            [input.documentId]
+          );
+          
+          return { success: true, message: "Document deleted successfully" };
+        } finally {
+          await connection.end();
         }
-        
-        // Delete associated facts
-        await db.execute(
-          "DELETE FROM extracted_facts WHERE source_document_id = " + parseInt(input.documentId)
-        );
-        
-        // Delete associated processing jobs
-        await db.execute(
-          "DELETE FROM processing_jobs WHERE document_id = " + parseInt(input.documentId)
-        );
-        
-        // Delete document record
-        await db.execute(
-          "DELETE FROM documents WHERE id = " + parseInt(input.documentId)
-        );
-        
-        return { success: true, message: "Document deleted successfully" };
       }),
     getProgress: protectedProcedure
       .input(z.object({ projectId: z.string(), documentId: z.string() }))
@@ -613,7 +626,16 @@ export const appRouter = router({
           const connection = await createProjectDbConnection(projectIdNum);
           
           try {
-            const query = `SELECT * FROM processing_jobs ORDER BY started_at DESC`;
+            // Join with documents table to get filename
+            const query = `
+              SELECT 
+                p.id, p.document_id, p.status, p.stage, p.progress_percent, 
+                p.started_at, p.completed_at, p.error_message,
+                d.fileName as document_name
+              FROM processing_jobs p
+              LEFT JOIN documents d ON p.document_id = d.id
+              ORDER BY p.started_at DESC
+            `;
             console.log(`[listJobs] Executing query for proj_${projectIdNum}_processing_jobs`);
             const [rows] = await connection.execute(query);
             console.log(`[listJobs] Found ${(rows as any[]).length} jobs`);
@@ -629,14 +651,17 @@ export const appRouter = router({
     retryJob: protectedProcedure
       .input(z.object({ projectId: z.string(), jobId: z.number() }))
       .mutation(async ({ input }) => {
-        const { getProjectDb } = await import("./project-db-provisioner");
-        const db = await getProjectDb(input.projectId);
-        
-        await db.execute(
-          "UPDATE processing_jobs SET status = 'queued', error_message = NULL WHERE id = ?"
-        );
-        
-        return { success: true };
+        const projectIdNum = parseInt(input.projectId);
+        const connection = await createProjectDbConnection(projectIdNum);
+        try {
+          await connection.execute(
+            "UPDATE processing_jobs SET status = 'queued', error_message = NULL WHERE id = ?",
+            [input.jobId]
+          );
+          return { success: true };
+        } finally {
+          await connection.end();
+        }
       }),
   }),
 
@@ -644,12 +669,16 @@ export const appRouter = router({
     list: protectedProcedure
       .input(z.object({ projectId: z.string() }))
       .query(async ({ input }) => {
-        const { getProjectDb } = await import("./project-db-provisioner");
-        const db = await getProjectDb(input.projectId);
-        const [rows] = await db.execute(
-          "SELECT * FROM extracted_facts WHERE deleted_at IS NULL ORDER BY confidence DESC, created_at DESC"
-        );
-        return rows as unknown as any[];
+        const projectIdNum = parseInt(input.projectId);
+        const connection = await createProjectDbConnection(projectIdNum);
+        try {
+          const [rows] = await connection.execute(
+            "SELECT * FROM extracted_facts WHERE deleted_at IS NULL ORDER BY confidence DESC, created_at DESC"
+          );
+          return rows as unknown as any[];
+        } finally {
+          await connection.end();
+        }
       }),
     getNarratives: protectedProcedure
       .input(z.object({ projectId: z.string() }))
@@ -681,24 +710,29 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const { getProjectDb } = await import("./project-db-provisioner");
-        const db = await getProjectDb(input.projectId);
+        const projectIdNum = parseInt(input.projectId);
+        const connection = await createProjectDbConnection(projectIdNum);
         
-        const updates: string[] = ["verification_status = ?"];
-        const params: any[] = [input.status];
-        
-        if (input.value !== undefined) {
-          updates.push("value = ?");
-          params.push(input.value);
+        try {
+          const updates: string[] = ["verification_status = ?"];
+          const params: any[] = [input.status];
+          
+          if (input.value !== undefined) {
+            updates.push("value = ?");
+            params.push(input.value);
+          }
+          
+          params.push(input.factId);
+          
+          await connection.execute(
+            `UPDATE extracted_facts SET ${updates.join(", ")} WHERE id = ?`,
+            params
+          );
+          
+          return { success: true };
+        } finally {
+          await connection.end();
         }
-        
-        params.push(input.factId);
-        
-        await db.execute(
-          `UPDATE extracted_facts SET ${updates.join(", ")} WHERE id = ?`
-        );
-        
-        return { success: true };
       }),
     synthesizeNarrativeOnDemand: protectedProcedure
       .input(

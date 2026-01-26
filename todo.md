@@ -1253,3 +1253,8 @@
 - [x] Fixed processing_jobs INSERT to match project schema (stage/progress_percent columns)
 - [x] Fixed listJobs query to use createProjectDbConnection() instead of getProjectDb()
 - [x] Fixed all TypeScript type errors in db-connection.ts and document-service.ts
+
+
+## Production Issues (Jan 26, 2026 - Session 2)
+- [x] Fix document name not showing in Processing Status (added JOIN with documents table to get fileName)
+- [x] Fix insights not showing after document processing completes (fixed facts.list and other endpoints to use createProjectDbConnection instead of getProjectDb)
