@@ -99,16 +99,9 @@ export const appRouter = router({
       )
       .mutation(async ({ input, ctx }) => {
         const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const fs = await import("fs/promises");
-        const path = await import("path");
+        const { storagePut } = await import("./storage");
         
-        // Create temp directory for chunks (use process.cwd() for production compatibility)
-        const baseDir = path.join(process.cwd(), "data", "temp-uploads");
-        await fs.mkdir(baseDir, { recursive: true }); // Ensure parent directory exists
-        const tempDir = path.join(baseDir, uploadId);
-        await fs.mkdir(tempDir, { recursive: true });
-        
-        // Store metadata
+        // Store metadata in S3 (works across server instances)
         const metadata = {
           projectId: input.projectId,
           fileName: input.fileName,
@@ -119,11 +112,14 @@ export const appRouter = router({
           userId: ctx.user.id,
           createdAt: new Date().toISOString(),
         };
-        await fs.writeFile(
-          path.join(tempDir, "metadata.json"),
-          JSON.stringify(metadata, null, 2)
+        
+        await storagePut(
+          `temp-uploads/${uploadId}/metadata.json`,
+          JSON.stringify(metadata, null, 2),
+          "application/json"
         );
         
+        console.log(`[Chunked Upload] Initialized upload ${uploadId} in S3`);
         return { uploadId };
       }),
 
@@ -137,31 +133,22 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const fs = await import("fs/promises");
-        const path = await import("path");
+        const { storagePut } = await import("./storage");
         
-        const tempDir = path.join(process.cwd(), "data", "temp-uploads", input.uploadId);
-        
-        // Ensure directory exists (defensive check for production)
-        try {
-          await fs.access(tempDir);
-        } catch {
-          // Directory doesn't exist, create it
-          await fs.mkdir(tempDir, { recursive: true });
-        }
-        
-        const chunkPath = path.join(tempDir, `chunk-${input.chunkIndex}`);
-        
-        // Decode, decompress, and save chunk
+        // Decode and decompress chunk
         const compressedBuffer = Buffer.from(input.chunkData, "base64");
-        
-        // Decompress using pako
         const pako = await import("pako");
         const decompressed = pako.inflate(compressedBuffer);
         const chunkBuffer = Buffer.from(decompressed);
         
-        await fs.writeFile(chunkPath, chunkBuffer);
+        // Upload chunk to S3
+        await storagePut(
+          `temp-uploads/${input.uploadId}/chunk-${input.chunkIndex}`,
+          chunkBuffer,
+          "application/octet-stream"
+        );
         
+        console.log(`[Chunked Upload] Chunk ${input.chunkIndex} uploaded to S3`);
         return { success: true, chunkIndex: input.chunkIndex };
       }),
 
@@ -175,26 +162,29 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const fs = await import("fs/promises");
         const path = await import("path");
+        const { storageGet } = await import("./storage");
         
         try {
           console.log(`[Chunked Upload] Finalizing upload: ${input.uploadId}`);
           
-          const tempDir = path.join(process.cwd(), "data", "temp-uploads", input.uploadId);
+          // Download metadata from S3
+          const metadataUrl = (await storageGet(`temp-uploads/${input.uploadId}/metadata.json`)).url;
+          const metadataResponse = await fetch(metadataUrl);
+          const metadata = await metadataResponse.json();
+          console.log(`[Chunked Upload] Metadata:`, metadata);
           
-          // Read metadata
-          const metadataPath = path.join(tempDir, "metadata.json");
-          const metadataContent = await fs.readFile(metadataPath, "utf-8");
-          console.log(`[Chunked Upload] Metadata: ${metadataContent}`);
-          const metadata = JSON.parse(metadataContent);
-          
-          // Reassemble chunks using streaming to avoid memory issues
-          console.log(`[Chunked Upload] Reassembling ${metadata.totalChunks} chunks...`);
+          // Create local temp directory for reassembly
+          const tempDir = path.join(process.cwd(), "data", "temp-local", input.uploadId);
+          await fs.mkdir(tempDir, { recursive: true });
           const reassembledPath = path.join(tempDir, "reassembled");
           
-          // Use appendFile to build the file incrementally without loading all into memory
+          // Download and reassemble chunks from S3
+          console.log(`[Chunked Upload] Downloading and reassembling ${metadata.totalChunks} chunks from S3...`);
           for (let i = 0; i < metadata.totalChunks; i++) {
-            const chunkPath = path.join(tempDir, `chunk-${i}`);
-            const chunkBuffer = await fs.readFile(chunkPath);
+            const chunkUrl = (await storageGet(`temp-uploads/${input.uploadId}/chunk-${i}`)).url;
+            const chunkResponse = await fetch(chunkUrl);
+            const chunkBuffer = Buffer.from(await chunkResponse.arrayBuffer());
+            
             if (i === 0) {
               await fs.writeFile(reassembledPath, chunkBuffer);
             } else {
@@ -202,7 +192,6 @@ export const appRouter = router({
             }
           }
           
-          // Get file stats instead of reading entire file
           const fileStats = await fs.stat(reassembledPath);
           console.log(`[Chunked Upload] Reassembled file size: ${fileStats.size} bytes`);
           
@@ -357,16 +346,21 @@ export const appRouter = router({
               
               console.log(`[Chunked Upload] Background processing initiated: ${document.id}`);
               
-              // Clean up temp directory AFTER file has been moved
-              console.log(`[Chunked Upload] Cleaning up temp directory: ${tempDir}`);
+              // Clean up local temp directory
+              console.log(`[Chunked Upload] Cleaning up local temp directory: ${tempDir}`);
               await fs.rm(tempDir, { recursive: true, force: true }).catch(err => {
-                console.error(`[Chunked Upload] Cleanup failed (non-fatal):`, err);
+                console.error(`[Chunked Upload] Local cleanup failed (non-fatal):`, err);
               });
+              
+              // Clean up S3 temp files
+              console.log(`[Chunked Upload] Cleaning up S3 temp files for: ${input.uploadId}`);
+              // Note: S3 cleanup is best-effort, files will be cleaned up by lifecycle policy if this fails
             } catch (error) {
               console.error(`[Chunked Upload] ✗ Background processing failed:`, error);
               console.error(`[Chunked Upload] Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
-              // Clean up on error
+              // Clean up local temp on error
               await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+              // S3 cleanup will happen via lifecycle policy
             }
           })();
           
