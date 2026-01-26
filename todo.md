@@ -1296,4 +1296,4 @@
 - [x] Fix document ID mismatch - frontend receives one ID but background process creates document with different ID, causing document to not appear in list
 - [x] Fix production path issue - chunks 6-8 fail with ENOENT because temp directory doesn't exist in production Docker container (/usr/src/app)
 - [x] Fix documents not appearing in list - ROOT CAUSE: filesystem temp storage doesn't work in multi-instance production (chunks on Server A, finalize on Server B). Solution: use S3 for chunk storage
-- [ ] Debug: Upload completes successfully with S3 storage but documents still don't appear in list - background processing failing silently after finalization returns
+- [x] FIXED: Column name mismatch in INSERT (snake_case vs camelCase) - chunked upload used wrong column names

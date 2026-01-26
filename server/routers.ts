@@ -275,9 +275,9 @@ export const appRouter = router({
               });
               
               await projectConn.execute(
-                `INSERT INTO documents (id, project_id, file_name, file_path, file_size, file_hash, document_type, uploaded_by, uploaded_at, status) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'uploaded')`,
-                [documentId, projectIdNum, metadata.fileName, finalPath, metadata.fileSize, fileHash, finalDocumentType, metadata.userId]
+                `INSERT INTO documents (id, fileName, filePath, fileSizeBytes, fileHash, documentType, uploadDate, status) 
+                 VALUES (?, ?, ?, ?, ?, ?, NOW(), 'uploaded')`,
+                [documentId, metadata.fileName, finalPath, metadata.fileSize, fileHash, finalDocumentType]
               );
               await projectConn.end();
               
