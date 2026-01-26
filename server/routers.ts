@@ -141,6 +141,15 @@ export const appRouter = router({
         const path = await import("path");
         
         const tempDir = path.join(process.cwd(), "data", "temp-uploads", input.uploadId);
+        
+        // Ensure directory exists (defensive check for production)
+        try {
+          await fs.access(tempDir);
+        } catch {
+          // Directory doesn't exist, create it
+          await fs.mkdir(tempDir, { recursive: true });
+        }
+        
         const chunkPath = path.join(tempDir, `chunk-${input.chunkIndex}`);
         
         // Decode, decompress, and save chunk
