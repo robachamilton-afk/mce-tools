@@ -16,11 +16,11 @@ export function PerformanceParameters() {
   // Fetch project to get ID
   const { data: projects } = trpc.projects.list.useQuery();
   const project = projects?.find((p: any) => p.id === parseInt(projectIdParam || '0'));
-  const projectId = project?.id;
+  const projectId = project?.id ? String(project.id) : undefined;
 
   // Fetch performance parameters
   const { data: parameters, isLoading } = trpc.performanceParams.getByProject.useQuery(
-    { projectId: projectId || 0 },
+    { projectId: projectId || "" },
     { enabled: !!projectId }
   );
 

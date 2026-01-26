@@ -1258,3 +1258,10 @@
 ## Production Issues (Jan 26, 2026 - Session 2)
 - [x] Fix document name not showing in Processing Status (added JOIN with documents table to get fileName)
 - [x] Fix insights not showing after document processing completes (fixed facts.list and other endpoints to use createProjectDbConnection instead of getProjectDb)
+
+
+## Production Issues (Jan 26, 2026 - Session 3)
+- [x] Fix Performance Validation page slow loading and not showing weather file data (fixed projectId type mismatch - was passing number instead of string)
+- [x] Fix Performance Params page not showing data despite weather file being processed (same projectId fix)
+- [x] Fix Financial page slow loading and inaccurate data (same projectId fix)
+- [x] Fixed PerformanceValidation.tsx, PerformanceParameters.tsx, FinancialData.tsx to use String(projectId)

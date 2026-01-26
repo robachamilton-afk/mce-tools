@@ -30,7 +30,7 @@ export default function PerformanceValidation() {
   // Get project to extract ID
   const { data: projects } = trpc.projects.list.useQuery();
   const project = projects?.find((p: any) => p.id.toString() === projectIdParam);
-  const projectId = project?.id;
+  const projectId = project?.id ? String(project.id) : undefined;
 
   // Fetch performance validations
   const { data: validations, isLoading } = trpc.performance.getByProject.useQuery(
