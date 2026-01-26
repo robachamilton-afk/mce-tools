@@ -1284,3 +1284,9 @@
 - [x] Update frontend validation to handle large files gracefully (updated WeatherFileUpload.tsx from 50MB to 250MB limit)
 - [x] Implement chunked file upload to bypass platform-level body size limits (74.75MB+ files failing in production)
 - [x] Fix 'unexpected token S' error during chunked upload finalization (chunks upload successfully but finalization fails)
+- [x] Fix "Service Unavailable" error during chunked upload (server crashing or timing out during chunk reassembly)
+
+## Upload Speed Optimization (Jan 26, 2026 - Session 7)
+- [x] Implement parallel chunk uploads (3 concurrent chunks instead of sequential)
+- [x] Add compression/decompression for chunks to reduce transfer size
+- [ ] Test and measure upload speed improvements with 75MB file

@@ -8,6 +8,7 @@ import { Upload, File, AlertCircle, CheckCircle, Loader2, X, ArrowLeft, Linkedin
 import { ExtractionProgressBar } from "@/components/ExtractionProgressBar";
 import { useState, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
+import pako from "pako";
 
 interface UploadedFile {
   id: string;
@@ -179,35 +180,51 @@ export default function DocumentUpload() {
         totalChunks,
       });
       
-      // Upload chunks sequentially
-      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-        const start = chunkIndex * CHUNK_SIZE;
-        const end = Math.min(start + CHUNK_SIZE, fileObj.size);
-        const chunk = fileObj.slice(start, end);
+      // Upload chunks in parallel batches of 3
+      const PARALLEL_UPLOADS = 3;
+      let completedChunks = 0;
+      
+      for (let batchStart = 0; batchStart < totalChunks; batchStart += PARALLEL_UPLOADS) {
+        const batchEnd = Math.min(batchStart + PARALLEL_UPLOADS, totalChunks);
+        const batchPromises = [];
         
-        // Read chunk as base64
-        const chunkData = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const base64 = (reader.result as string).split(',')[1];
-            resolve(base64);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(chunk);
-        });
+        // Create batch of chunk uploads
+        for (let chunkIndex = batchStart; chunkIndex < batchEnd; chunkIndex++) {
+          const start = chunkIndex * CHUNK_SIZE;
+          const end = Math.min(start + CHUNK_SIZE, fileObj.size);
+          const chunk = fileObj.slice(start, end);
+          
+          // Convert chunk to base64, compress, and upload
+          const uploadPromise = (async () => {
+            // Read chunk as ArrayBuffer
+            const arrayBuffer = await chunk.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+            
+            // Compress chunk
+            const compressed = pako.deflate(uint8Array);
+            
+            // Convert compressed data to base64
+            const base64 = btoa(String.fromCharCode.apply(null, Array.from(compressed)));
+            
+            await uploadChunkMutation.mutateAsync({
+              uploadId,
+              chunkIndex,
+              chunkData: base64,
+            });
+            
+            completedChunks++;
+            // Update progress
+            const progress = Math.round((completedChunks / totalChunks) * 90); // Reserve 10% for finalization
+            setUploadedFiles(prev => prev.map(f => 
+              f.id === fileInfo.id ? { ...f, progress } : f
+            ));
+          })();
+          
+          batchPromises.push(uploadPromise);
+        }
         
-        // Upload chunk
-        await uploadChunkMutation.mutateAsync({
-          uploadId,
-          chunkIndex,
-          chunkData,
-        });
-        
-        // Update progress
-        const progress = Math.round(((chunkIndex + 1) / totalChunks) * 90); // Reserve 10% for finalization
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === fileInfo.id ? { ...f, progress } : f
-        ));
+        // Wait for all chunks in this batch to complete
+        await Promise.all(batchPromises);
       }
       
       // Finalize upload
