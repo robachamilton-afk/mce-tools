@@ -203,8 +203,14 @@ export default function DocumentUpload() {
             // Compress chunk
             const compressed = pako.deflate(uint8Array);
             
-            // Convert compressed data to base64
-            const base64 = btoa(String.fromCharCode.apply(null, Array.from(compressed)));
+            // Convert compressed data to base64 in batches to avoid call stack overflow
+            let binary = '';
+            const chunkSize = 8192; // Process 8KB at a time
+            for (let i = 0; i < compressed.length; i += chunkSize) {
+              const slice = compressed.subarray(i, i + chunkSize);
+              binary += String.fromCharCode.apply(null, Array.from(slice));
+            }
+            const base64 = btoa(binary);
             
             await uploadChunkMutation.mutateAsync({
               uploadId,

@@ -1290,3 +1290,4 @@
 - [x] Implement parallel chunk uploads (3 concurrent chunks instead of sequential)
 - [x] Add compression/decompression for chunks to reduce transfer size
 - [ ] Test and measure upload speed improvements with 75MB file
+- [x] Fix "Maximum call stack size exceeded" error in compression code (String.fromCharCode.apply can't handle large arrays)
