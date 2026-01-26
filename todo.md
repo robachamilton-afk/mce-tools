@@ -1237,5 +1237,4 @@
 
 - [x] Fix extractProjectId() error in document upload (refactored db-connection.ts to accept numeric projectId instead of string prefix)
 
-- [x] Fix document processing not triggering after upload (documents upload successfully but no processing happens)
-- [ ] Deploy location extractor schema fix to production (processing works in dev but fails in production)
+- [x] Fix document processing never starting in production (fixed processing_jobs INSERT schema mismatch and listJobs query connection)

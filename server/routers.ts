@@ -604,16 +604,21 @@ export const appRouter = router({
     listJobs: protectedProcedure
       .input(z.object({ projectId: z.string() }))
       .query(async ({ input }) => {
-        const { getProjectDb } = await import("./project-db-provisioner");
-        const db = await getProjectDb(input.projectId);
-        
-        const [rows] = await db.execute(
-          `SELECT pj.*, d.fileName as document_name 
-           FROM processing_jobs pj 
-           LEFT JOIN documents d ON pj.document_id = d.id 
-           ORDER BY pj.started_at DESC`
-        );
-        return rows as unknown as any[];
+        try {
+          const connection = await createProjectDbConnection(parseInt(input.projectId));
+          
+          try {
+            const [rows] = await connection.execute(
+              `SELECT * FROM processing_jobs ORDER BY started_at DESC`
+            );
+            return rows as unknown as any[];
+          } finally {
+            await connection.end();
+          }
+        } catch (error) {
+          console.error('[listJobs] Error:', error);
+          throw error;
+        }
       }),
     retryJob: protectedProcedure
       .input(z.object({ projectId: z.string(), jobId: z.number() }))
