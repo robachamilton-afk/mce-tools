@@ -1282,3 +1282,4 @@
 - [x] Fix "unexpected JSON" error when uploading large files (increased Express body parser limit from 200MB to 250MB)
 - [x] Increase Express body parser limit to support up to 250MB uploads (updated server/_core/index.ts)
 - [x] Update frontend validation to handle large files gracefully (updated WeatherFileUpload.tsx from 50MB to 250MB limit)
+- [x] Implement chunked file upload to bypass platform-level body size limits (74.75MB+ files failing in production)

@@ -157,6 +157,101 @@ export default function DocumentUpload() {
     fileObjectsRef.current.delete(id);
   };
   
+  // Chunked upload mutations
+  const initChunkedUploadMutation = trpc.documents.initChunkedUpload.useMutation();
+  const uploadChunkMutation = trpc.documents.uploadChunk.useMutation();
+  const finalizeChunkedUploadMutation = trpc.documents.finalizeChunkedUpload.useMutation();
+
+  const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB chunks
+  const LARGE_FILE_THRESHOLD = 50 * 1024 * 1024; // 50MB threshold for chunked upload
+
+  const uploadFileChunked = async (fileInfo: UploadedFile, fileObj: File) => {
+    const totalChunks = Math.ceil(fileObj.size / CHUNK_SIZE);
+    
+    try {
+      // Initialize chunked upload
+      const { uploadId } = await initChunkedUploadMutation.mutateAsync({
+        projectId: String(projectId),
+        fileName: fileObj.name,
+        fileType: fileObj.type,
+        fileSize: fileObj.size,
+        documentType: fileInfo.type as any,
+        totalChunks,
+      });
+      
+      // Upload chunks sequentially
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const start = chunkIndex * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, fileObj.size);
+        const chunk = fileObj.slice(start, end);
+        
+        // Read chunk as base64
+        const chunkData = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = (reader.result as string).split(',')[1];
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(chunk);
+        });
+        
+        // Upload chunk
+        await uploadChunkMutation.mutateAsync({
+          uploadId,
+          chunkIndex,
+          chunkData,
+        });
+        
+        // Update progress
+        const progress = Math.round(((chunkIndex + 1) / totalChunks) * 90); // Reserve 10% for finalization
+        setUploadedFiles(prev => prev.map(f => 
+          f.id === fileInfo.id ? { ...f, progress } : f
+        ));
+      }
+      
+      // Finalize upload
+      setUploadedFiles(prev => prev.map(f => 
+        f.id === fileInfo.id ? { ...f, progress: 95 } : f
+      ));
+      
+      const result = await finalizeChunkedUploadMutation.mutateAsync({ uploadId });
+      
+      // Mark as completed
+      setUploadedFiles(prev => prev.map(f => 
+        f.id === fileInfo.id ? { ...f, status: 'extracting', progress: 100, documentId: result.documentId } : f
+      ));
+      
+      console.log('Chunked upload completed:', fileObj.name);
+    } catch (error: any) {
+      console.error('Chunked upload failed:', error);
+      throw error;
+    }
+  };
+
+  const uploadFileNormal = async (fileInfo: UploadedFile, fileObj: File) => {
+    // Read file as base64
+    const fileData = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(fileObj);
+    });
+    
+    // Upload via tRPC with base64 data
+    await uploadMutation.mutateAsync({
+      projectId: String(projectId),
+      fileName: fileObj.name,
+      fileType: fileObj.type,
+      fileSize: fileObj.size,
+      documentType: fileInfo.type as any,
+      fileData,
+    });
+  };
+
   const handleUploadAll = async () => {
     const filesToUpload = uploadedFiles.filter(f => f.status === 'pending');
     
@@ -166,37 +261,25 @@ export default function DocumentUpload() {
       
       // Mark as uploading
       setUploadedFiles(prev => prev.map(f => 
-        f.id === fileInfo.id ? { ...f, status: 'uploading', progress: 50 } : f
+        f.id === fileInfo.id ? { ...f, status: 'uploading', progress: 5 } : f
       ));
       
       try {
-        // Read file as base64
-        const fileData = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const base64 = (reader.result as string).split(',')[1];
-            resolve(base64);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(fileObj);
-        });
-        
-        // Upload via tRPC with base64 data
-        await uploadMutation.mutateAsync({
-          projectId: String(projectId),
-          fileName: fileObj.name,
-          fileType: fileObj.type,
-          fileSize: fileObj.size,
-          documentType: fileInfo.type as any,
-          fileData,
-        });
+        // Use chunked upload for large files (>50MB)
+        if (fileObj.size > LARGE_FILE_THRESHOLD) {
+          console.log(`Using chunked upload for large file: ${fileObj.name} (${fileObj.size} bytes)`);
+          await uploadFileChunked(fileInfo, fileObj);
+        } else {
+          console.log(`Using normal upload for file: ${fileObj.name} (${fileObj.size} bytes)`);
+          await uploadFileNormal(fileInfo, fileObj);
+          
+          // Mark as completed
+          setUploadedFiles(prev => prev.map(f => 
+            f.id === fileInfo.id ? { ...f, status: 'completed', progress: 100 } : f
+          ));
+        }
         
         console.log('Upload completed:', fileObj.name);
-        
-        // Mark as completed
-        setUploadedFiles(prev => prev.map(f => 
-          f.id === fileInfo.id ? { ...f, status: 'completed', progress: 100 } : f
-        ));
       } catch (error: any) {
         console.error('Upload failed:', error);
         setUploadedFiles(prev => prev.map(f => 
