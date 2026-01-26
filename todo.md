@@ -1291,3 +1291,4 @@
 - [x] Add compression/decompression for chunks to reduce transfer size
 - [ ] Test and measure upload speed improvements with 75MB file
 - [x] Fix "Maximum call stack size exceeded" error in compression code (String.fromCharCode.apply can't handle large arrays)
+- [x] Fix 413 Payload Too Large error by reducing chunk size from 10MB to 5MB (compressed chunks still too large)

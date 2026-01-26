@@ -163,7 +163,7 @@ export default function DocumentUpload() {
   const uploadChunkMutation = trpc.documents.uploadChunk.useMutation();
   const finalizeChunkedUploadMutation = trpc.documents.finalizeChunkedUpload.useMutation();
 
-  const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB chunks
+  const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks (compressed to ~1-3MB)
   const LARGE_FILE_THRESHOLD = 50 * 1024 * 1024; // 50MB threshold for chunked upload
 
   const uploadFileChunked = async (fileInfo: UploadedFile, fileObj: File) => {
