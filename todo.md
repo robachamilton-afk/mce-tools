@@ -1293,3 +1293,4 @@
 - [x] Fix "Maximum call stack size exceeded" error in compression code (String.fromCharCode.apply can't handle large arrays)
 - [x] Fix 413 Payload Too Large error by reducing chunk size from 10MB to 5MB (compressed chunks still too large)
 - [x] Fix server crashes (503 Service Unavailable) during document processing for large files (75-250MB) - memory exhaustion during text extraction
+- [x] Fix document ID mismatch - frontend receives one ID but background process creates document with different ID, causing document to not appear in list

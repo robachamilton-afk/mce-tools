@@ -223,7 +223,6 @@ export const appRouter = router({
               
               // Move file directly to storage without loading into memory
               console.log(`[Chunked Upload] Moving file to storage...`);
-              const { v4: uuidv4 } = await import('uuid');
               const crypto = await import('crypto');
               const projectIdNum = parseInt(metadata.projectId);
               
@@ -233,10 +232,9 @@ export const appRouter = router({
               const documentsDir = path.join(projectDir, "documents");
               await fs.mkdir(documentsDir, { recursive: true });
               
-              // Generate document ID and move file
-              const docId = uuidv4();
+              // Use the same document ID that was returned to frontend
               const fileExtension = path.extname(metadata.fileName);
-              const storedFileName = `${docId}${fileExtension}`;
+              const storedFileName = `${documentId}${fileExtension}`;
               const finalPath = path.join(documentsDir, storedFileName);
               await fs.rename(reassembledPath, finalPath);
               console.log(`[Chunked Upload] File moved to: ${finalPath}`);
@@ -269,13 +267,13 @@ export const appRouter = router({
               await projectConn.execute(
                 `INSERT INTO documents (id, project_id, file_name, file_path, file_size, file_hash, document_type, uploaded_by, uploaded_at, status) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'uploaded')`,
-                [docId, projectIdNum, metadata.fileName, finalPath, metadata.fileSize, fileHash, finalDocumentType, metadata.userId]
+                [documentId, projectIdNum, metadata.fileName, finalPath, metadata.fileSize, fileHash, finalDocumentType, metadata.userId]
               );
               await projectConn.end();
               
-              console.log(`[Chunked Upload] Document saved to database: ${docId}`);
+              console.log(`[Chunked Upload] Document saved to database: ${documentId}`);
               
-              const document = { id: docId, fileName: metadata.fileName, filePath: finalPath };
+              const document = { id: documentId, fileName: metadata.fileName, filePath: finalPath };
 
               // Start processing
               const projectDb = createProjectDbPool(projectIdNum);
